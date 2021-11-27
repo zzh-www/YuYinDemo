@@ -22,10 +22,12 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="..\:/Users/86180/.gradle/caches/transforms-2/files-2.1/b2988d41207f4305a039379a00391394/jetified-EasyFloat-2.0.3/res/layout/default_add_layout.xml" value="0.38645833333333335" />
+        <entry key="..\:/Users/86180/.gradle/caches/transforms-2/files-2.1/b2988d41207f4305a039379a00391394/jetified-EasyFloat-2.0.3/res/layout/default_close_layout.xml" value="0.38645833333333335" />
         <entry key="..\:/Users/86180/Desktop/MyAndroidApp/Yuyin/app/src/main/res/layout/activity_capture_audio.xml" value="0.27717391304347827" />
         <entry key="..\:/Users/86180/Desktop/MyAndroidApp/Yuyin/app/src/main/res/layout/activity_main.xml" value="0.27717391304347827" />
         <entry key="..\:/Users/86180/Desktop/MyAndroidApp/Yuyin/app/src/main/res/layout/activity_test_float.xml" value="0.21822916666666667" />
-        <entry key="..\:/Users/86180/Desktop/MyAndroidApp/Yuyin/app/src/main/res/layout/floatviewtest.xml" value="0.38645833333333335" />
+        <entry key="..\:/Users/86180/Desktop/MyAndroidApp/Yuyin/app/src/main/res/layout/floatviewtest.xml" value="0.2" />
       </map>
     </option>
   </component>

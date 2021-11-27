@@ -15,7 +15,7 @@ class TestFloat : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_test_float)
         EasyFloat.with(this)
-            .setLayout(1)
+            .setLayout(R.layout.default_add_layout)
             .setShowPattern(ShowPattern.ALL_TIME)
             .setSidePattern(SidePattern.RESULT_HORIZONTAL)
             .setTag("Test")
@@ -24,7 +24,7 @@ class TestFloat : AppCompatActivity() {
             .setLocation(100,200)
             .setGravity(Gravity.END or Gravity.CENTER_VERTICAL, 0, 200)
             .setLayoutChangedGravity(Gravity.END)
-            .setBorder(100,100,800,800)
+            .setBorder()
             .setMatchParent(false, false)
             .setAnimator(DefaultAnimator())
             .setFilter(MainActivity::class.java)
@@ -40,7 +40,5 @@ class TestFloat : AppCompatActivity() {
 
             }
             .show()
-
-
     }
 }
