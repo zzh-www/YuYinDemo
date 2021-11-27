@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.application'
 }
+apply plugin: 'kotlin-android'
 
 repositories {
     jcenter()
@@ -24,13 +25,13 @@ android {
     configurations {
         extractForNativeBuild
     }
-    compileSdkVersion 30
+    compileSdkVersion 31
     buildToolsVersion "30.0.3"
 
     defaultConfig {
         applicationId "com.mobvoi.wenet"
         minSdkVersion 21
-        targetSdkVersion 30
+        targetSdkVersion 31
         versionCode 1
         versionName "1.0"
 
@@ -86,6 +87,9 @@ dependencies {
 
     implementation 'com.github.pengzhendong:wenet-openfst-android:1.0.1'
     extractForNativeBuild 'com.github.pengzhendong:wenet-openfst-android:1.0.1'
+    implementation "androidx.core:core-ktx:+"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation 'com.github.princekin-f:EasyFloat:2.0.3'
 }
 
 task extractAARForNativeBuild {

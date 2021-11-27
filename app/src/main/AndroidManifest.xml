@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
         android:allowBackup="true"
@@ -15,6 +16,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Wenet"
         tools:replace="android:theme">
+        <activity
+            android:name=".TestFloat"
+            android:exported="true" />
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -28,11 +32,10 @@
         <service
             android:name=".MediaCaptureService"
             android:enabled="true"
-            android:foregroundServiceType="mediaProjection"
-            android:exported="false" />
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
 
-        <activity android:name=".CaptureAudio">
-        </activity>
+        <activity android:name=".CaptureAudio"></activity>
     </application>
 
 </manifest>

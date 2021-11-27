@@ -60,6 +60,7 @@ public class MainActivity extends AppCompatActivity {
   private List<SpeechText> speechList = new ArrayList<SpeechText>();
   private SpeechTextAdapter adapter;
   private RecyclerView recyclerView;
+
   public static String assetFilePath(Context context, String assetName) {
     File file = new File(context.getFilesDir(), assetName);
     if (file.exists() && file.length() > 0) {
@@ -81,7 +82,6 @@ public class MainActivity extends AppCompatActivity {
     }
     return null;
   }
-
 
 
   @RequiresApi(api = Build.VERSION_CODES.Q)
@@ -108,8 +108,14 @@ public class MainActivity extends AppCompatActivity {
 
     Button Test = findViewById(R.id.button3);
     Test.setOnClickListener(v -> {
-      Intent cap = new Intent(this,CaptureAudio.class);
+      Intent cap = new Intent(this, CaptureAudio.class);
       startActivity(cap);
+    });
+
+    Button floatView = findViewById(R.id.button4);
+    floatView.setOnClickListener(v->{
+      Intent flo = new Intent(this, TestFloat.class);
+      startActivity(flo);
     });
 
     Button button_init = findViewById(R.id.button2);
@@ -120,7 +126,7 @@ public class MainActivity extends AppCompatActivity {
 //      Recognize.init(modelPath, dictPath);
     });
 
-    new Thread(()->{
+    new Thread(() -> {
       final String modelPath = new File(assetFilePath(this, "final.zip")).getAbsolutePath();
       final String dictPath = new File(assetFilePath(this, "words.txt")).getAbsolutePath();
       Recognize.init(modelPath, dictPath);
@@ -133,7 +139,6 @@ public class MainActivity extends AppCompatActivity {
     speechList.add(new SpeechText("Hi!"));
     adapter = new SpeechTextAdapter(speechList);
     recyclerView.setAdapter(adapter);
-
 
 
     Button button = findViewById(R.id.button);
@@ -158,10 +163,10 @@ public class MainActivity extends AppCompatActivity {
   @RequiresApi(api = Build.VERSION_CODES.Q)
   private void requestAudioPermissions() {
     if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-        != PackageManager.PERMISSION_GRANTED) {
+            != PackageManager.PERMISSION_GRANTED) {
       ActivityCompat.requestPermissions(this,
-          new String[]{Manifest.permission.RECORD_AUDIO},
-          MY_PERMISSIONS_RECORD_AUDIO);
+              new String[]{Manifest.permission.RECORD_AUDIO},
+              MY_PERMISSIONS_RECORD_AUDIO);
     } else {
       initRecoder();
     }
@@ -170,25 +175,38 @@ public class MainActivity extends AppCompatActivity {
   @Override
   protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
     super.onActivityResult(requestCode, resultCode, data);
-    m_mediaProjection = m_mediaProjectionManager.getMediaProjection(resultCode,data);
+    m_mediaProjection = m_mediaProjectionManager.getMediaProjection(resultCode, data);
   }
 
   @RequiresApi(api = Build.VERSION_CODES.Q)
   private void initRecoder() {
 //    // buffer size in bytes 1280
     miniBufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE,
-        AudioFormat.CHANNEL_IN_MONO,
-        AudioFormat.ENCODING_PCM_16BIT);
+            AudioFormat.CHANNEL_IN_MONO,
+            AudioFormat.ENCODING_PCM_16BIT);
     if (miniBufferSize == AudioRecord.ERROR || miniBufferSize == AudioRecord.ERROR_BAD_VALUE) {
       Log.e(LOG_TAG, "Audio buffer can't initialize!");
       return;
     }
+
+
+    if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+      // TODO: Consider calling
+      //    ActivityCompat#requestPermissions
+      // here to request the missing permissions, and then overriding
+      //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+      //                                          int[] grantResults)
+      // to handle the case where the user grants the permission. See the documentation
+      // for ActivityCompat#requestPermissions for more details.
+      return;
+    }
     record = new AudioRecord(MediaRecorder.AudioSource.DEFAULT,
-        SAMPLE_RATE,
-        AudioFormat.CHANNEL_IN_MONO,
-        AudioFormat.ENCODING_PCM_16BIT,
-        miniBufferSize);
+            SAMPLE_RATE,
+            AudioFormat.CHANNEL_IN_MONO,
+            AudioFormat.ENCODING_PCM_16BIT,
+            miniBufferSize);
     Log.i(LOG_TAG, "Record init okay");
+
     if (record.getState() != AudioRecord.STATE_INITIALIZED) {
       Log.e(LOG_TAG, "Audio Record can't initialize!");
       return;
