@@ -120,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
 
     Button button_init = findViewById(R.id.button2);
     button_init.setOnClickListener(v -> {
-      requestAudioPermissions();
+      requestAudioPermissions(); // 请求录音权限
 //      final String modelPath = new File(assetFilePath(this, "final.zip")).getAbsolutePath();
 //      final String dictPath = new File(assetFilePath(this, "words.txt")).getAbsolutePath();
 //      Recognize.init(modelPath, dictPath);
@@ -147,10 +147,11 @@ public class MainActivity extends AppCompatActivity {
       if (!startRecord) {
         startRecord = true;
         Recognize.reset();
-        startRecordThread();
-        startAsrThread();
-        Recognize.startDecode();
-        button.setText("Stop Record");
+        startRecordThread(); // 开启录制音频的线程
+        startAsrThread(); // 开启实时转换音频的线程
+        Recognize.startDecode(); // 开始解码
+        button.setText("Stop Record"); //
+
       } else {
         startRecord = false;
         Recognize.setInputFinished();
@@ -260,10 +261,10 @@ public class MainActivity extends AppCompatActivity {
         try {
           short[] data = bufferQueue.take();
           // 1. add data to C++ interface
-          Recognize.acceptWaveform(data);
+          Recognize.acceptWaveform(data);// 将音频传到模型
           // 2. get partial result
           runOnUiThread(() -> {
-            speechList.add(new SpeechText(Recognize.getResult()));
+            speechList.add(new SpeechText(Recognize.getResult())); // 更新转换结果
             adapter.notifyItemInserted(speechList.size()-1);
             recyclerView.scrollToPosition(speechList.size()-1);
           });
