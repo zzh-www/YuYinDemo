@@ -41,6 +41,6 @@ class TorchAsrModel {
   WENET_DISALLOW_COPY_AND_ASSIGN(TorchAsrModel);
 };
 
-}  // namespace wenet
+}  // namespace com.demo.wenet
 
 #endif  // DECODER_TORCH_ASR_MODEL_H_

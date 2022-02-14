@@ -69,6 +69,6 @@ std::string Rtrim(const std::string& str);
 
 std::string Trim(const std::string& str);
 
-}  // namespace wenet
+}  // namespace com.demo.wenet
 
 #endif  // UTILS_STRING_H_

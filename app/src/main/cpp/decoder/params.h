@@ -150,6 +150,6 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
   return resource;
 }
 
-}  // namespace wenet
+}  // namespace com.demo.wenet
 
 #endif  // DECODER_PARAMS_H_

@@ -20,6 +20,6 @@ void make_bitrev(int n, int* bitrev);
 
 int fft(const int* bitrev, const float* sintbl, float* x, float* y, int n);
 
-}  // namespace wenet
+}  // namespace com.demo.wenet
 
 #endif  // FRONTEND_FFT_H_

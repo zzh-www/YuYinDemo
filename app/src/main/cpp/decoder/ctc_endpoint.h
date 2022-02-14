@@ -61,6 +61,6 @@ class CtcEndpoint {
   int num_frames_trailing_blank_ = 0;
 };
 
-}  // namespace wenet
+}  // namespace com.demo.wenet
 
 #endif  // DECODER_CTC_ENDPOINT_H_

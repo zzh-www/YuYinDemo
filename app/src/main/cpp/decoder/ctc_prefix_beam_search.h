@@ -130,6 +130,6 @@ class CtcPrefixBeamSearch : public SearchInterface {
   WENET_DISALLOW_COPY_AND_ASSIGN(CtcPrefixBeamSearch);
 };
 
-}  // namespace wenet
+}  // namespace com.demo.wenet
 
 #endif  // DECODER_CTC_PREFIX_BEAM_SEARCH_H_

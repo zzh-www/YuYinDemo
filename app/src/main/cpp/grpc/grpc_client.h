@@ -65,6 +65,6 @@ class GrpcClient {
   WENET_DISALLOW_COPY_AND_ASSIGN(GrpcClient);
 };
 
-}  // namespace wenet
+}  // namespace com.demo.wenet
 
 #endif  // GRPC_GRPC_CLIENT_H_

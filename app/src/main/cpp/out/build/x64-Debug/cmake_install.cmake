@@ -1,4 +1,4 @@
-# Install script for directory: C:/Users/86180/Downloads/wenet-main/android/wenet/app/src/main/cpp
+# Install script for directory: C:/Users/86180/Downloads/com.demo.wenet-main/android/com.demo.wenet/app/src/main/cpp
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

@@ -42,6 +42,6 @@ class ContextGraph {
   DISALLOW_COPY_AND_ASSIGN(ContextGraph);
 };
 
-}  // namespace wenet
+}  // namespace com.demo.wenet
 
 #endif  // DECODER_CONTEXT_GRAPH_H_

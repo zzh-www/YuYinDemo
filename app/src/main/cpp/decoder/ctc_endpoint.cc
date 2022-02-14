@@ -61,4 +61,4 @@ bool CtcEndpoint::IsEndpoint(const torch::Tensor& ctc_log_probs,
   return false;
 }
 
-}  // namespace wenet
+}  // namespace com.demo.wenet

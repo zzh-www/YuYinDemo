@@ -112,6 +112,6 @@ class FeaturePipeline {
   std::condition_variable finish_condition_;
 };
 
-}  // namespace wenet
+}  // namespace com.demo.wenet
 
 #endif  // FRONTEND_FEATURE_PIPELINE_H_

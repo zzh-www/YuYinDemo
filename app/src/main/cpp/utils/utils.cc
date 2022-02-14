@@ -29,4 +29,4 @@ float LogAdd(float x, float y) {
   return std::log(std::exp(x - xmax) + std::exp(y - xmax)) + xmax;
 }
 
-}  // namespace wenet
+}  // namespace com.demo.wenet

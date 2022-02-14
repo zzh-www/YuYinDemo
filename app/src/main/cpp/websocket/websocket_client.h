@@ -66,6 +66,6 @@ class WebSocketClient {
   WENET_DISALLOW_COPY_AND_ASSIGN(WebSocketClient);
 };
 
-}  // namespace wenet
+}  // namespace com.demo.wenet
 
 #endif  // WEBSOCKET_WEBSOCKET_CLIENT_H_

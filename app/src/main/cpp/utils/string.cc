@@ -191,4 +191,4 @@ std::string Rtrim(const std::string& str) {
 
 std::string Trim(const std::string& str) { return Rtrim(Ltrim(str)); }
 
-}  // namespace wenet
+}  // namespace com.demo.wenet

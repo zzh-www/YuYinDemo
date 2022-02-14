@@ -268,4 +268,4 @@ void WebSocketServer::Start() {
   }
 }
 
-}  // namespace wenet
+}  // namespace com.demo.wenet

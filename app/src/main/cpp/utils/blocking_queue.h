@@ -91,6 +91,6 @@ class BlockingQueue {
   WENET_DISALLOW_COPY_AND_ASSIGN(BlockingQueue);
 };
 
-}  // namespace wenet
+}  // namespace com.demo.wenet
 
 #endif  // UTILS_BLOCKING_QUEUE_H_

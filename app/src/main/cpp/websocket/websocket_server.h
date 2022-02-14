@@ -98,6 +98,6 @@ class WebSocketServer {
   WENET_DISALLOW_COPY_AND_ASSIGN(WebSocketServer);
 };
 
-}  // namespace wenet
+}  // namespace com.demo.wenet
 
 #endif  // WEBSOCKET_WEBSOCKET_SERVER_H_

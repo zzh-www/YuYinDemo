@@ -34,6 +34,6 @@ class Timer {
  private:
   std::chrono::time_point<std::chrono::steady_clock> time_start_;
 };
-}  // namespace wenet
+}  // namespace com.demo.wenet
 
 #endif  // UTILS_TIMER_H_

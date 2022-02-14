@@ -178,4 +178,4 @@ Status GrpcServer::Recognize(ServerContext* context,
   t.join();
   return Status::OK;
 }
-}  // namespace wenet
+}  // namespace com.demo.wenet

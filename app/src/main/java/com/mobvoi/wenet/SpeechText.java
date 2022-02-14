@@ -1,8 +1,8 @@
 package com.mobvoi.wenet;
 
 /**
- * @ProjectName: wenet
- * @Package: com.mobvoi.wenet
+ * @ProjectName: com.demo.wenet
+ * @Package: com.demo.wenet
  * @ClassName: SpeechText
  * @Description: 描述
  * @Author: ZZH

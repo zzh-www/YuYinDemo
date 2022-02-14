@@ -140,7 +140,7 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
                                               subsampling_cache_,
                                               elayers_output_cache_,
                                               conformer_cnn_cache_};
-    // Refer interfaces in wenet/transformer/asr_model.py
+    // Refer interfaces in com.demo.wenet/transformer/asr_model.py
     auto outputs = model_->torch_model()
                        ->get_method("forward_encoder_chunk")(inputs)
                        .toTuple()
@@ -337,4 +337,4 @@ void TorchAsrDecoder::AttentionRescoring() {
   std::sort(result_.begin(), result_.end(), DecodeResult::CompareFunc);
 }
 
-}  // namespace wenet
+}  // namespace com.demo.wenet

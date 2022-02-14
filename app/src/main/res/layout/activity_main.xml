@@ -12,49 +12,49 @@
         android:id="@+id/recycler"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        VoiceRect:layout_constraintBottom_toTopOf="@+id/button2"
+        VoiceRect:layout_constraintBottom_toTopOf="@+id/capaudio_bt"
         VoiceRect:layout_constraintStart_toStartOf="parent"
         VoiceRect:layout_constraintTop_toTopOf="parent" />
 
     <Button
-        android:id="@+id/button"
+        android:id="@+id/start_bt"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="8dp"
-        android:text="浮窗"
+        android:text="start"
         VoiceRect:layout_constraintBottom_toBottomOf="parent"
         VoiceRect:layout_constraintEnd_toEndOf="parent"
         VoiceRect:layout_constraintStart_toStartOf="parent" />
 
     <Button
-        android:id="@+id/button2"
+        android:id="@+id/init_bt"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="24dp"
         android:layout_marginBottom="32dp"
         android:text="初始化"
-        VoiceRect:layout_constraintBottom_toTopOf="@+id/button"
+        VoiceRect:layout_constraintBottom_toTopOf="@+id/start_bt"
         VoiceRect:layout_constraintStart_toStartOf="parent" />
 
     <Button
-        android:id="@+id/button3"
+        android:id="@+id/capaudio_bt"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="24dp"
         android:layout_marginBottom="32dp"
         android:text="TestNew"
-        VoiceRect:layout_constraintBottom_toTopOf="@+id/button"
+        VoiceRect:layout_constraintBottom_toTopOf="@+id/start_bt"
         VoiceRect:layout_constraintEnd_toEndOf="parent" />
 
     <Button
-        android:id="@+id/button4"
+        android:id="@+id/flow_bt"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Button"
-        VoiceRect:layout_constraintBaseline_toBaselineOf="@+id/button2"
-        VoiceRect:layout_constraintEnd_toStartOf="@+id/button3"
-        VoiceRect:layout_constraintStart_toEndOf="@+id/button2" />
+        android:text="浮窗"
+        VoiceRect:layout_constraintBaseline_toBaselineOf="@+id/capaudio_bt"
+        VoiceRect:layout_constraintEnd_toStartOf="@+id/capaudio_bt"
+        VoiceRect:layout_constraintStart_toEndOf="@+id/init_bt" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

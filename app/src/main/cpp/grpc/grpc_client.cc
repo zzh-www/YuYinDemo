@@ -82,4 +82,4 @@ void GrpcClient::Join() {
     LOG(INFO) << "Recognize rpc failed.";
   }
 }
-}  // namespace wenet
+}  // namespace com.demo.wenet

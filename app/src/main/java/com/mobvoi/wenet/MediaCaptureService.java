@@ -39,6 +39,8 @@ import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
+import com.yuyin.demo.R;
+
 public class MediaCaptureService extends Service {
 
     public static final String ACTION_ALL = "ALL";

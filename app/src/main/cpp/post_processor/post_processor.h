@@ -67,6 +67,6 @@ class PostProcessor {
   WENET_DISALLOW_COPY_AND_ASSIGN(PostProcessor);
 };
 
-}  // namespace wenet
+}  // namespace com.demo.wenet
 
 #endif  // POST_PROCESSOR_POST_PROCESSOR_H_

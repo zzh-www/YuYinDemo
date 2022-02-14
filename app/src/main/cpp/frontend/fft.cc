@@ -118,4 +118,4 @@ int fft(const int* bitrev, const float* sintbl, float* x, float* y, int n) {
   return 0; /* finished successfully */
 }
 
-}  // namespace wenet
+}  // namespace com.demo.wenet

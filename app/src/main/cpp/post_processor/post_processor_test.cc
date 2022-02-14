@@ -42,22 +42,22 @@ TEST(PostProcessorTest, ProcessSpacekMandarinEnglishTest) {
     "▁binbin▁is▁also▁handsome",
     // modeling unit: english word
     // decode type: CtcWfstBeamSearch, " ".join()
-    " life is short i use wenet",
+    " life is short i use com.demo.wenet",
     // modeling unit: mandarin character + english wordpiece
     // decode type: CtcPrefixBeamSearch, "".join()
     "超哥▁is▁the▁most▁handsome",
     // modeling unit: mandarin word + english word
     // decode type: CtcWfstBeamSearch, " ".join()
-    " 人生 苦短 i use wenet",
+    " 人生 苦短 i use com.demo.wenet",
   };
 
   std::vector<std::string> result_lowercase = {
     "震东好帅",
     "吴迪也好帅",
     "binbin is also handsome",
-    "life is short i use wenet",
+    "life is short i use com.demo.wenet",
     "超哥 is the most handsome",
-    "人生苦短i use wenet",
+    "人生苦短i use com.demo.wenet",
   };
 
   std::vector<std::string> result_uppercase = {

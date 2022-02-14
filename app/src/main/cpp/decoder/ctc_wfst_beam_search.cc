@@ -192,4 +192,4 @@ void CtcWfstBeamSearch::RemoveContinuousTags(std::vector<int>* output) {
   }
 }
 
-}  // namespace wenet
+}  // namespace com.demo.wenet

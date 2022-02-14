@@ -95,4 +95,4 @@ int ContextGraph::GetNextState(int cur_state, int word_id, float* score,
   return next_state;
 }
 
-}  // namespace wenet
+}  // namespace com.demo.wenet

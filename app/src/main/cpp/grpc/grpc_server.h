@@ -94,6 +94,6 @@ class GrpcServer final : public ASR::Service {
   DISALLOW_COPY_AND_ASSIGN(GrpcServer);
 };
 
-}  // namespace wenet
+}  // namespace com.demo.wenet
 
 #endif  // GRPC_GRPC_SERVER_H_

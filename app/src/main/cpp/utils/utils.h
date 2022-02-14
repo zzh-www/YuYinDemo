@@ -30,6 +30,6 @@ const char kSpaceSymbol[] = "\xe2\x96\x81";
 // Return the sum of two probabilities in log scale
 float LogAdd(float x, float y);
 
-}  // namespace wenet
+}  // namespace com.demo.wenet
 
 #endif  // UTILS_UTILS_H_

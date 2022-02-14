@@ -10,6 +10,7 @@ import android.util.AttributeSet;
 import android.view.View;
 import androidx.core.content.ContextCompat;
 import java.util.Arrays;
+import com.yuyin.demo.R;
 
 /**
  * 自定义的音频模拟条形图 Created by shize on 2016/9/5.

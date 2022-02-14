@@ -4,9 +4,7 @@ import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.media.AudioAttributes;
 import android.media.AudioFormat;
-import android.media.AudioPlaybackCaptureConfiguration;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.media.projection.MediaProjection;
@@ -16,7 +14,6 @@ import android.os.Bundle;
 import android.os.Process;
 import android.util.Log;
 import android.widget.Button;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -27,6 +24,8 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -36,6 +35,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+
+import com.yuyin.demo.R;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -60,6 +61,11 @@ public class MainActivity extends AppCompatActivity {
   private List<SpeechText> speechList = new ArrayList<SpeechText>();
   private SpeechTextAdapter adapter;
   private RecyclerView recyclerView;
+
+  private Button init_bt;
+  private Button start_bt;
+  private Button flow_bt;
+  private Button cap_bt;
 
   public static String assetFilePath(Context context, String assetName) {
     File file = new File(context.getFilesDir(), assetName);
@@ -94,8 +100,6 @@ public class MainActivity extends AppCompatActivity {
         initRecoder();
       } else {
         Toast.makeText(this, "Permissions denied to record audio", Toast.LENGTH_LONG).show();
-        Button button = findViewById(R.id.button);
-        button.setEnabled(false);
       }
     }
   }
@@ -106,31 +110,32 @@ public class MainActivity extends AppCompatActivity {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
 
-    Button Test = findViewById(R.id.button3);
-    Test.setOnClickListener(v -> {
+    cap_bt = findViewById(R.id.capaudio_bt);
+    init_bt = findViewById(R.id.init_bt);
+    start_bt = findViewById(R.id.start_bt);
+    flow_bt = findViewById(R.id.flow_bt);
+    cap_bt.setOnClickListener(v -> {
       Intent cap = new Intent(this, CaptureAudio.class);
       startActivity(cap);
     });
 
-    Button floatView = findViewById(R.id.button4);
-    floatView.setOnClickListener(v->{
+    flow_bt.setOnClickListener(v->{
       Intent flo = new Intent(this, TestFloat.class);
       startActivity(flo);
     });
 
-    Button button_init = findViewById(R.id.button2);
-    button_init.setOnClickListener(v -> {
+    init_bt.setOnClickListener(v -> {
       requestAudioPermissions(); // 请求录音权限
-//      final String modelPath = new File(assetFilePath(this, "final.zip")).getAbsolutePath();
-//      final String dictPath = new File(assetFilePath(this, "words.txt")).getAbsolutePath();
-//      Recognize.init(modelPath, dictPath);
-    });
-
-    new Thread(() -> {
       final String modelPath = new File(assetFilePath(this, "final.zip")).getAbsolutePath();
       final String dictPath = new File(assetFilePath(this, "words.txt")).getAbsolutePath();
       Recognize.init(modelPath, dictPath);
-    }).start();
+    });
+
+//    new Thread(() -> {
+//      final String modelPath = new File(assetFilePath(this, "final.zip")).getAbsolutePath();
+//      final String dictPath = new File(assetFilePath(this, "words.txt")).getAbsolutePath();
+//      Recognize.init(modelPath, dictPath);
+//    }).start();
 
     // 滚动视图
     LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
@@ -141,23 +146,21 @@ public class MainActivity extends AppCompatActivity {
     recyclerView.setAdapter(adapter);
 
 
-    Button button = findViewById(R.id.button);
-    button.setText("Start Record");
-    button.setOnClickListener(view -> {
+
+    start_bt.setOnClickListener(view -> {
       if (!startRecord) {
         startRecord = true;
         Recognize.reset();
         startRecordThread(); // 开启录制音频的线程
         startAsrThread(); // 开启实时转换音频的线程
         Recognize.startDecode(); // 开始解码
-        button.setText("Stop Record"); //
+        start_bt.setText("Stop Record"); //
 
       } else {
         startRecord = false;
         Recognize.setInputFinished();
-        button.setText("Start Record");
+        start_bt.setText("Start Record");
       }
-      button.setEnabled(false);
     });
   }
 
@@ -210,7 +213,6 @@ public class MainActivity extends AppCompatActivity {
 
     if (record.getState() != AudioRecord.STATE_INITIALIZED) {
       Log.e(LOG_TAG, "Audio Record can't initialize!");
-      return;
     }
 
 
@@ -233,10 +235,10 @@ public class MainActivity extends AppCompatActivity {
         } catch (InterruptedException e) {
           Log.e(LOG_TAG, e.getMessage());
         }
-        Button button = findViewById(R.id.button);
-        if (!button.isEnabled() && startRecord) {
-          runOnUiThread(() -> button.setEnabled(true));
-        }
+//        Button button = findViewById(R.id.button);
+//        if (!button.isEnabled() && startRecord) {
+//          runOnUiThread(() -> button.setEnabled(true));
+//        }
       }
       record.stop();
 //      voiceView.zero();
@@ -262,6 +264,8 @@ public class MainActivity extends AppCompatActivity {
           short[] data = bufferQueue.take();
           // 1. add data to C++ interface
           Recognize.acceptWaveform(data);// 将音频传到模型
+
+          Log.e(LOG_TAG+"GETWRONG","传模型");
           // 2. get partial result
           runOnUiThread(() -> {
             speechList.add(new SpeechText(Recognize.getResult())); // 更新转换结果
@@ -270,6 +274,7 @@ public class MainActivity extends AppCompatActivity {
           });
         } catch (InterruptedException e) {
           Log.e(LOG_TAG, e.getMessage());
+          Log.e(LOG_TAG+"GETWRONG","runonui");
         }
       }
 
@@ -283,8 +288,7 @@ public class MainActivity extends AppCompatActivity {
           });
         } else {
           runOnUiThread(() -> {
-            Button button = findViewById(R.id.button);
-            button.setEnabled(true);
+            start_bt.setEnabled(true);
           });
           break;
         }

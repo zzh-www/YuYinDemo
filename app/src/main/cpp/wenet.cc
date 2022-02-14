@@ -75,7 +75,7 @@ void accept_waveform(JNIEnv *env, jobject, jshortArray jWaveform) {
   env->GetShortArrayRegion(jWaveform, 0, size, &waveform[0]);
   std::vector<float> floatWaveform(waveform.begin(), waveform.end());
   feature_pipeline->AcceptWaveform(floatWaveform);
-//  LOG(INFO) << "wenet accept waveform in ms: "
+//  LOG(INFO) << "com.demo.wenet accept waveform in ms: "
 //            << int(floatWaveform.size() / 16);
 }
 
@@ -130,7 +130,6 @@ jstring get_result(JNIEnv *env, jobject) {
   if (decoder->DecodedSomething()) {
     result = decoder->result()[0].sentence;
   }
-//  LOG(INFO) << "wenet ui result: " << total_result + result;
   return env->NewStringUTF((total_result + result).c_str());
 }
 }  // namespace wenet

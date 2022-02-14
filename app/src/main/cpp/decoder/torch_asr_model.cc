@@ -42,4 +42,4 @@ void TorchAsrModel::Read(const std::string& model_path, const int num_threads) {
             << num_threads;
 }
 
-}  // namespace wenet
+}  // namespace com.demo.wenet

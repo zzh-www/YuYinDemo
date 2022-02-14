@@ -1,22 +1,21 @@
 package com.mobvoi.wenet;
 
-import android.app.Activity;
-import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
+
 
 import java.util.List;
 
+import com.yuyin.demo.R;
+
 /**
- * @ProjectName: wenet
- * @Package: com.mobvoi.wenet
+ * @ProjectName: com.demo.wenet
+ * @Package: com.demo.wenet
  * @ClassName: SpeechTextAdapter
  * @Description: 描述
  * @Author: ZZH

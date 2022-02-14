@@ -103,4 +103,4 @@ void WebSocketClient::SendEndSignal() {
   this->SendTextData(end_message);
 }
 
-}  // namespace wenet
+}  // namespace com.demo.wenet

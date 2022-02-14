@@ -93,6 +93,6 @@ class CtcWfstBeamSearch : public SearchInterface {
   const CtcWfstBeamSearchOptions& opts_;
 };
 
-}  // namespace wenet
+}  // namespace com.demo.wenet
 
 #endif  // DECODER_CTC_WFST_BEAM_SEARCH_H_

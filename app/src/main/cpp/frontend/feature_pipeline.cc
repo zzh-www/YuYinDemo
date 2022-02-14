@@ -97,4 +97,4 @@ void FeaturePipeline::Reset() {
   feature_queue_.Clear();
 }
 
-}  // namespace wenet
+}  // namespace com.demo.wenet

@@ -63,4 +63,4 @@ std::string PostProcessor::Process(const std::string& str, bool finish) {
   return result;
 }
 
-}  // namespace wenet
+}  // namespace com.demo.wenet

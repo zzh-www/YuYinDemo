@@ -121,7 +121,7 @@ void CompileAlignFst(std::vector<int> labels,
   fst::ArcSort(ofst, fst::StdILabelCompare());
 }
 
-}  // namespace wenet
+}  // namespace com.demo.wenet
 
 int main(int argc, char *argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, false);

@@ -13,12 +13,12 @@ repositories {
 android {
     signingConfigs {
         release {
-            storeFile file('wenet.keystore')
+            storeFile file('com.yuyin.demo.keystore')
             storePassword '123456'
-            keyAlias 'wenet'
+            keyAlias 'com.yuyin.demo'
             keyPassword '123456'
         }
-    }
+    }  //  APP签名，非必须
     packagingOptions {
         pickFirst 'lib/arm64-v8a/libc++_shared.so'
     }
@@ -29,7 +29,7 @@ android {
     buildToolsVersion "30.0.3"
 
     defaultConfig {
-        applicationId "com.mobvoi.wenet"
+        applicationId "com.yuyin.demo"
         minSdkVersion 21
         targetSdkVersion 31
         versionCode 1

@@ -198,6 +198,6 @@ class WavWriter {
   int bits_per_sample_;
 };
 
-}  // namespace wenet
+}  // namespace com.demo.wenet
 
 #endif  // FRONTEND_WAV_H_

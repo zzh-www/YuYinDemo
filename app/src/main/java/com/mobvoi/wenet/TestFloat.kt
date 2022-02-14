@@ -8,14 +8,14 @@ import com.lzf.easyfloat.anim.DefaultAnimator
 import com.lzf.easyfloat.enums.ShowPattern
 import com.lzf.easyfloat.enums.SidePattern
 import com.lzf.easyfloat.utils.DisplayUtils
-
+import com.yuyin.demo.R
 
 class TestFloat : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_test_float)
         EasyFloat.with(this)
-            .setLayout(R.layout.default_add_layout)
+            .setLayout(R.layout.floatviewtest)
             .setShowPattern(ShowPattern.ALL_TIME)
             .setSidePattern(SidePattern.RESULT_HORIZONTAL)
             .setTag("Test")

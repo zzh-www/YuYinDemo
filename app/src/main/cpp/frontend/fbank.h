@@ -215,6 +215,6 @@ class Fbank {
   std::vector<float> sintbl_;
 };
 
-}  // namespace wenet
+}  // namespace com.demo.wenet
 
 #endif  // FRONTEND_FBANK_H_

@@ -34,6 +34,6 @@ class SearchInterface {
   virtual const std::vector<std::vector<int>>& Times() const = 0;
 };
 
-}  // namespace wenet
+}  // namespace com.demo.wenet
 
 #endif  // DECODER_SEARCH_INTERFACE_H_

@@ -186,4 +186,4 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
   }
 }
 
-}  // namespace wenet
+}  // namespace com.demo.wenet

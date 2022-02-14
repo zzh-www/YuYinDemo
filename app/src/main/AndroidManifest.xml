@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="com.mobvoi.wenet">
+    package="com.yuyin.demo">
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -17,10 +17,19 @@
         android:theme="@style/Theme.Wenet"
         tools:replace="android:theme">
         <activity
-            android:name=".TestFloat"
+            android:name="com.yuyin.demo.MainActivityView"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="com.mobvoi.wenet.TestFloat"
             android:exported="true" />
         <activity
-            android:name=".MainActivity"
+            android:name="com.mobvoi.wenet.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -30,12 +39,12 @@
         </activity>
 
         <service
-            android:name=".MediaCaptureService"
+            android:name="com.mobvoi.wenet.MediaCaptureService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="mediaProjection" />
 
-        <activity android:name=".CaptureAudio"></activity>
+        <activity android:name="com.mobvoi.wenet.CaptureAudio" />
     </application>
 
 </manifest>
