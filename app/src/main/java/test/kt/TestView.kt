@@ -4,33 +4,28 @@ import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
 import android.view.MotionEvent
-import com.lzf.easyfloat.R
+import androidx.core.content.res.ResourcesCompat
+import androidx.core.graphics.drawable.toBitmap
+import com.lzf.easyfloat.R as easyR
 import com.lzf.easyfloat.interfaces.OnTouchRangeListener
 import com.lzf.easyfloat.utils.DisplayUtils
 import com.lzf.easyfloat.widget.BaseSwitchView
+import com.yuyin.demo.R
 
-/**
- * @author: liuzhenfeng
- * @date: 2020/10/25  11:16
- * @Package: com.lzf.easyfloat.widget
- * @Description:
- */
-class TestView(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0) : BaseSwitchView(context, attrs, defStyleAttr) {
+class TestView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0) : BaseSwitchView(context, attrs, defStyleAttr) {
 
     private var normalColor = Color.parseColor("#99000000")
     private var inRangeColor = Color.parseColor("#99FF0000")
     private var shapeType = 2
 
     private lateinit var paint: Paint
-    private var path = Path()
     private var width = 0f
     private var height = 0f
-    private var rectF = RectF()
     private var region = Region()
-    private val totalRegion = Region()
     private var inRange = false
     private var zoomSize = DisplayUtils.dp2px(context, 4f).toFloat()
     private var listener: OnTouchRangeListener? = null
+    private var myIcon: Bitmap? = ResourcesCompat.getDrawable(context.resources,R.drawable.ic_main,null)?.toBitmap()
 
     init {
         attrs?.apply { initAttrs(this) }
@@ -39,11 +34,11 @@ class TestView(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int 
     }
 
     private fun initAttrs(attrs: AttributeSet) =
-        context.theme.obtainStyledAttributes(attrs, R.styleable.DefaultCloseView, 0, 0).apply {
-            normalColor = getColor(R.styleable.DefaultCloseView_normalColor, normalColor)
-            inRangeColor = getColor(R.styleable.DefaultCloseView_inRangeColor, inRangeColor)
-            shapeType = getInt(R.styleable.DefaultCloseView_shapeType, shapeType)
-            zoomSize = getDimension(R.styleable.DefaultCloseView_zoomSize, zoomSize)
+        context.theme.obtainStyledAttributes(attrs, easyR.styleable.DefaultCloseView, 0, 0).apply {
+            normalColor = getColor(easyR.styleable.DefaultCloseView_normalColor, normalColor)
+            inRangeColor = getColor(easyR.styleable.DefaultCloseView_inRangeColor, inRangeColor)
+            shapeType = getInt(easyR.styleable.DefaultCloseView_shapeType, shapeType)
+            zoomSize = getDimension(easyR.styleable.DefaultCloseView_zoomSize, zoomSize)
         }.recycle()
 
 
@@ -54,6 +49,8 @@ class TestView(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int 
             style = Paint.Style.FILL
             isAntiAlias = true
         }
+
+
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -63,68 +60,17 @@ class TestView(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int 
     }
 
     override fun onDraw(canvas: Canvas?) {
-        path.reset()
-        if (inRange) {
-            paint.color = inRangeColor
-            when (shapeType) {
-                // 半椭圆
-                0 -> {
-                    rectF.set(paddingLeft.toFloat(), 0f, width - paddingRight, height * 2)
-                    path.addOval(rectF, Path.Direction.CW)
-                }
-                // 矩形
-                1 -> {
-                    rectF.set(paddingLeft.toFloat(), 0f, width - paddingRight, height)
-                    path.addRect(rectF, Path.Direction.CW)
-                }
-                // 半圆
-                2 -> path.addCircle(width / 2, height, height, Path.Direction.CW)
-            }
-        } else {
-            paint.color = normalColor
-            when (shapeType) {
-                // 半椭圆
-                0 -> {
-                    rectF.set(
-                        paddingLeft + zoomSize,
-                        zoomSize,
-                        width - paddingRight - zoomSize,
-                        (height - zoomSize) * 2
-                    )
-                    path.addOval(rectF, Path.Direction.CW)
-                    totalRegion.set(
-                        paddingLeft + zoomSize.toInt(),
-                        zoomSize.toInt(),
-                        (width - paddingRight - zoomSize).toInt(),
-                        height.toInt()
-                    )
-                }
-                // 矩形
-                1 -> {
-                    rectF.set(
-                        paddingLeft.toFloat(),
-                        zoomSize,
-                        width - paddingRight,
-                        height
-                    )
-                    path.addRect(rectF, Path.Direction.CW)
-                    totalRegion.set(
-                        paddingLeft,
-                        zoomSize.toInt(),
-                        width.toInt() - paddingRight,
-                        height.toInt()
-                    )
-                }
-                // 半圆
-                2 -> {
-                    path.addCircle(width / 2, height, height - zoomSize, Path.Direction.CW)
-                    totalRegion.set(0, zoomSize.toInt(), width.toInt(), height.toInt())
-                }
-            }
-            region.setPath(path, totalRegion)
-        }
-        canvas?.drawPath(path, paint)
         super.onDraw(canvas)
+        canvas?.apply {
+            // w: 36dp
+            val radius = height/2f
+            drawCircle(radius,radius,radius,paint)
+
+            // 24dp
+            myIcon?.let {
+                drawBitmap(it,radius-it.width/2f,radius-it.height/2f,null)
+            }
+        }
     }
 
     override fun setTouchRangeListener(event: MotionEvent, listener: OnTouchRangeListener?) {

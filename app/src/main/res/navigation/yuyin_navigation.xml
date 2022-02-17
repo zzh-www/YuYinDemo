@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/yuyin_navigation"
+    app:startDestination="@id/main2">
+
+    <fragment
+        android:id="@+id/filesManager"
+        android:name="com.yuyin.demo.FilesManager"
+        android:label="fragment_files_manager"
+        tools:layout="@layout/fragment_files_manager" />
+    <fragment
+        android:id="@+id/runingCapture"
+        android:name="com.yuyin.demo.RuningCapture"
+        android:label="fragment_runing_capture"
+        tools:layout="@layout/fragment_runing_capture" />
+    <fragment
+        android:id="@+id/runingRecord"
+        android:name="com.yuyin.demo.RuningRecord"
+        android:label="fragment_runing_record"
+        tools:layout="@layout/fragment_runing_record" />
+    <fragment
+        android:id="@+id/main2"
+        android:name="com.yuyin.demo.Main"
+        android:label="fragment_main"
+        tools:layout="@layout/fragment_main" />
+</navigation>

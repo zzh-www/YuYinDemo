@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/filesManager"
+        android:icon="@drawable/ic_filemanager"
+        android:title="@string/file_manager" />
+
+    <item
+        android:id="@+id/main"
+        android:icon="@drawable/ic_main"
+        android:title="@string/main" />
+
+    <item
+        android:id="@+id/systemSetting"
+        android:icon="@drawable/ic_setting"
+        android:title="@string/app_setting" />
+
+</menu>
