@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">wenet</string>
+    <string name="app_name">YuYin</string>
     <string name="title_activity_capture">CaptureActivity</string>
     <!-- Strings used for fragments for navigation -->
     <string name="first_fragment_label">First Fragment</string>
@@ -28,4 +28,5 @@
     <string name="attachment_summary_on">Automatically download attachments for incoming emails
     </string>
     <string name="attachment_summary_off">Only download attachments when manually requested</string>
+    <string name="title_activity_settings">SettingsActivity</string>
 </resources>

@@ -17,7 +17,11 @@
         android:theme="@style/Theme.Wenet"
         tools:replace="android:theme">
         <activity
-            android:name="com.yuyin.demo.MainActivityView"
+            android:name=".SettingsActivity"
+            android:exported="false"
+            android:label="@string/title_activity_settings" />
+        <activity
+            android:name=".MainActivityView"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

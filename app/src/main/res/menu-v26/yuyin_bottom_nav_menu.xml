@@ -2,24 +2,18 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item
-        android:id="@+id/filesManager"
+        android:id="@+id/main_dest"
+        android:icon="@drawable/ic_main"
+        android:title="@string/main"
+        android:checked="true"
+        android:checkable="true"/>
+    <item
+        android:id="@+id/filesManager_dest"
         android:icon="@drawable/ic_filemanager"
         android:title="@string/file_manager"
         android:checked="false"
         android:checkable="true"/>
 
-    <item
-        android:id="@+id/main"
-        android:icon="@drawable/ic_main"
-        android:title="@string/main"
-        android:checked="true"
-        android:checkable="true"/>
 
-    <item
-        android:id="@+id/systemSetting"
-        android:icon="@drawable/ic_setting"
-        android:title="@string/app_setting"
-        android:checked="false"
-        android:checkable="true"/>
 
 </menu>

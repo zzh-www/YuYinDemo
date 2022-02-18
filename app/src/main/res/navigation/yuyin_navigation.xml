@@ -3,26 +3,42 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/yuyin_navigation"
-    app:startDestination="@id/main2">
+    app:startDestination="@id/main_dest">
 
     <fragment
-        android:id="@+id/filesManager"
+        android:id="@+id/filesManager_dest"
         android:name="com.yuyin.demo.FilesManager"
         android:label="fragment_files_manager"
         tools:layout="@layout/fragment_files_manager" />
     <fragment
-        android:id="@+id/runingCapture"
+        android:id="@+id/runingCapture_dest"
         android:name="com.yuyin.demo.RuningCapture"
         android:label="fragment_runing_capture"
         tools:layout="@layout/fragment_runing_capture" />
     <fragment
-        android:id="@+id/runingRecord"
+        android:id="@+id/runingRecord_dest"
         android:name="com.yuyin.demo.RuningRecord"
         android:label="fragment_runing_record"
         tools:layout="@layout/fragment_runing_record" />
     <fragment
-        android:id="@+id/main2"
+        android:id="@+id/main_dest"
         android:name="com.yuyin.demo.Main"
         android:label="fragment_main"
-        tools:layout="@layout/fragment_main" />
+        tools:layout="@layout/fragment_main" >
+        <action
+            android:id="@+id/action_main_dest_to_runingCapture_dest"
+            app:destination="@id/runingCapture_dest"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+        <action
+            android:id="@+id/action_main_dest_to_runingRecord_dest"
+            app:destination="@id/runingRecord_dest"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right"/>
+    </fragment>
+
 </navigation>

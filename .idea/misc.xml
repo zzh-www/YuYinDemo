@@ -13,7 +13,7 @@
         <entry key="..\:/Users/86180/Desktop/YuYinDemo/app/src/main/res/drawable/round_background.xml" value="0.3865" />
         <entry key="..\:/Users/86180/Desktop/YuYinDemo/app/src/main/res/layout/activity_capture_audio.xml" value="0.3704710144927536" />
         <entry key="..\:/Users/86180/Desktop/YuYinDemo/app/src/main/res/layout/activity_main.xml" value="0.21614583333333334" />
-        <entry key="..\:/Users/86180/Desktop/YuYinDemo/app/src/main/res/layout/activity_main_view.xml" value="0.25" />
+        <entry key="..\:/Users/86180/Desktop/YuYinDemo/app/src/main/res/layout/activity_main_view.xml" value="0.30027173913043476" />
         <entry key="..\:/Users/86180/Desktop/YuYinDemo/app/src/main/res/layout/activity_test_float.xml" value="0.20104166666666667" />
         <entry key="..\:/Users/86180/Desktop/YuYinDemo/app/src/main/res/layout/file_item.xml" value="0.34148550724637683" />
         <entry key="..\:/Users/86180/Desktop/YuYinDemo/app/src/main/res/layout/floatviewtest.xml" value="0.3532608695652174" />
@@ -24,8 +24,10 @@
         <entry key="..\:/Users/86180/Desktop/YuYinDemo/app/src/main/res/layout/fragment_system_setting.xml" value="0.34148550724637683" />
         <entry key="..\:/Users/86180/Desktop/YuYinDemo/app/src/main/res/layout/root_preferences.xml" value="0.34148550724637683" />
         <entry key="..\:/Users/86180/Desktop/YuYinDemo/app/src/main/res/layout/round_button_background.xml" value="0.34148550724637683" />
+        <entry key="..\:/Users/86180/Desktop/YuYinDemo/app/src/main/res/layout/settings_activity.xml" value="0.20104166666666667" />
         <entry key="..\:/Users/86180/Desktop/YuYinDemo/app/src/main/res/layout/text_item.xml" value="0.34148550724637683" />
         <entry key="..\:/Users/86180/Desktop/YuYinDemo/app/src/main/res/menu-v26/yuyin_bottom_nav_menu.xml" value="0.38645833333333335" />
+        <entry key="..\:/Users/86180/Desktop/YuYinDemo/app/src/main/res/menu/bar_menu.xml" value="0.38645833333333335" />
         <entry key="..\:/Users/86180/Desktop/YuYinDemo/app/src/main/res/menu/yuyin_bottom_nav_menu.xml" value="0.38645833333333335" />
         <entry key="..\:/Users/86180/Desktop/YuYinDemo/app/src/main/res/xml/root_preferences.xml" value="0.3704710144927536" />
       </map>
