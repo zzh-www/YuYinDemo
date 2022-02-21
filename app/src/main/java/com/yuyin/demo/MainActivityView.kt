@@ -1,24 +1,58 @@
 package com.yuyin.demo
 
+import android.Manifest
+import android.content.Context
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
+import android.content.pm.PackageManager
+import android.media.AudioFormat
+import android.media.AudioRecord
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.NavHostFragment
-import androidx.navigation.ui.*
+import androidx.navigation.ui.AppBarConfiguration
+import androidx.navigation.ui.navigateUp
+import androidx.navigation.ui.setupActionBarWithNavController
+import androidx.navigation.ui.setupWithNavController
+import androidx.preference.PreferenceManager
+import com.mobvoi.wenet.MainActivity
+import com.mobvoi.wenet.Recognize
 import com.yuyin.demo.databinding.ActivityMainViewBinding
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 
 class MainActivityView : AppCompatActivity() {
 
     // 视图绑定
     private lateinit var binding: ActivityMainViewBinding
 
+    // 所需请求的权限
+    private val appPermissions: Array<String> = arrayOf<String>(
+        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+        Manifest.permission.RECORD_AUDIO,
+        Manifest.permission.FOREGROUND_SERVICE
+    )
+    private val m_ALL_PERMISSIONS_PERMISSION_CODE = 1000
+
+
+    private val MY_PERMISSIONS_RECORD_AUDIO = 1
+    private var miniBufferSize = 0
+    private val LOG_TAG = "YUYIN"
+    private val SAMPLE_RATE = 16000 // The sampling rate
+
+    private val MAX_QUEUE_SIZE = 2500
     // 层级配置
     private lateinit var appBarConfiguration: AppBarConfiguration
+
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,6 +78,34 @@ class MainActivityView : AppCompatActivity() {
 
         // 应用底层导航菜单
         setupBottomNavMenu(navController)
+
+
+        // 权限
+        checkRequestPermissions()
+
+        // 模型
+        var model_name = "final"
+        var dic_name = "words"
+        val sharedPreference = PreferenceManager.getDefaultSharedPreferences(this)
+        val mod = sharedPreference.getString("languageOfModule","zh")
+        model_name = "$`model_name`_$`mod`.zip"
+        dic_name = "$`dic_name`_$`mod`.txt"
+        try {
+            init_model(model_name,dic_name)
+        } catch (exception:Exception) {
+            Log.e(LOG_TAG, "can not init model")
+        }
+
+
+
+
+    }
+
+
+    fun init_model(model: String, dic: String) {
+        val model_path = File(assetFilePath(this,model)).absolutePath
+        val dic_path = File(assetFilePath(this,dic)).absolutePath
+        Recognize.init(model_path,dic_path)
     }
 
     override fun onDestroy() {
@@ -83,7 +145,106 @@ class MainActivityView : AppCompatActivity() {
         setupActionBarWithNavController(navController,appBarConfig)
     }
 
+    private fun requestAudioPermissions() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this, arrayOf(Manifest.permission.RECORD_AUDIO),
+                MY_PERMISSIONS_RECORD_AUDIO
+            )
+        } else {
+            initRecoder()
+        }
+    }
 
 
+    private fun initRecoder()
+    {
+//    // buffer size in bytes 1280
+
+//    // buffer size in bytes 1280
+        miniBufferSize = AudioRecord.getMinBufferSize(
+            SAMPLE_RATE,
+            AudioFormat.CHANNEL_IN_MONO,
+            AudioFormat.ENCODING_PCM_16BIT
+        )
+        if (miniBufferSize == AudioRecord.ERROR || miniBufferSize == AudioRecord.ERROR_BAD_VALUE) {
+            Log.e(LOG_TAG, "Audio buffer can't initialize!")
+            return
+        }
+    }
+
+
+    fun checkRequestPermissions(): Boolean {
+        val listPermissionsNeeded: MutableList<String> = ArrayList()
+        for (permission in appPermissions) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    permission
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                listPermissionsNeeded.add(permission)
+            }
+        }
+        if (!listPermissionsNeeded.isEmpty()) {
+            ActivityCompat.requestPermissions(
+                this,
+                listPermissionsNeeded.toTypedArray(),
+                m_ALL_PERMISSIONS_PERMISSION_CODE
+            )
+            return false
+        }
+        return true
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+//        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == m_ALL_PERMISSIONS_PERMISSION_CODE) {
+            val permissionResults = HashMap<String, Int>()
+            var deniedCount = 0
+            for (permissionIndx in permissions.indices) {
+                if (grantResults[permissionIndx] != PackageManager.PERMISSION_GRANTED) {
+                    permissionResults[permissions[permissionIndx]] = grantResults[permissionIndx]
+                    deniedCount++
+                }
+            }
+            if (deniedCount != 0) Log.e(
+                LOG_TAG,
+                "Permission Denied!  Now you must allow  permission from settings."
+            )
+        }
+    }
+
+    fun assetFilePath(context: Context, assetName: String): String? {
+        val file = File(context.filesDir, assetName)
+        if (file.exists() && file.length() > 0) {
+            return file.absolutePath
+        }
+        try {
+            context.assets.open(assetName).use { `is` ->
+                FileOutputStream(file).use { os ->
+                    val buffer = ByteArray(4 * 1024)
+                    var read: Int
+                    while (`is`.read(buffer).also { read = it } != -1) {
+                        os.write(buffer, 0, read)
+                    }
+                    os.flush()
+                }
+                return file.absolutePath
+            }
+        } catch (e: IOException) {
+            Log.e(
+                LOG_TAG,
+                "Error process asset $assetName to file path"
+            )
+        }
+        return null
+    }
 
 }

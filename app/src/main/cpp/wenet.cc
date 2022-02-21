@@ -23,6 +23,7 @@
 #include "post_processor/post_processor.h"
 #include "utils/log.h"
 #include "utils/string.h"
+#include "queue"
 
 namespace wenet {
 
@@ -33,6 +34,8 @@ std::shared_ptr<TorchAsrDecoder> decoder;
 std::shared_ptr<DecodeResource> resource;
 DecodeState state = kEndBatch;
 std::string total_result;  // NOLINT
+std::queue<std::string> results;
+std::string current_string;
 
 void init(JNIEnv *env, jobject, jstring jModelPath, jstring jDictPath) {
   resource = std::make_shared<DecodeResource>();
@@ -102,7 +105,10 @@ void decode_thread_func() {
       break;
     } else if (state == kEndpoint) {
       LOG(INFO) << "wenet endpoint final result: " << result;
-      total_result += result + "，";
+      if (result!="") {
+        results.push(result+" ");
+      }
+      total_result += result + ",";
       decoder->ResetContinuousDecoding();
     } else {
       if (decoder->DecodedSomething()) {
@@ -125,12 +131,20 @@ jboolean get_finished(JNIEnv *env, jobject) {
   return JNI_FALSE;
 }
 
+
+
 jstring get_result(JNIEnv *env, jobject) {
-  std::string result;
-  if (decoder->DecodedSomething()) {
-    result = decoder->result()[0].sentence;
+  std::string result = "";
+  if (results.empty()) {
+    if(decoder->DecodedSomething()) {
+        result = decoder->result()[0].sentence;
+    }
+  } else {
+    result = results.front();
+    results.pop();
   }
-  return env->NewStringUTF((total_result + result).c_str());
+
+  return env->NewStringUTF(result.c_str());
 }
 }  // namespace wenet
 
@@ -148,13 +162,16 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *) {
   static const JNINativeMethod methods[] = {
     {"init", "(Ljava/lang/String;Ljava/lang/String;)V",
      reinterpret_cast<void *>(wenet::init)},
-    {"reset", "()V", reinterpret_cast<void *>(wenet::reset)},
+    {"reset", "()V",
+     reinterpret_cast<void *>(wenet::reset)},
     {"acceptWaveform", "([S)V",
      reinterpret_cast<void *>(wenet::accept_waveform)},
     {"setInputFinished", "()V",
      reinterpret_cast<void *>(wenet::set_input_finished)},
-    {"getFinished", "()Z", reinterpret_cast<void *>(wenet::get_finished)},
-    {"startDecode", "()V", reinterpret_cast<void *>(wenet::start_decode)},
+    {"getFinished", "()Z",
+     reinterpret_cast<void *>(wenet::get_finished)},
+    {"startDecode", "()V",
+     reinterpret_cast<void *>(wenet::start_decode)},
     {"getResult", "()Ljava/lang/String;",
      reinterpret_cast<void *>(wenet::get_result)},
   };

@@ -151,7 +151,9 @@ public class CaptureAudio extends AppCompatActivity {
             m_actionReceiver = new CaptureAudioReceiver();
             registerReceiver(m_actionReceiver, filter);
         }).start();
+
         checkRequestPermissions();
+
         new Thread(()->{
             Intent i = new Intent(this, MediaCaptureService.class);
             bindService(i,connection, Context.BIND_AUTO_CREATE);

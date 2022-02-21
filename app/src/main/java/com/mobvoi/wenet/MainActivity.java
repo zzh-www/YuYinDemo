@@ -126,14 +126,14 @@ public class MainActivity extends AppCompatActivity {
 
     init_bt.setOnClickListener(v -> {
       requestAudioPermissions(); // 请求录音权限
-      final String modelPath = new File(assetFilePath(this, "final.zip")).getAbsolutePath();
-      final String dictPath = new File(assetFilePath(this, "words.txt")).getAbsolutePath();
+      final String modelPath = new File(assetFilePath(this, "final_zh.zip")).getAbsolutePath();
+      final String dictPath = new File(assetFilePath(this, "words_zh.txt")).getAbsolutePath();
       Recognize.init(modelPath, dictPath);
     });
 
 //    new Thread(() -> {
-//      final String modelPath = new File(assetFilePath(this, "final.zip")).getAbsolutePath();
-//      final String dictPath = new File(assetFilePath(this, "words.txt")).getAbsolutePath();
+//      final String modelPath = new File(assetFilePath(this, "final_zh.zip")).getAbsolutePath();
+//      final String dictPath = new File(assetFilePath(this, "words_zh.txt")).getAbsolutePath();
 //      Recognize.init(modelPath, dictPath);
 //    }).start();
 

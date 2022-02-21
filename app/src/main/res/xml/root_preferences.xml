@@ -8,7 +8,7 @@
         <!--            app:useSimpleSummaryProvider="true" />-->
 
         <ListPreference
-            app:defaultValue="ch"
+            app:defaultValue="zh"
             app:entries="@array/language_entries"
             app:entryValues="@array/language_values"
             app:key="languageOfModule"
