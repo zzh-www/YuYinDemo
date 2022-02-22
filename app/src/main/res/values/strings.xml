@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">YuYin</string>
+    <string name="app_name">YuYinDemo</string>
     <string name="title_activity_capture">CaptureActivity</string>
     <!-- Strings used for fragments for navigation -->
     <string name="first_fragment_label">First Fragment</string>
