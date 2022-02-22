@@ -132,7 +132,7 @@ jboolean get_finished(JNIEnv *env, jobject) {
 }
 
 
-
+// 更改以获取段句
 jstring get_result(JNIEnv *env, jobject) {
   std::string result = "";
   if (results.empty()) {

@@ -1,7 +1,7 @@
 package com.yuyin.demo;
-
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
@@ -11,6 +11,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -25,9 +26,7 @@ import com.mobvoi.wenet.Recognize;
 import com.yuyin.demo.databinding.FragmentRuningRecordBinding;
 
 import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
+
 
 
 public class RuningRecord extends Fragment {
@@ -39,14 +38,20 @@ public class RuningRecord extends Fragment {
     private static final int SAMPLE_RATE = 16000;  // The sampling rate
     private static final int MAX_QUEUE_SIZE = 2500;  // 100 seconds audio, 1 / 0.04 * 100
     private AudioRecord record = null;
-    private boolean startRecord = false;
+
     private int miniBufferSize = 0;
-    private final BlockingQueue<short[]> bufferQueue = new ArrayBlockingQueue<>(MAX_QUEUE_SIZE);
+
 
     // 滚动视图
-    private List<SpeechText> speechList = new ArrayList<SpeechText>();
+    private ArrayList<SpeechText> speechList = new ArrayList<SpeechText>();
     private SpeechTextAdapter adapter;
     private RecyclerView recyclerView;
+
+    // ViewModel
+    private YuyinViewModel model;
+
+
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -69,43 +74,71 @@ public class RuningRecord extends Fragment {
 
         super.onViewCreated(view, savedInstanceState);
 
+        model = new ViewModelProvider(requireActivity()).get(YuyinViewModel.class);
+
         // 滚动视图
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getContext());
         recyclerView = binding.recyclerRunRecord;
         recyclerView.setLayoutManager(linearLayoutManager);
-        speechList.add(new SpeechText("Hi"));
+        if (model.getResultsSize()==null || model.getResultsSize()<1) {
+            speechList.add(new SpeechText("Hi"));
+        } else {
+            speechList = model.getResults().getValue();
+        }
         adapter = new SpeechTextAdapter(speechList);
         recyclerView.setAdapter(adapter);
+        // false false
+        // true true
 
+        if (model.getChange_senor()) {
+            // 屏幕旋转 而重构
 
-        initRecorder();
-
-        Recognize.reset();
-
-        startRecordThread();
-
-        startRecord = true;
-
-        Recognize.startDecode();
-
-        startAsrThread();
+            // 旋转前正在录制 应该继续录制
+            if (model.getStartRecord()) {
+                initRecorder();
+                startRecordThread();
+                binding.stopBtRunRecord.setText("stop");
+                binding.saveBtRunRecord.setVisibility(View.INVISIBLE);
+                binding.saveBtRunRecord.setEnabled(false);
+            } else {
+                binding.stopBtRunRecord.setText("start");
+                binding.saveBtRunRecord.setVisibility(View.VISIBLE);
+                binding.saveBtRunRecord.setEnabled(true);
+            }
+        } else {
+            // 正常启动绘制
+                initRecorder();
+                startRecordThread();
+                binding.stopBtRunRecord.setText("stop");
+                binding.saveBtRunRecord.setVisibility(View.INVISIBLE);
+                binding.saveBtRunRecord.setEnabled(false);
+                Recognize.reset();
+                Recognize.startDecode();
+                startAsrThread();
+        }
 
 
 
         binding.stopBtRunRecord.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //TODO stopASR
-                if (startRecord) {
+                //只需停止录音即可
+                if (model.getStartRecord()) {
                     getActivity().runOnUiThread(()->{
-                        startRecord = false;
+                        binding.stopBtRunRecord.setEnabled(false);
+                        model.setStartRecord(false);
+                        binding.stopBtRunRecord.setText("start");
+                        binding.saveBtRunRecord.setVisibility(View.VISIBLE);
+                        binding.saveBtRunRecord.setEnabled(true);
                     });
                 } else {
                     initRecorder();
                     startRecordThread();
-                    startRecord = true;
-                    Recognize.startDecode();
-                    startAsrThread();
+                    model.setStartRecord(true);
+                    binding.saveBtRunRecord.setVisibility(View.INVISIBLE);
+                    binding.saveBtRunRecord.setEnabled(false);
+                    // Recognize.startDecode();
+                    // startAsrThread();
                 }
             }
         });
@@ -119,9 +152,28 @@ public class RuningRecord extends Fragment {
     }
 
     @Override
+    public void onConfigurationChanged(@NonNull Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+//        model.setChange_senor(true); // 标记屏幕旋转
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        getActivity().runOnUiThread(()->{
+            model.setStartRecord(false);
+            model.setStartAsr(false);
+            binding = null;
+            Recognize.reset();
+        });
+
+        model.getResults().setValue(speechList);
+    }
+    @Override
     public void onDestroy() {
+        model.getResults().getValue().clear();
+        model.getBufferQueue().clear();
         super.onDestroy();
-        binding = null;
     }
 
     private void initRecorder() {
@@ -153,43 +205,47 @@ public class RuningRecord extends Fragment {
     }
 
     private void startRecordThread() {
+//        model.setStartRecord(true);
         new Thread(() -> {
 //      VoiceRectView voiceView = findViewById(R.id.voiceRectView);
             record.startRecording();
             getActivity().runOnUiThread(()->{
-                    binding.stopBtRunRecord.setText("stop");
+                binding.stopBtRunRecord.setText("stop");
             });
             Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO);
-            while (startRecord) {
+            while (model.getStartRecord()) {
                 short[] buffer = new short[miniBufferSize / 2];
                 int read = record.read(buffer, 0, buffer.length);
 //        voiceView.add(calculateDb(buffer));
                 try {
                     if (AudioRecord.ERROR_INVALID_OPERATION != read) {
-                        bufferQueue.put(buffer);
+//                        bufferQueue.put(buffer)
+                        model.getBufferQueue().put(buffer);
                     }
                 } catch (InterruptedException e) {
                     Log.e(LOG_TAG, e.getMessage());
                 }
-//        Button button = findViewById(R.id.button);
-//        if (!button.isEnabled() && startRecord) {
-//          runOnUiThread(() -> button.setEnabled(true));
-//        }
+
             }
             record.stop();
+
+            if (binding != null) {
+                getActivity().runOnUiThread(()->{
+                    if (binding != null)
+                        binding.stopBtRunRecord.setEnabled(true); });
+            }
 //      voiceView.zero();
         }).start();
     }
 
     private void startAsrThread() {
         new Thread(() -> {
-            int start = 0;
-            StringBuilder pre_string = new StringBuilder();
             // Send all data
-            while (startRecord || bufferQueue.size() > 0) {
+            model.setStartAsr(true);
+            while (model.getStartAsr() || model.getBufferQueue().size() > 0) {
                 try {
-
-                    short[] data = bufferQueue.take();
+                    if(binding==null) break;
+                    short[] data = model.getBufferQueue().take();
                     // 1. add data to C++ interface
                     Recognize.acceptWaveform(data);// 将音频传到模型
 
@@ -211,8 +267,10 @@ public class RuningRecord extends Fragment {
                             adapter.notifyItemChanged(speechList.size()-1);
 //                            recyclerView.scrollToPosition(speechList.size()-1);
                         });
-                            // 部分结果
+                        // 部分结果
                     }
+
+
 
                 } catch (Exception e) {
                     Log.e(LOG_TAG, e.getMessage());
@@ -220,38 +278,23 @@ public class RuningRecord extends Fragment {
                 }
             }
 
-            // Wait for final result
-            while (true) {
-                // get result
-                String result = Recognize.getResult();
-                getActivity().runOnUiThread(()->{
-                    binding.stopBtRunRecord.setEnabled(false);
-                });
-                if (result.equals("")) continue;
-                if (!Recognize.getFinished()) {
-                    if (result.endsWith(" ")) {
-                        getActivity().runOnUiThread(()->{
-                            speechList.get(speechList.size()-1).setText(result.trim());
-                            adapter.notifyItemChanged(speechList.size()-1);
-                            speechList.add(new SpeechText("..."));
-                            adapter.notifyItemInserted(speechList.size()-1);
-                            recyclerView.scrollToPosition(speechList.size()-1);
-                        });
-                    } else {
-                        getActivity().runOnUiThread(()->{
-                            // 部分结果
-                            speechList.get(speechList.size()-1).setText(result);
-                            adapter.notifyItemChanged(speechList.size()-1);
-                        });
-                    }
-                } else {
-                    getActivity().runOnUiThread(() -> {
-                        binding.stopBtRunRecord.setText("start");
-                        binding.stopBtRunRecord.setEnabled(true);
-                    });
-                    break;
-                }
-            }
+//            // Wait for final result
+//            while (model.getStartAsr()) {
+//                // get result
+//                String result = Recognize.getResult();
+//                if (!Recognize.getFinished()) {
+//                    if (result.endsWith(" ")) {
+//                        model.getResults().getValue().get(model.getResultsSize()-1).setText(result.trim());
+//                        model.getResults().getValue().add(new SpeechText("..."));
+//                    } else {
+//                        try {
+//                            model.getResults().getValue().get(model.getResultsSize()-1).setText(result.trim());
+//                        }
+//                    }
+//                } else {
+//                    break;
+//                }
+//            }
         }).start();
     }
 }

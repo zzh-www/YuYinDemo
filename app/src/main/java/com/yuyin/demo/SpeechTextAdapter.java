@@ -11,7 +11,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.List;
 
-public class SpeechTextAdapter extends RecyclerView.Adapter<com.mobvoi.wenet.SpeechTextAdapter.ViewHolder> {
+public class SpeechTextAdapter extends RecyclerView.Adapter<SpeechTextAdapter.ViewHolder> {
     private List<SpeechText> dataList;
 
     public SpeechTextAdapter(List<SpeechText> data) {
@@ -20,13 +20,13 @@ public class SpeechTextAdapter extends RecyclerView.Adapter<com.mobvoi.wenet.Spe
 
     @NonNull
     @Override
-    public com.mobvoi.wenet.SpeechTextAdapter.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+    public SpeechTextAdapter.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.text_item, parent, false);
-        return new com.mobvoi.wenet.SpeechTextAdapter.ViewHolder(view);
+        return new SpeechTextAdapter.ViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull com.mobvoi.wenet.SpeechTextAdapter.ViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull SpeechTextAdapter.ViewHolder holder, int position) {
         SpeechText speechText = dataList.get(position);
         holder.getSpeech_view().setText(speechText.getText());
     }

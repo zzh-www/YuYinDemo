@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.os.Bundle
@@ -11,10 +12,12 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
+import androidx.navigation.NavDestination
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
@@ -22,7 +25,6 @@ import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import androidx.preference.PreferenceManager
-import com.mobvoi.wenet.MainActivity
 import com.mobvoi.wenet.Recognize
 import com.yuyin.demo.databinding.ActivityMainViewBinding
 import java.io.File
@@ -48,7 +50,6 @@ class MainActivityView : AppCompatActivity() {
     private val LOG_TAG = "YUYIN"
     private val SAMPLE_RATE = 16000 // The sampling rate
 
-    private val MAX_QUEUE_SIZE = 2500
     // 层级配置
     private lateinit var appBarConfiguration: AppBarConfiguration
 
@@ -79,6 +80,35 @@ class MainActivityView : AppCompatActivity() {
         // 应用底层导航菜单
         setupBottomNavMenu(navController)
 
+        val model: YuyinViewModel by viewModels()
+
+        // 控制底部导航条只出现在main_dest fileManager_dest
+        navController.addOnDestinationChangedListener(object : NavController.OnDestinationChangedListener {
+            override fun onDestinationChanged(
+                controller: NavController,
+                destination: NavDestination,
+                arguments: Bundle?
+            ) {
+                if (destination.id == R.id.runingCapture_dest || destination.id == R.id.runingRecord_dest) {
+                    runOnUiThread {
+                        binding.mainBottomNavigation.visibility =  View.INVISIBLE
+                        binding.mainBottomNavigation.isEnabled = false
+                    }
+                } else {
+                    runOnUiThread {
+                        binding.mainBottomNavigation.visibility =  View.VISIBLE
+                        binding.mainBottomNavigation.isEnabled = true
+                        // 回到顶层清除数据
+                        model.results.value?.clear()
+                        model.bufferQueue.clear()
+                        model.startAsr = true
+                        model.startRecord = true
+                    }
+
+                }
+            }
+        })
+
 
         // 权限
         checkRequestPermissions()
@@ -101,6 +131,9 @@ class MainActivityView : AppCompatActivity() {
 
     }
 
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+    }
 
     fun init_model(model: String, dic: String) {
         val model_path = File(assetFilePath(this,model)).absolutePath
@@ -110,7 +143,6 @@ class MainActivityView : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        binding
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -246,5 +278,6 @@ class MainActivityView : AppCompatActivity() {
         }
         return null
     }
+
 
 }
