@@ -15,6 +15,7 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.os.Environment;
 import android.os.Process;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -25,8 +26,16 @@ import com.mobvoi.wenet.Recognize;
 
 import com.yuyin.demo.databinding.FragmentRuningRecordBinding;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+
 import java.util.ArrayList;
 
+import java.util.Date;
 
 
 public class RuningRecord extends Fragment {
@@ -36,7 +45,6 @@ public class RuningRecord extends Fragment {
 
     // record
     private static final int SAMPLE_RATE = 16000;  // The sampling rate
-    private static final int MAX_QUEUE_SIZE = 2500;  // 100 seconds audio, 1 / 0.04 * 100
     private AudioRecord record = null;
 
     private int miniBufferSize = 0;
@@ -147,6 +155,29 @@ public class RuningRecord extends Fragment {
             @Override
             public void onClick(View v) {
                 //TODO saveResult
+                Long timeStamp = System.currentTimeMillis();
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd:HH:mm:ss");
+                String filename = sdf.format(new Date(Long.parseLong(String.valueOf(timeStamp))))+".txt";
+                File dir_path = getContext().getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS);
+                File file = new File(dir_path.getAbsoluteFile()+File.separator+"YuYin"+File.separator+filename);
+                StringBuilder total_result = new StringBuilder();
+
+                for (SpeechText i : speechList ) {
+                    total_result.append(i.getText());
+                    total_result.append("\n");
+                }
+                try {
+                    if (file.createNewFile()) {
+                        try (OutputStream op = new FileOutputStream(file.getAbsolutePath())) {
+                            op.write(total_result.toString().getBytes(StandardCharsets.UTF_8));
+                        }
+                    }
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+
             }
         });
     }

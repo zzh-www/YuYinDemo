@@ -18,6 +18,8 @@ public class RuningCapture extends Fragment {
     private FragmentRuningCaptureBinding binding;
 
 
+
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

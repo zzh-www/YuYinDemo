@@ -7,12 +7,16 @@ import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.media.AudioFormat
 import android.media.AudioRecord
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.Settings
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import androidx.activity.viewModels
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -30,6 +34,7 @@ import com.yuyin.demo.databinding.ActivityMainViewBinding
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.nio.file.Paths
 
 class MainActivityView : AppCompatActivity() {
 
@@ -40,7 +45,7 @@ class MainActivityView : AppCompatActivity() {
     private val appPermissions: Array<String> = arrayOf<String>(
         Manifest.permission.WRITE_EXTERNAL_STORAGE,
         Manifest.permission.RECORD_AUDIO,
-        Manifest.permission.FOREGROUND_SERVICE
+        Manifest.permission.FOREGROUND_SERVICE,
     )
     private val m_ALL_PERMISSIONS_PERMISSION_CODE = 1000
 
@@ -129,16 +134,30 @@ class MainActivityView : AppCompatActivity() {
 
 
 
+//        getExternalFilesDir()
+        val docDirPath = getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+        val yuYinDir = Paths.get(docDirPath?.absolutePath, "YuYin").toFile()
+        if (!yuYinDir.exists()) {
+            yuYinDir.mkdir()
+        }
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
     }
 
+
+
     fun init_model(model: String, dic: String) {
         val model_path = File(assetFilePath(this,model)).absolutePath
         val dic_path = File(assetFilePath(this,dic)).absolutePath
         Recognize.init(model_path,dic_path)
+    }
+
+
+    override fun onStart() {
+        super.onStart()
+
     }
 
     override fun onDestroy() {
@@ -227,6 +246,8 @@ class MainActivityView : AppCompatActivity() {
             )
             return false
         }
+
+
         return true
     }
 

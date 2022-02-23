@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.yuyin.demo">
 
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
@@ -16,6 +16,16 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Wenet"
         tools:replace="android:theme">
+
+        <provider
+            android:authorities="com.yuyin.demo.fileprovider"
+            android:name="androidx.core.content.FileProvider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/filepaths"/>
+        </provider>
+
         <activity
             android:name=".SettingsActivity"
             android:exported="false"

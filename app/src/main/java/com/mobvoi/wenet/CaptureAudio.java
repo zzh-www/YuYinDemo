@@ -33,7 +33,7 @@ import java.util.List;
 
 import com.yuyin.demo.R;
 
-@RequiresApi(api = Build.VERSION_CODES.P)
+
 public class CaptureAudio extends AppCompatActivity {
     private final String Tag = "ZZH";
 

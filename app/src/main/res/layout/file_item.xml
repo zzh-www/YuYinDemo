@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="wrap_content"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
 
@@ -12,7 +12,7 @@
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="1dp"
         app:cardCornerRadius="5dp"
-        app:cardBackgroundColor="@color/purple_500">
+        android:layout_marginTop="5dp">
 
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/file_card_text"
@@ -20,19 +20,21 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:singleLine="true"
+            android:text="20010122054533.txt"
             android:textAlignment="center"
-            android:textStyle="bold"
-            android:text="20010122054533.txt" />
+            android:textAppearance="@style/TextAppearance.AppCompat.Large"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
         <androidx.appcompat.widget.AppCompatImageView
             android:id="@+id/file_card_bt"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:src="@drawable/ic_file"
-            android:layout_gravity="end"
-            android:background="@color/purple_700"/>
+            android:layout_gravity="end|center_vertical"/>
 
 
 
     </com.google.android.material.card.MaterialCardView>
 
-</FrameLayout>
+</LinearLayout>
