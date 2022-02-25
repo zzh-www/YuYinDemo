@@ -13,4 +13,13 @@
     <color name="blue">#b8f1ed</color>
     <color name="top_color">#b7d28d</color>
     <color name="down_color">#b8f1ed</color>
+
+    <color name="primaryColor">#0e5d74</color>
+    <color name="primaryLightColor">#498aa3</color>
+    <color name="primaryDarkColor">#003348</color>
+    <color name="secondaryColor">#1592b7</color>
+    <color name="secondaryLightColor">#5dc2e9</color>
+    <color name="secondaryDarkColor">#006487</color>
+    <color name="primaryTextColor">#ffffff</color>
+    <color name="secondaryTextColor">#000000</color>
 </resources>

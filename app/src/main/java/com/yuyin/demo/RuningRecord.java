@@ -51,6 +51,7 @@ public class RuningRecord extends Fragment {
 
 
     // 滚动视图
+    private LinearLayoutManager linearLayoutManager;
     private ArrayList<SpeechText> speechList = new ArrayList<SpeechText>();
     private SpeechTextAdapter adapter;
     private RecyclerView recyclerView;
@@ -82,10 +83,76 @@ public class RuningRecord extends Fragment {
 
         super.onViewCreated(view, savedInstanceState);
 
+        initRunner();
+
+
+        binding.stopBtRunRecord.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                //只需停止录音即可
+                if (model.getStartRecord()) {
+                    getActivity().runOnUiThread(()->{
+                        binding.stopBtRunRecord.setEnabled(false);
+                        model.setStartRecord(false);
+                        binding.stopBtRunRecord.setText("start");
+                        binding.saveBtRunRecord.setVisibility(View.VISIBLE);
+                        binding.saveBtRunRecord.setEnabled(true);
+                    });
+                } else {
+                    initRecorder();
+                    startRecordThread();
+                    model.setStartRecord(true);
+
+                    binding.saveBtRunRecord.setVisibility(View.INVISIBLE);
+                    binding.saveBtRunRecord.setEnabled(false);
+                    // Recognize.startDecode();
+                    // startAsrThread();
+                }
+            }
+        });
+
+        binding.saveBtRunRecord.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // get all Result
+                YuYinUtil.get_all_result(speechList);
+                // saveToFile
+                YuYinUtil.save_file(requireContext(),speechList);
+
+            }
+        });
+    }
+
+    @Override
+    public void onConfigurationChanged(@NonNull Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        model.setChange_senor(true); // 标记屏幕旋转
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        getActivity().runOnUiThread(()->{
+            model.setStartRecord(false);
+            model.setStartAsr(false);
+            binding = null;
+        });
+
+        model.getResults().setValue(speechList);
+    }
+    @Override
+    public void onDestroy() {
+        Recognize.setInputFinished();
+        model.getResults().getValue().clear();
+        model.getBufferQueue().clear();
+        super.onDestroy();
+    }
+
+    private void initRunner() {
         model = new ViewModelProvider(requireActivity()).get(YuyinViewModel.class);
 
         // 滚动视图
-        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getContext());
+        linearLayoutManager = new LinearLayoutManager(getContext());
         recyclerView = binding.recyclerRunRecord;
         recyclerView.setLayoutManager(linearLayoutManager);
         if (model.getResultsSize()==null || model.getResultsSize()<1) {
@@ -115,96 +182,15 @@ public class RuningRecord extends Fragment {
             }
         } else {
             // 正常启动绘制
-                initRecorder();
-                startRecordThread();
-                binding.stopBtRunRecord.setText("stop");
-                binding.saveBtRunRecord.setVisibility(View.INVISIBLE);
-                binding.saveBtRunRecord.setEnabled(false);
-                Recognize.reset();
-                Recognize.startDecode();
-                startAsrThread();
-        }
-
-
-
-        binding.stopBtRunRecord.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                //只需停止录音即可
-                if (model.getStartRecord()) {
-                    getActivity().runOnUiThread(()->{
-                        binding.stopBtRunRecord.setEnabled(false);
-                        model.setStartRecord(false);
-                        binding.stopBtRunRecord.setText("start");
-                        binding.saveBtRunRecord.setVisibility(View.VISIBLE);
-                        binding.saveBtRunRecord.setEnabled(true);
-                    });
-                } else {
-                    initRecorder();
-                    startRecordThread();
-                    model.setStartRecord(true);
-                    binding.saveBtRunRecord.setVisibility(View.INVISIBLE);
-                    binding.saveBtRunRecord.setEnabled(false);
-                    // Recognize.startDecode();
-                    // startAsrThread();
-                }
-            }
-        });
-
-        binding.saveBtRunRecord.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                //TODO saveResult
-                Long timeStamp = System.currentTimeMillis();
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd:HH:mm:ss");
-                String filename = sdf.format(new Date(Long.parseLong(String.valueOf(timeStamp))))+".txt";
-                File dir_path = getContext().getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS);
-                File file = new File(dir_path.getAbsoluteFile()+File.separator+"YuYin"+File.separator+filename);
-                StringBuilder total_result = new StringBuilder();
-
-                for (SpeechText i : speechList ) {
-                    total_result.append(i.getText());
-                    total_result.append("\n");
-                }
-                try {
-                    if (file.createNewFile()) {
-                        try (OutputStream op = new FileOutputStream(file.getAbsolutePath())) {
-                            op.write(total_result.toString().getBytes(StandardCharsets.UTF_8));
-                        }
-                    }
-
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-
-            }
-        });
-    }
-
-    @Override
-    public void onConfigurationChanged(@NonNull Configuration newConfig) {
-        super.onConfigurationChanged(newConfig);
-//        model.setChange_senor(true); // 标记屏幕旋转
-    }
-
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        getActivity().runOnUiThread(()->{
-            model.setStartRecord(false);
-            model.setStartAsr(false);
-            binding = null;
+            initRecorder();
+            startRecordThread();
+            binding.stopBtRunRecord.setText("stop");
+            binding.saveBtRunRecord.setVisibility(View.INVISIBLE);
+            binding.saveBtRunRecord.setEnabled(false);
             Recognize.reset();
-        });
-
-        model.getResults().setValue(speechList);
-    }
-    @Override
-    public void onDestroy() {
-        model.getResults().getValue().clear();
-        model.getBufferQueue().clear();
-        super.onDestroy();
+            Recognize.startDecode();
+            startAsrThread();
+        }
     }
 
     private void initRecorder() {
@@ -232,7 +218,7 @@ public class RuningRecord extends Fragment {
             Log.e(LOG_TAG, "Audio Record can't initialize!");
         }
 
-
+        model.setStartRecord(true);
     }
 
     private void startRecordThread() {
@@ -277,8 +263,11 @@ public class RuningRecord extends Fragment {
                 try {
                     if(binding==null) break;
                     short[] data = model.getBufferQueue().take();
-                    // 1. add data to C++ interface
-                    Recognize.acceptWaveform(data);// 将音频传到模型
+
+                    if (data!=null) {
+                        // 1. add data to C++ interface
+                        Recognize.acceptWaveform(data);// 将音频传到模型
+                    }
 
                     // 2. get partial result
 

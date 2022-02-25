@@ -1,7 +1,6 @@
 package com.mobvoi.wenet;
 
-import android.Manifest;
-import android.annotation.TargetApi;
+
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -10,7 +9,6 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.media.projection.MediaProjectionManager;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
@@ -21,7 +19,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -32,6 +30,8 @@ import java.util.List;
 
 
 import com.yuyin.demo.R;
+import com.yuyin.demo.RuningCapture;
+import com.yuyin.demo.YuYinUtil;
 
 
 public class CaptureAudio extends AppCompatActivity {
@@ -47,19 +47,11 @@ public class CaptureAudio extends AppCompatActivity {
     private static final int m_ALL_PERMISSIONS_PERMISSION_CODE = 1000;
     private static final int m_CREATE_SCREEN_CAPTURE = 1001;
     private MediaProjectionManager m_mediaProjectionManager;
-    private boolean is_init =  false;
     private CaptureAudioReceiver m_actionReceiver;
     Button luyin;
-    MediaCaptureService mediaCaptureService;
     boolean mBound = false;
     private MediaCaptureService.mcs_Binder mcs_binder;
 
-    // 所需请求的权限
-    private final String[] appPermissions = {
-            Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            Manifest.permission.RECORD_AUDIO,
-            Manifest.permission.FOREGROUND_SERVICE
-    };
 
     @Override
     protected void onStart() {
@@ -87,8 +79,8 @@ public class CaptureAudio extends AppCompatActivity {
                         startRecording();
                     }
                     else if (actionName.equalsIgnoreCase(CaptureAudio_START_ASR)) {
-                            startAsrThread();
-                            Recognize.startDecode();
+                        startAsrThread();
+                        Recognize.startDecode();
                     }
                 }
             }
@@ -100,7 +92,7 @@ public class CaptureAudio extends AppCompatActivity {
     // 每次开始录音时都应该调用 确保具有权限
     public boolean checkRequestPermissions() {
         List< String > listPermissionsNeeded = new ArrayList<>();
-        for(String permission : appPermissions){
+        for(String permission : YuYinUtil.appPermissions){
             if(ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED){
                 listPermissionsNeeded.add(permission);
             }
@@ -186,15 +178,15 @@ public class CaptureAudio extends AppCompatActivity {
     }
 
     /**
-     * @Author zzh
+     * @Author zzh<!-- ?xml version="1.0" encoding="UTF-8"? -->
      * @Description 弹出 屏幕录制请求窗口 回调onActivityResult() 成功 则启动服务
      * @Date 17:55 2021/11/10
      * @Param []
      * @return void
      **/
-    @TargetApi(Build.VERSION_CODES.P)
     private void initAudioCapture() {
-        m_mediaProjectionManager = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
+        m_mediaProjectionManager =
+                (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
         Intent intent = m_mediaProjectionManager.createScreenCaptureIntent();
         startActivityForResult(intent, m_CREATE_SCREEN_CAPTURE); // 会在service保存此intent 获取前线
     }
@@ -204,8 +196,8 @@ public class CaptureAudio extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (m_CREATE_SCREEN_CAPTURE == requestCode) {
             Intent i = new Intent(this, MediaCaptureService.class);
-            i.setAction(MediaCaptureService.ACTION_ALL);
-            i.putExtra(MediaCaptureService.EXTRA_RESULT_CODE,resultCode);
+            i.setAction(RuningCapture.ACTION_ALL);
+            i.putExtra(RuningCapture.EXTRA_RESULT_CODE,resultCode);
             i.putExtras(data);
             this.startService(i);
         } else {
@@ -216,10 +208,10 @@ public class CaptureAudio extends AppCompatActivity {
     private void startRecording() {
         // 广播告知 MediaCaptureService
         Intent broadCastIntent = new Intent();
-        broadCastIntent.setAction(MediaCaptureService.ACTION_ALL);
+        broadCastIntent.setAction(RuningCapture.ACTION_ALL);
         // 具体action
         // 根据 MediaCaptureService.EXTRA_ACTION_NAME("ACTION_NAME") 对应的值
-        broadCastIntent.putExtra(MediaCaptureService.EXTRA_ACTION_NAME, MediaCaptureService.ACTION_START);
+        broadCastIntent.putExtra(RuningCapture.EXTRA_ACTION_NAME, RuningCapture.ACTION_START);
         this.sendBroadcast(broadCastIntent);
         m_startRecording = true;
 
@@ -231,8 +223,8 @@ public class CaptureAudio extends AppCompatActivity {
             m_startRecording = false;
         });
         Intent broadCastIntent = new Intent();
-        broadCastIntent.setAction(MediaCaptureService.ACTION_ALL);
-        broadCastIntent.putExtra(MediaCaptureService.EXTRA_ACTION_NAME, MediaCaptureService.ACTION_STOP);
+        broadCastIntent.setAction(RuningCapture.ACTION_ALL);
+        broadCastIntent.putExtra(RuningCapture.EXTRA_ACTION_NAME, RuningCapture.ACTION_STOP);
         this.sendBroadcast(broadCastIntent);
     }
 

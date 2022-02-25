@@ -1,6 +1,7 @@
 package com.mobvoi.wenet;
 
 
+import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -20,13 +21,12 @@ import android.media.AudioRecord;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
 import android.os.Binder;
-import android.os.Build;
 import android.os.Environment;
 import android.os.IBinder;
 import android.os.Process;
 import android.util.Log;
 
-import androidx.annotation.RequiresApi;
+import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 
 import java.io.File;
@@ -40,14 +40,16 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 import com.yuyin.demo.R;
+import com.yuyin.demo.RuningCapture;
+
 
 public class MediaCaptureService extends Service {
 
-    public static final String ACTION_ALL = "ALL";
-    public static final String ACTION_START = "ACTION_START";
-    public static final String ACTION_STOP = "ACTION_STOP";
-    public static final String EXTRA_RESULT_CODE = "EXTRA_RESULT_CODE";
-    public static final String EXTRA_ACTION_NAME = "ACTION_NAME";
+//    public static final String ACTION_ALL = "ALL";
+//    public static final String ACTION_START = "ACTION_START";
+//    public static final String ACTION_STOP = "ACTION_STOP";
+//    public static final String EXTRA_RESULT_CODE = "EXTRA_RESULT_CODE";
+//    public static final String EXTRA_ACTION_NAME = "ACTION_NAME";
     private static final int m_RECORDER_SAMPLERATE = 16000;
     private static final int m_RECORDER_CHANNELS = AudioFormat.CHANNEL_IN_MONO;
     private static final int m_RECORDER_AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT;
@@ -59,7 +61,7 @@ public class MediaCaptureService extends Service {
     private final String m_NOTIFICATION_CHANNEL_ID = "Yuyin_ChannelId";
     private final String m_NOTIFICATION_CHANNEL_NAME = "Yuyin_Channel";
     private final String m_NOTIFICATION_CHANNEL_DESC = "Yuyin is working";
-    private final BlockingQueue<String> resultText = new ArrayBlockingQueue<>(100);
+
     private final IBinder binder = new mcs_Binder();
     public final BlockingQueue<short[]> bufferQueue = new ArrayBlockingQueue<>(MAX_QUEUE_SIZE);
     private boolean isCreate = false;
@@ -76,23 +78,34 @@ public class MediaCaptureService extends Service {
     private MediaProjectionManager m_mediaProjectionManager;
     private MediaProjection m_mediaProjection;
 
-
-//    private AudioRecognize m_audioRecognize;
+    
+    
 
 
     BroadcastReceiver m_actionReceiver = new BroadcastReceiver() {
 
-        @RequiresApi(api = Build.VERSION_CODES.Q)
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-            if (action.equalsIgnoreCase(ACTION_ALL)) {
-                String actionName = intent.getStringExtra(EXTRA_ACTION_NAME);
+            if (action.equalsIgnoreCase(RuningCapture.ACTION_ALL)) {
+                String actionName = intent.getStringExtra( RuningCapture.EXTRA_ACTION_NAME);
                 if (actionName != null && !actionName.isEmpty()) {
-                    if (actionName.equalsIgnoreCase(ACTION_START)) {
-                        startRecording(m_callingIntent);
-                    } else {
-                        stopRecording(m_callingIntent);
+                    if (actionName.equalsIgnoreCase(RuningCapture.ACTION_START)) {
+                        // 接受通知启动录制
+                        try {
+                            startMediaProject(m_callingIntent);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    } else if (actionName.equalsIgnoreCase(RuningCapture.ACTION_START_RECORDING)){
+//                        stopRecording(m_callingIntent);
+                        restartRecording();
+                    } else if (actionName.equalsIgnoreCase(RuningCapture.ACTION_STOP_RECORDING)){
+                        stopRecording();
+                    } else if (actionName.equalsIgnoreCase(RuningCapture.ACTION_STOP)){
+                        releaseRecording();
+                    } else if (actionName.equalsIgnoreCase(RuningCapture.ACTION_STOP_RECORDING_To_Main)) {
+                        stopRecordingToMain();
                     }
                 }
             }
@@ -108,22 +121,18 @@ public class MediaCaptureService extends Service {
      * @date: 2021/11/10 22:34
      * @Author: zzh
      */
-    @RequiresApi(api = Build.VERSION_CODES.Q)
-    private void startRecording(Intent intent) {
+    private void startMediaProject(Intent intent) {
         m_mediaProjection = m_mediaProjectionManager.getMediaProjection(-1, intent);
         startRecording(m_mediaProjection);
-        Log.e("ZZH","start_recording");
-//        m_audioRecognize.initASR();
-//        startASR();
-//        m_audioRecognize.AsrDecode();
+        Log.e("ZZH", "start_recording");
     }
+
 
 
     /**
      * @method startRecording
      * @description 配置采样场景 配置音轨 输出音频样式等
      */
-    @RequiresApi(api = Build.VERSION_CODES.Q)
     private void startRecording(MediaProjection mediaProjection) {
         // 录制场景
         AudioPlaybackCaptureConfiguration config =
@@ -142,16 +151,20 @@ public class MediaCaptureService extends Service {
 
         miniBufferSize = AudioRecord.getMinBufferSize(m_RECORDER_SAMPLERATE, m_RECORDER_CHANNELS, m_RECORDER_AUDIO_ENCODING);
 
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
         m_recorder = new AudioRecord.Builder()
                 .setAudioFormat(audioFormat)
                 .setBufferSizeInBytes(miniBufferSize)
                 .setAudioPlaybackCaptureConfig(config).build();
         m_isRecording = true;
 
-        new Thread(()->{
+        new Thread(() -> {
             Intent broad = new Intent();
             broad.setAction(CaptureAudio.CaptureAudio_ALL);
-            broad.putExtra(CaptureAudio.EXTRA_CaptureAudio_NAME,CaptureAudio.CaptureAudio_START_ASR);
+            broad.putExtra(CaptureAudio.EXTRA_CaptureAudio_NAME, CaptureAudio.CaptureAudio_START_ASR);
             this.sendBroadcast(broad);
         }).start();
 
@@ -183,60 +196,109 @@ public class MediaCaptureService extends Service {
 //        }).start();
     }
 
-    private void stopRecording(Intent intent) {
+    private void restartRecording() {
+        m_isRecording = true;
+        new Thread(() -> {
+            Intent broad = new Intent();
+            broad.setAction(CaptureAudio.CaptureAudio_ALL);
+            broad.putExtra(CaptureAudio.EXTRA_CaptureAudio_NAME, RuningCapture.CaptureAudio_RESTART_RECORDING);
+            this.sendBroadcast(broad);
+        }).start();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                m_recorder.startRecording();
+                Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO);
+                while (m_isRecording) {
+                    short[] buffer = new short[miniBufferSize / 2];
+                    int read = m_recorder.read(buffer, 0, buffer.length);
+                    try {
+                        if (AudioRecord.ERROR_INVALID_OPERATION != read) {
+                            bufferQueue.put(buffer);
+                        }
+                    } catch (InterruptedException e) {
+                        Log.e(m_Log_TAG, e.getMessage());
+                    }
+                }
+            }
+        }).start();
+    }
+
+    private void stopRecording() {
+
+            m_isRecording = false;
+
+            m_recorder.stop();
+
+
+//            m_mediaProjection.stop();
+
+            new Thread(() -> {
+                Intent broad = new Intent();
+                broad.setAction(CaptureAudio.CaptureAudio_ALL);
+                broad.putExtra(CaptureAudio.EXTRA_CaptureAudio_NAME, CaptureAudio.CaptureAudio_STOP);
+                this.sendBroadcast(broad);
+            }).start();
+    }
+
+    private void stopRecordingToMain(){
+        m_isRecording = false;
+
+        m_recorder.stop();
+    }
+
+    private void releaseRecording() {
         if (m_recorder != null) {
             m_isRecording = false;
             m_recorder.stop();
             m_recorder.release();
             m_recorder = null;
         }
-        m_mediaProjection.stop();
-        stopSelf(); // 停止本服务
-    }
 
+        m_mediaProjection.stop();
+        stopForeground(true);
+        stopSelf();
+    }
 
     @Override
     public void onCreate() {
         super.onCreate();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // 启动
-            Intent notificationIntent = new Intent(this, MediaCaptureService.class);
-            //  Returns an existing or new PendingIntent matching the given parameters
-            PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
-            m_notificationBuilder = new NotificationCompat.Builder(this, m_NOTIFICATION_CHANNEL_ID)
-                    .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.drawable.ic_launcher_foreground))
-                    .setSmallIcon(R.drawable.ic_launcher_foreground)
-                    .setContentTitle("余音")
-                    .setContentText("ASR starting")
-                    .setTicker(m_ONGING_NOTIFICATION_TICKER) //通知到来时低版本上会在系统状态栏显示一小段时间 5.0以上版本好像没有用了
-                    .setContentIntent(pendingIntent);
-            Notification notification = m_notificationBuilder.build();
-            NotificationChannel channel = new NotificationChannel(m_NOTIFICATION_CHANNEL_ID, m_NOTIFICATION_CHANNEL_NAME, NotificationManager.IMPORTANCE_DEFAULT);
-            channel.setDescription(m_NOTIFICATION_CHANNEL_DESC);
-            m_notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            m_notificationManager.createNotificationChannel(channel);
-            startForeground(m_NOTIFICATION_ID, notification);
-        }
+        isCreate = true;
+        Intent notificationIntent = new Intent(this, MediaCaptureService.class);
+        //  Returns an existing or new PendingIntent matching the given parameters
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
+        m_notificationBuilder = new NotificationCompat.Builder(this, m_NOTIFICATION_CHANNEL_ID)
+                .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.drawable.ic_launcher_foreground))
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setContentTitle("余音")
+                .setContentText("ASR starting")
+                .setTicker(m_ONGING_NOTIFICATION_TICKER) //通知到来时低版本上会在系统状态栏显示一小段时间 5.0以上版本好像没有用了
+                .setContentIntent(pendingIntent);
+        NotificationChannel channel = new NotificationChannel(m_NOTIFICATION_CHANNEL_ID, m_NOTIFICATION_CHANNEL_NAME, NotificationManager.IMPORTANCE_DEFAULT);
+        channel.setDescription(m_NOTIFICATION_CHANNEL_DESC);
+        m_notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        m_notificationManager.createNotificationChannel(channel);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            m_mediaProjectionManager = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
-        }
+
+        m_mediaProjectionManager = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
 
         IntentFilter filter = new IntentFilter();
-        filter.addAction(ACTION_ALL);
+        filter.addAction(RuningCapture.ACTION_ALL);
         registerReceiver(m_actionReceiver, filter);
 
     }
 
 
-    @RequiresApi(api = Build.VERSION_CODES.Q)
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 //        return super.onStartCommand(intent, flags, startId);
-
-        isCreate = true;
+        // 启动
         m_callingIntent = intent;
-        new Thread(()->{
+        Notification notification = m_notificationBuilder.build();
+        startForeground(m_NOTIFICATION_ID, notification);
+
+        // 通知服务已启动
+        new Thread(() -> {
             Intent broad = new Intent();
             broad.setAction(CaptureAudio.CaptureAudio_ALL);
             broad.putExtra(CaptureAudio.EXTRA_CaptureAudio_NAME, CaptureAudio.CaptureAudio_START);
@@ -256,20 +318,24 @@ public class MediaCaptureService extends Service {
     }
 
     public class mcs_Binder extends Binder {
-        short[] getAudioQueue() throws InterruptedException {
+        public short[] getAudioQueue() throws InterruptedException {
             short[] data = bufferQueue.take();
             return data;
         }
 
-        int getAudioQueueSize() {
+        public void clearQueue(){
+            bufferQueue.clear();
+        }
+
+        public int getAudioQueueSize() {
             return bufferQueue.size();
         }
 
-        boolean getIsRecording(){
+        public boolean getIsRecording() {
             return m_isRecording;
         }
 
-        boolean getIsCreate() {
+        public boolean getIsCreate() {
             return isCreate;
         }
     }
@@ -310,7 +376,7 @@ public class MediaCaptureService extends Service {
     }
 
     private void writeAudioDataToFile() {
-        if(m_recorder==null) return;
+        if (m_recorder == null) return;
         // Write the output audio in byte
         Log.i("ZZH", "Recording started. Computing output file name");
         File sampleDir = new File(getExternalFilesDir(Environment.DIRECTORY_MUSIC), "/TestRecordingDasa1");
@@ -353,7 +419,7 @@ public class MediaCaptureService extends Service {
     }
 
     private void writeAudioDataToFileMic() {
-        if(m_recorderMic==null) return;
+        if (m_recorderMic == null) return;
         // Write the output audio in byte
         Log.i("ZZH", "Recording started. Computing output file name");
         File sampleDir = new File(getExternalFilesDir(Environment.DIRECTORY_MUSIC), "/TestRecordingDasa1Mic");

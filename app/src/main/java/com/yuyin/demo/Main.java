@@ -1,5 +1,6 @@
 package com.yuyin.demo;
 
+import android.media.projection.MediaProjectionManager;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -14,9 +15,11 @@ import android.view.ViewGroup;
 import com.yuyin.demo.databinding.FragmentMainBinding;
 
 
+
 public class Main extends Fragment {
 
     private FragmentMainBinding binding;
+
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -35,10 +38,26 @@ public class Main extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        binding.recordAsrBt.setOnClickListener(Navigation.createNavigateOnClickListener(R.id.action_main_dest_to_runingRecord_dest, null));
 
-        binding.captureAsrBt.setOnClickListener(Navigation.createNavigateOnClickListener(R.id.action_main_dest_to_runingCapture_dest,null));
 
+        binding.recordAsrBt.setOnClickListener(v -> {
+            if (YuYinUtil.checkRequestPermissions(requireActivity(),requireContext())) {
+                Navigation.findNavController(
+                        requireActivity(),
+                        R.id.yuyin_nav_host_container_fragment)
+                            .navigate(R.id.action_main_dest_to_runingRecord_dest);
+            }
+        });
+
+
+        binding.captureAsrBt.setOnClickListener(v -> {
+            if (YuYinUtil.checkRequestPermissions(requireActivity(),requireContext())) {
+                Navigation.findNavController(
+                        requireActivity(),
+                        R.id.yuyin_nav_host_container_fragment)
+                        .navigate(R.id.action_main_dest_to_runingCapture_dest);
+            }
+        });
     }
 
     @Override
@@ -46,4 +65,5 @@ public class Main extends Fragment {
         super.onDestroyView();
         binding = null;
     }
+
 }

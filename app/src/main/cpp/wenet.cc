@@ -85,6 +85,9 @@ void accept_waveform(JNIEnv *env, jobject, jshortArray jWaveform) {
 void set_input_finished() {
   LOG(INFO) << "wenet input finished";
   feature_pipeline->set_input_finished();
+  while (!results.empty()) {
+    results.pop();
+  }
 }
 
 void decode_thread_func() {
