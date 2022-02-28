@@ -30,7 +30,9 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
+import com.lzf.easyfloat.EasyFloat;
 import com.mobvoi.wenet.MediaCaptureService;
 import com.mobvoi.wenet.Recognize;
 import com.yuyin.demo.databinding.FragmentRuningCaptureBinding;
@@ -375,6 +377,8 @@ public class RuningCapture extends Fragment {
 
     // Asr
     private void startAsrThread() {
+
+        //TODO 浮窗逻辑....
         new Thread(() -> {
             while (model.getStartAsr()) {
                 try {
@@ -388,7 +392,16 @@ public class RuningCapture extends Fragment {
                     // 2. get partial result
 
                     String result = Recognize.getResult();
-                    if (result.equals("")) continue;
+                    if (result.equals("")) {
+                        if (!speechList.get(speechList.size() - 1).getText().equals("")) {
+                            speechList.get(speechList.size() - 1).setText(result);
+                            continue;
+                        } else {
+                            continue;
+                        }
+                    }
+
+
                     if (result.endsWith(" ")) {
                         model.context.runOnUiThread(() -> {
                             speechList.get(speechList.size() - 1).setText(result.trim());
@@ -402,6 +415,8 @@ public class RuningCapture extends Fragment {
                             speechList.get(speechList.size() - 1).setText(result);
                             adapter.notifyItemChanged(speechList.size() - 1);
 //                            recyclerView.scrollToPosition(speechList.size()-1);
+                            TextView floatText =  EasyFloat.getFloatView("Capture").findViewById(R.id.flow_text);
+                            floatText.setText(result);
                         });
                         // 部分结果
                     }

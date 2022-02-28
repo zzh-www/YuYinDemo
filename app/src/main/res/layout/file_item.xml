@@ -12,7 +12,8 @@
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="1dp"
         app:cardCornerRadius="15dp"
-        android:layout_marginTop="8dp">
+        android:layout_marginTop="8dp"
+        app:cardBackgroundColor="@color/secondaryDarkColor">
 
         <RelativeLayout
             android:layout_width="match_parent"
@@ -31,12 +32,13 @@
                 android:id="@+id/file_card_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_toEndOf="@+id/file_card_im"
                 android:layout_marginVertical="2dp"
                 android:layout_marginStart="12dp"
+                android:layout_toEndOf="@+id/file_card_im"
                 android:singleLine="true"
                 android:text="20010122054533.txt"
-                android:textAppearance="@style/TextAppearance.AppCompat.Large" />
+                android:textAppearance="@style/TextAppearance.AppCompat.Large"
+                android:textColor="@color/secondaryTextColor" />
 
             <androidx.appcompat.widget.AppCompatImageView
                 android:id="@+id/file_card_bt"

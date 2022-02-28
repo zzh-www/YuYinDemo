@@ -11,10 +11,11 @@
         android:id="@+id/action_bar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="?attr/colorPrimary"
+        android:background="@color/primaryLightColor"
         android:elevation="4dp"
         android:theme="@style/ThemeOverlay.AppCompat.ActionBar"
         app:layout_constraintTop_toTopOf="parent"
+        app:titleTextColor="@color/primaryTextColor"
         app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
 
     <androidx.fragment.app.FragmentContainerView
@@ -25,14 +26,15 @@
         android:layout_weight="1"
         app:defaultNavHost="true"
 
-
         app:navGraph="@navigation/yuyin_navigation" />
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/main_bottom_navigation"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:menu="@menu/yuyin_bottom_nav_menu" />
+        app:menu="@menu/yuyin_bottom_nav_menu"
+        android:background="@color/primaryLightColor"
+        app:itemTextColor="@color/primaryTextColor"/>
 </LinearLayout>
 
 

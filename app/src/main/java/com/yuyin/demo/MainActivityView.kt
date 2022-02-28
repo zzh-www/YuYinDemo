@@ -15,6 +15,7 @@ import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.ButtonBarLayout
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination
 import androidx.navigation.findNavController
@@ -103,6 +104,9 @@ class MainActivityView : AppCompatActivity() {
                         binding.mainBottomNavigation.visibility =  View.INVISIBLE
                         binding.mainBottomNavigation.isEnabled = false
                         model.context = this@MainActivityView
+                        val settingButton = this@MainActivityView.findViewById<ButtonBarLayout>(R.id.setting_option)
+                        settingButton.visibility = View.INVISIBLE
+                        settingButton.isEnabled = false
                     }
                 } else {
                     runOnUiThread {
@@ -116,6 +120,9 @@ class MainActivityView : AppCompatActivity() {
                         if (mBound) {
                             model.mcs_binder?.clearQueue()
                         }
+                        val settingButton = this@MainActivityView.findViewById<ButtonBarLayout>(R.id.setting_option)
+                        settingButton.visibility = View.VISIBLE
+                        settingButton.isEnabled = true
                     }
 
                 }
@@ -129,7 +136,7 @@ class MainActivityView : AppCompatActivity() {
                         EasyFloat.with(this@MainActivityView)
                             .setLayout(R.layout.floatviewtest)
                             .setShowPattern(ShowPattern.BACKGROUND) // 应用后台时显示
-                            .setSidePattern(SidePattern.RESULT_SIDE) // 吸附 根据移动后的位置贴附到边缘
+                            .setSidePattern(SidePattern.RESULT_HORIZONTAL) // 吸附 根据移动后的位置贴附到边缘
                             .setTag("Capture") // 设置TAG管理
                             .setDragEnable(true) // 可拖拽
                             .hasEditText(false) // 无编辑框，无需适配键盘

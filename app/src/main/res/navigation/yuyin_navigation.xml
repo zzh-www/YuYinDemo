@@ -8,22 +8,22 @@
     <fragment
         android:id="@+id/filesManager_dest"
         android:name="com.yuyin.demo.FilesManager"
-        android:label="fragment_files_manager"
+        android:label="YuYin_files_manager"
         tools:layout="@layout/fragment_files_manager" />
     <fragment
         android:id="@+id/runingCapture_dest"
         android:name="com.yuyin.demo.RuningCapture"
-        android:label="fragment_runing_capture"
+        android:label="YuYin_runing_capture"
         tools:layout="@layout/fragment_runing_capture" />
     <fragment
         android:id="@+id/runingRecord_dest"
         android:name="com.yuyin.demo.RuningRecord"
-        android:label="fragment_runing_record"
+        android:label="YuYin_runing_record"
         tools:layout="@layout/fragment_runing_record" />
     <fragment
         android:id="@+id/main_dest"
         android:name="com.yuyin.demo.Main"
-        android:label="fragment_main"
+        android:label="YuYin"
         tools:layout="@layout/fragment_main" >
         <action
             android:id="@+id/action_main_dest_to_runingCapture_dest"

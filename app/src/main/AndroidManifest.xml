@@ -51,7 +51,6 @@
             android:exported="false"
             android:foregroundServiceType="mediaProjection" />
 
-        <activity android:name="com.mobvoi.wenet.CaptureAudio" />
     </application>
 
 </manifest>

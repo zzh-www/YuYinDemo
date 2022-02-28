@@ -163,8 +163,8 @@ public class MediaCaptureService extends Service {
 
         new Thread(() -> {
             Intent broad = new Intent();
-            broad.setAction(CaptureAudio.CaptureAudio_ALL);
-            broad.putExtra(CaptureAudio.EXTRA_CaptureAudio_NAME, CaptureAudio.CaptureAudio_START_ASR);
+            broad.setAction(RuningCapture.CaptureAudio_ALL);
+            broad.putExtra(RuningCapture.EXTRA_CaptureAudio_NAME, RuningCapture.CaptureAudio_START_ASR);
             this.sendBroadcast(broad);
         }).start();
 
@@ -200,8 +200,8 @@ public class MediaCaptureService extends Service {
         m_isRecording = true;
         new Thread(() -> {
             Intent broad = new Intent();
-            broad.setAction(CaptureAudio.CaptureAudio_ALL);
-            broad.putExtra(CaptureAudio.EXTRA_CaptureAudio_NAME, RuningCapture.CaptureAudio_RESTART_RECORDING);
+            broad.setAction(RuningCapture.CaptureAudio_ALL);
+            broad.putExtra(RuningCapture.EXTRA_CaptureAudio_NAME, RuningCapture.CaptureAudio_RESTART_RECORDING);
             this.sendBroadcast(broad);
         }).start();
         new Thread(new Runnable() {
@@ -235,8 +235,8 @@ public class MediaCaptureService extends Service {
 
             new Thread(() -> {
                 Intent broad = new Intent();
-                broad.setAction(CaptureAudio.CaptureAudio_ALL);
-                broad.putExtra(CaptureAudio.EXTRA_CaptureAudio_NAME, CaptureAudio.CaptureAudio_STOP);
+                broad.setAction(RuningCapture.CaptureAudio_ALL);
+                broad.putExtra(RuningCapture.EXTRA_CaptureAudio_NAME, RuningCapture.CaptureAudio_STOP);
                 this.sendBroadcast(broad);
             }).start();
     }
@@ -273,7 +273,8 @@ public class MediaCaptureService extends Service {
                 .setContentTitle("余音")
                 .setContentText("ASR starting")
                 .setTicker(m_ONGING_NOTIFICATION_TICKER) //通知到来时低版本上会在系统状态栏显示一小段时间 5.0以上版本好像没有用了
-                .setContentIntent(pendingIntent);
+                .setContentIntent(pendingIntent)
+                .addAction();
         NotificationChannel channel = new NotificationChannel(m_NOTIFICATION_CHANNEL_ID, m_NOTIFICATION_CHANNEL_NAME, NotificationManager.IMPORTANCE_DEFAULT);
         channel.setDescription(m_NOTIFICATION_CHANNEL_DESC);
         m_notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -300,8 +301,8 @@ public class MediaCaptureService extends Service {
         // 通知服务已启动
         new Thread(() -> {
             Intent broad = new Intent();
-            broad.setAction(CaptureAudio.CaptureAudio_ALL);
-            broad.putExtra(CaptureAudio.EXTRA_CaptureAudio_NAME, CaptureAudio.CaptureAudio_START);
+            broad.setAction(RuningCapture.CaptureAudio_ALL);
+            broad.putExtra(RuningCapture.EXTRA_CaptureAudio_NAME, RuningCapture.CaptureAudio_START);
             this.sendBroadcast(broad);
         }).start();
         return START_STICKY; //因内存被销毁后， 重新创建
