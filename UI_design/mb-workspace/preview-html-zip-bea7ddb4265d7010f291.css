@@ -1487,7 +1487,7 @@
       right: 0;
       bottom: 0;
       z-index: 2;
-      line-height: 30px !important; /* TODO rm global line-height: 1后, 删除!important */
+      line-height: 30px !important;
       margin: 10px;
       text-align: center;
       text-shadow: 0 0 10px rgba(0, 0, 0, 0.31);

@@ -53,7 +53,6 @@ int main(int argc, char *argv[]) {
     for (int j = start; j < end; j++) {
       data.push_back(static_cast<int16_t>(pcm_data[j]));
     }
-    // TODO(Binbin Zhang): Network order?
     // Send PCM data
     client.SendBinaryData(data.data(), data.size() * sizeof(int16_t));
     VLOG(2) << "Send " << data.size() << " samples";
