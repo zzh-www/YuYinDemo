@@ -1,6 +1,9 @@
 package com.yuyin.demo;
 
 import android.app.Activity;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -17,6 +20,9 @@ import android.os.Bundle;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
@@ -41,7 +47,6 @@ import com.yuyin.demo.databinding.FragmentRuningCaptureBinding;
 import java.util.ArrayList;
 
 
-
 public class RuningCapture extends Fragment {
 
     public static final String CaptureAudio_ALL = "CaptureAudio";
@@ -59,11 +64,13 @@ public class RuningCapture extends Fragment {
     public static final String ACTION_STOP = "ACTION_STOP";
     public static final String ACTION_START_RECORDING = "CaptureAudio_START_RECORDING";
     public static final String ACTION_STOP_RECORDING = "CaptureAudio_STOP_RECORDING";
+    public static final String ACTION_STOP_RECORDING_From_Notification = "ACTION_STOP_RECORDING_From_Notification";
     public static final String ACTION_STOP_RECORDING_To_Main = "CaptureAudio_STOP_RECORDING_To_Main";
+    public static final String ACTION_START_RECORDING_From_Notification = "CaptureAudio_START_RECORDING_From_Notification";
 
 
     // view
-    private final String LOG_TAG = "YUYIN_RECORD";
+    private static final String LOG_TAG = "YUYIN_RECORD";
     private FragmentRuningCaptureBinding binding;
 
 
@@ -75,7 +82,6 @@ public class RuningCapture extends Fragment {
     private YuyinViewModel model;
 
 
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -85,9 +91,6 @@ public class RuningCapture extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-
-
-
 
         binding = FragmentRuningCaptureBinding.inflate(inflater, container, false);
         return binding.getRoot();
@@ -103,7 +106,7 @@ public class RuningCapture extends Fragment {
         binding.stopBtRunCap.setOnClickListener(v -> {
             //TODO stopASR
             if (model.getStartRecord()) {
-                getActivity().runOnUiThread(()->{
+                getActivity().runOnUiThread(() -> {
                     binding.stopBtRunCap.setEnabled(false);
                     stopRecording();
                     binding.stopBtRunCap.setText("start");
@@ -111,7 +114,7 @@ public class RuningCapture extends Fragment {
                     binding.saveBtRunCap.setEnabled(true);
                 });
             } else {
-                getActivity().runOnUiThread(()->{
+                getActivity().runOnUiThread(() -> {
                     binding.stopBtRunCap.setEnabled(false);
                     restartRecording();
                     binding.stopBtRunCap.setText("stop");
@@ -130,7 +133,7 @@ public class RuningCapture extends Fragment {
                 // get all Resukt
                 YuYinUtil.get_all_result(speechList);
                 // saveToFile
-                YuYinUtil.save_file(model.getContext(),speechList);
+                YuYinUtil.save_file(model.getContext(), speechList);
             }
         });
     }
@@ -144,7 +147,7 @@ public class RuningCapture extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        getActivity().runOnUiThread(()->{
+        getActivity().runOnUiThread(() -> {
             model.setStartRecord(false);
             model.setStartAsr(false);
             binding = null;
@@ -161,13 +164,12 @@ public class RuningCapture extends Fragment {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        getActivity().runOnUiThread(()->{
+        getActivity().runOnUiThread(() -> {
             stopRecordingToActivity();
             model.setStartAsr(false);
             Recognize.setInputFinished();
         });
     }
-
 
 
     @Override
@@ -185,7 +187,7 @@ public class RuningCapture extends Fragment {
         recyclerView = binding.recyclerRunCap;
         recyclerView.setLayoutManager(linearLayoutManager);
 
-        if (model.getResultsSize()==null || model.getResultsSize()<1) {
+        if (model.getResultsSize() == null || model.getResultsSize() < 1) {
             speechList.add(new SpeechText("Hi"));
 //            speechList = model.getResults().getValue();
         } else {
@@ -225,7 +227,7 @@ public class RuningCapture extends Fragment {
             }
 
 
-            model.getContext().runOnUiThread(()->{
+            model.getContext().runOnUiThread(() -> {
                 binding.stopBtRunCap.setText("stop");
                 binding.saveBtRunCap.setVisibility(View.INVISIBLE);
                 binding.saveBtRunCap.setEnabled(false);
@@ -234,7 +236,6 @@ public class RuningCapture extends Fragment {
 
         }
     }
-
 
 
     // 广播服务
@@ -253,10 +254,9 @@ public class RuningCapture extends Fragment {
                         // 接收服务已启动的通知
                         // 通知服务开启录制
                         startRecordingService();
-                    }
-                    else if (actionName.equalsIgnoreCase(CaptureAudio_START_ASR)) {
+                    } else if (actionName.equalsIgnoreCase(CaptureAudio_START_ASR)) {
                         // binding 变为了null？？？
-                        model.getContext().runOnUiThread(()->{
+                        model.getContext().runOnUiThread(() -> {
                             model.getContext().findViewById(R.id.stop_bt_run_cap).setEnabled(true);
                             model.setStartRecord(true);
                         });
@@ -267,9 +267,8 @@ public class RuningCapture extends Fragment {
                             Recognize.startDecode();
                             model.setStartAsr(true);
                         }
-                    }
-                    else if (actionName.equalsIgnoreCase(CaptureAudio_STOP)) {
-                        model.getContext().runOnUiThread(()->{
+                    } else if (actionName.equalsIgnoreCase(CaptureAudio_STOP)) {
+                        model.getContext().runOnUiThread(() -> {
                             model.setStartRecord(false);
                             // 跳出当前fragment后
                             try {
@@ -279,17 +278,31 @@ public class RuningCapture extends Fragment {
                             }
                         });
                     } else if (actionName.equalsIgnoreCase(CaptureAudio_RESTART_RECORDING)) {
-                        model.getContext().runOnUiThread(()->{
+                        model.getContext().runOnUiThread(() -> {
                             model.getContext().findViewById(R.id.stop_bt_run_cap).setEnabled(true);
                             model.setStartRecord(true);
+                        });
+                    } else if (actionName.equalsIgnoreCase(ACTION_STOP_RECORDING_From_Notification)) {
+                        model.context.runOnUiThread(()->{
+                            binding.stopBtRunCap.setEnabled(false);
+                            stopRecording();
+                            binding.stopBtRunCap.setText("start");
+                            binding.saveBtRunCap.setVisibility(View.VISIBLE);
+                            binding.saveBtRunCap.setEnabled(true);
+                        });
+                    } else if (actionName.equalsIgnoreCase(ACTION_START_RECORDING_From_Notification)) {
+                        model.context.runOnUiThread(() -> {
+                            binding.stopBtRunCap.setEnabled(false);
+                            restartRecording();
+                            binding.stopBtRunCap.setText("stop");
+                            binding.saveBtRunCap.setVisibility(View.INVISIBLE);
+                            binding.saveBtRunCap.setEnabled(false);
                         });
                     }
                 }
             }
         }
     }
-
-
 
 
     private void startRecordingService() {
@@ -299,7 +312,7 @@ public class RuningCapture extends Fragment {
             broadCastIntent.setAction(ACTION_ALL);
             broadCastIntent.putExtra(EXTRA_ACTION_NAME, ACTION_START);
             model.getContext().sendBroadcast(broadCastIntent);
-        }catch (Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -307,8 +320,8 @@ public class RuningCapture extends Fragment {
     private void restartRecording() {
         Intent broadCastIntent = new Intent();
         broadCastIntent.setAction(ACTION_ALL);
-        broadCastIntent.putExtra(EXTRA_ACTION_NAME,ACTION_START_RECORDING);
-       model.getContext().sendBroadcast(broadCastIntent);
+        broadCastIntent.putExtra(EXTRA_ACTION_NAME, ACTION_START_RECORDING);
+        model.getContext().sendBroadcast(broadCastIntent);
     }
 
     private void stopRecording() {
@@ -351,14 +364,14 @@ public class RuningCapture extends Fragment {
                     new ActivityResultContracts.StartActivityForResult(),
                     result -> {
                         if (result.getResultCode() == Activity.RESULT_OK) {
-                            new Thread(()->{
+                            new Thread(() -> {
                                 IntentFilter filter = new IntentFilter();
                                 filter.addAction(CaptureAudio_ALL);
                                 model.m_actionReceiver = new CaptureAudioReceiver();
                                 model.getContext().registerReceiver(model.m_actionReceiver, filter);
 
                                 Intent i = new Intent(model.getContext(), MediaCaptureService.class);
-                                model.getContext().bindService(i,connection,Context.BIND_AUTO_CREATE);
+                                model.getContext().bindService(i, connection, Context.BIND_AUTO_CREATE);
                             }).start();
                             // 启动服务
                             Intent i = new Intent(model.getContext(), MediaCaptureService.class);
@@ -368,7 +381,7 @@ public class RuningCapture extends Fragment {
                             i.putExtras(result.getData());
                             model.getContext().startService(i);
                         } else {
-                            Navigation.findNavController(model.getContext(),R.id.yuyin_nav_host_container_fragment).popBackStack();
+                            Navigation.findNavController(model.getContext(), R.id.yuyin_nav_host_container_fragment).popBackStack();
                         }
                     }
             ).launch(intent);
@@ -378,13 +391,12 @@ public class RuningCapture extends Fragment {
     // Asr
     private void startAsrThread() {
 
-        //TODO 浮窗逻辑....
         new Thread(() -> {
             while (model.getStartAsr()) {
                 try {
                     if (binding == null) break;
                     short[] data = model.getMcs_binder().getAudioQueue();
-                    if (data!=null) {
+                    if (data != null) {
                         // 1. add data to C++ interface
                         Recognize.acceptWaveform(data);// 将音频传到模型
                     }
@@ -415,7 +427,7 @@ public class RuningCapture extends Fragment {
                             speechList.get(speechList.size() - 1).setText(result);
                             adapter.notifyItemChanged(speechList.size() - 1);
 //                            recyclerView.scrollToPosition(speechList.size()-1);
-                            TextView floatText =  EasyFloat.getFloatView("Capture").findViewById(R.id.flow_text);
+                            TextView floatText = EasyFloat.getFloatView("Capture").findViewById(R.id.flow_text);
                             floatText.setText(result);
                         });
                         // 部分结果
@@ -427,7 +439,6 @@ public class RuningCapture extends Fragment {
                     e.printStackTrace();
                 }
             }
-
 
 
         }).start();

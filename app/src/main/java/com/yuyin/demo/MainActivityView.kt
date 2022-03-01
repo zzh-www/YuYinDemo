@@ -104,9 +104,7 @@ class MainActivityView : AppCompatActivity() {
                         binding.mainBottomNavigation.visibility =  View.INVISIBLE
                         binding.mainBottomNavigation.isEnabled = false
                         model.context = this@MainActivityView
-                        val settingButton = this@MainActivityView.findViewById<ButtonBarLayout>(R.id.setting_option)
-                        settingButton.visibility = View.INVISIBLE
-                        settingButton.isEnabled = false
+                        actionBar?.show()
                     }
                 } else {
                     runOnUiThread {
@@ -120,9 +118,7 @@ class MainActivityView : AppCompatActivity() {
                         if (mBound) {
                             model.mcs_binder?.clearQueue()
                         }
-                        val settingButton = this@MainActivityView.findViewById<ButtonBarLayout>(R.id.setting_option)
-                        settingButton.visibility = View.VISIBLE
-                        settingButton.isEnabled = true
+                        actionBar?.hide()
                     }
 
                 }
@@ -173,6 +169,16 @@ class MainActivityView : AppCompatActivity() {
         })
 
 
+
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+    }
+
+    override fun onPause() {
+        super.onPause()
+
         // 权限
         YuYinUtil.checkRequestPermissions(this,this)
 
@@ -198,10 +204,6 @@ class MainActivityView : AppCompatActivity() {
         if (!yuYinDir.exists()) {
             yuYinDir.mkdir()
         }
-    }
-
-    override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
     }
 
 

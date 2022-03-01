@@ -13,10 +13,10 @@ repositories {
 android {
     signingConfigs {
         release {
-            storeFile file('com.yuyin.demo.keystore')
-            storePassword '123456'
-            keyAlias 'com.yuyin.demo'
-            keyPassword '123456'
+//            storeFile file('com.yuyin.demo.keystore')
+//            storePassword '123456'
+//            keyAlias 'com.yuyin.demo'
+//            keyPassword '123456'
         }
     }  //  APP签名，非必须
     packagingOptions {

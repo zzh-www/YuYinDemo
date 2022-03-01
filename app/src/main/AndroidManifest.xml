@@ -40,9 +40,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity
-            android:name="com.mobvoi.wenet.TestFloat"
-            android:exported="true" />
 
 
         <service
