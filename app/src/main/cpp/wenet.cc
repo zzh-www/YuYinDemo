@@ -42,12 +42,12 @@ void init(JNIEnv *env, jobject, jstring jModelPath, jstring jDictPath) {
   resource->model = std::make_shared<TorchAsrModel>();
   const char *pModelPath = (env)->GetStringUTFChars(jModelPath, nullptr);
   std::string modelPath = std::string(pModelPath);
-  LOG(INFO) << "model path: " << modelPath;
+//  LOG(INFO) << "model path: " << modelPath;
   resource->model->Read(modelPath);
 
   const char *pDictPath = (env)->GetStringUTFChars(jDictPath, nullptr);
   std::string dictPath = std::string(pDictPath);
-  LOG(INFO) << "dict path: " << dictPath;
+//  LOG(INFO) << "dict path: " << dictPath;
   resource->symbol_table = std::shared_ptr<fst::SymbolTable>(
           fst::SymbolTable::ReadText(dictPath));
 
@@ -66,7 +66,7 @@ void init(JNIEnv *env, jobject, jstring jModelPath, jstring jDictPath) {
 }
 
 void reset(JNIEnv *env, jobject) {
-  LOG(INFO) << "wenet reset";
+//  LOG(INFO) << "wenet reset";
   decoder->Reset();
   state = kEndBatch;
   total_result = "";
@@ -83,7 +83,7 @@ void accept_waveform(JNIEnv *env, jobject, jshortArray jWaveform) {
 }
 
 void set_input_finished() {
-  LOG(INFO) << "wenet input finished";
+//  LOG(INFO) << "wenet input finished";
   feature_pipeline->set_input_finished();
   while (!results.empty()) {
     results.pop();
@@ -103,11 +103,11 @@ void decode_thread_func() {
     }
 
     if (state == kEndFeats) {
-      LOG(INFO) << "wenet endfeats final result: " << result;
+//      LOG(INFO) << "wenet endfeats final result: " << result;
       total_result += result;
       break;
     } else if (state == kEndpoint) {
-      LOG(INFO) << "wenet endpoint final result: " << result;
+//      LOG(INFO) << "wenet endpoint final result: " << result;
       if (result!="") {
         results.push(result+" ");
       }
@@ -115,7 +115,7 @@ void decode_thread_func() {
       decoder->ResetContinuousDecoding();
     } else {
       if (decoder->DecodedSomething()) {
-        LOG(INFO) << "wenet partial result: " << result;
+//        LOG(INFO) << "wenet partial result: " << result;
       }
     }
   }
@@ -128,11 +128,13 @@ void start_decode() {
 
 jboolean get_finished(JNIEnv *env, jobject) {
   if (state == kEndFeats) {
-    LOG(INFO) << "wenet recognize finished";
+//    LOG(INFO) << "wenet recognize finished";
     return JNI_TRUE;
   }
   return JNI_FALSE;
 }
+
+
 
 
 // 更改以获取段句

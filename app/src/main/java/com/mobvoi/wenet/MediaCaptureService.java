@@ -190,7 +190,6 @@ public class MediaCaptureService extends Service {
                 .setColor(ContextCompat.getColor(this, R.color.primaryDarkColor))
                 .setContentTitle("余音")
                 .setContentText("ASR working")
-                .setContentIntent(pendingIntent)
                 .addAction(R.drawable.ic_baseline_play_arrow_24, "stop", stopPendingIntent);
         Notification notification = m_notificationBuilder.build();
         m_notificationManager.notify(m_NOTIFICATION_ID,notification);
@@ -227,7 +226,6 @@ public class MediaCaptureService extends Service {
                 .setColor(ContextCompat.getColor(this, R.color.primaryDarkColor))
                 .setContentTitle("余音")
                 .setContentText("ASR stop")
-                .setContentIntent(pendingIntent)
                 .addAction(R.drawable.ic_baseline_play_arrow_24, "start", startPendingIntent);
         Notification notification = m_notificationBuilder.build();
         m_notificationManager.notify(m_NOTIFICATION_ID,notification);
@@ -283,7 +281,6 @@ public class MediaCaptureService extends Service {
                 .setContentTitle("余音")
                 .setContentText("ASR working")
                 .setTicker(m_ONGING_NOTIFICATION_TICKER) //通知到来时低版本上会在系统状态栏显示一小段时间 5.0以上版本好像没有用了
-                .setContentIntent(pendingIntent)
                 .addAction(R.drawable.ic_baseline_stop_24, "stop", stopPendingIntent);
         NotificationChannel channel = new NotificationChannel(m_NOTIFICATION_CHANNEL_ID, m_NOTIFICATION_CHANNEL_NAME, NotificationManager.IMPORTANCE_DEFAULT);
         channel.setDescription(m_NOTIFICATION_CHANNEL_DESC);
@@ -329,6 +326,9 @@ public class MediaCaptureService extends Service {
     public class mcs_Binder extends Binder {
         public short[] getAudioQueue() throws InterruptedException {
             return bufferQueue.take();
+        }
+        public int getAudioQueueSize() throws InterruptedException {
+            return bufferQueue.size();
         }
 
         public void clearQueue() {

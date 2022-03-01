@@ -108,8 +108,8 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
 
   num_frames_in_current_chunk_ = chunk_feats.size();
   num_frames_ += chunk_feats.size();
-  LOG(INFO) << "Required " << num_requried_frames << " get "
-            << chunk_feats.size();
+//  LOG(INFO) << "Required " << num_requried_frames << " get "
+//            << chunk_feats.size();
   int num_frames = cached_feature_.size() + chunk_feats.size();
   // The total frames should be big enough to get just one output
   if (num_frames >= right_context + 1) {

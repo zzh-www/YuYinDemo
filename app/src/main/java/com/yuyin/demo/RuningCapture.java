@@ -270,6 +270,8 @@ public class RuningCapture extends Fragment {
                     } else if (actionName.equalsIgnoreCase(CaptureAudio_STOP)) {
                         model.getContext().runOnUiThread(() -> {
                             model.setStartRecord(false);
+                            TextView floatText = EasyFloat.getFloatView("Capture").findViewById(R.id.flow_text);
+                            floatText.setText("");
                             // 跳出当前fragment后
                             try {
                                 model.getContext().findViewById(R.id.stop_bt_run_cap).setEnabled(true);
@@ -282,6 +284,11 @@ public class RuningCapture extends Fragment {
                             model.getContext().findViewById(R.id.stop_bt_run_cap).setEnabled(true);
                             model.setStartRecord(true);
                         });
+
+                        if (model.getStartAsr()==false) {
+                            model.setStartAsr(true);
+                            startAsrThread();
+                        }
                     } else if (actionName.equalsIgnoreCase(ACTION_STOP_RECORDING_From_Notification)) {
                         model.context.runOnUiThread(()->{
                             binding.stopBtRunCap.setEnabled(false);
@@ -404,15 +411,13 @@ public class RuningCapture extends Fragment {
                     // 2. get partial result
 
                     String result = Recognize.getResult();
-                    if (result.equals("")) {
-                        if (!speechList.get(speechList.size() - 1).getText().equals("")) {
-                            speechList.get(speechList.size() - 1).setText(result);
-                            continue;
-                        } else {
-                            continue;
-                        }
-                    }
 
+                    if (Recognize.getResult()=="") {
+                        model.context.runOnUiThread(()->{
+                            TextView floatText = EasyFloat.getFloatView("Capture").findViewById(R.id.flow_text);
+                            floatText.setText(result);
+                        });
+                    }
 
                     if (result.endsWith(" ")) {
                         model.context.runOnUiThread(() -> {
@@ -442,6 +447,8 @@ public class RuningCapture extends Fragment {
 
 
         }).start();
+
+        model.setStartAsr(false);
     }
 
 }

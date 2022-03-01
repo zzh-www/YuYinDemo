@@ -46,7 +46,7 @@ public class YuYinUtil {
 
     public static void save_file(Context context, ArrayList<SpeechText> speechList){
         Long timeStamp = System.currentTimeMillis();
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd:HH:mm:ss", Locale.CHINA);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss", Locale.CHINA);
         String filename = sdf.format(new Date(Long.parseLong(String.valueOf(timeStamp))))+".txt";
         File dir_path = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS);
         File file = new File(dir_path.getAbsoluteFile()+File.separator+"YuYin"+File.separator+filename);
@@ -69,19 +69,19 @@ public class YuYinUtil {
     }
 
     public static void get_all_result(ArrayList<SpeechText> speechList) {
-        while (true) {
-            String result = Recognize.getResult();
-            if (Recognize.getFinished()) {
-                break;
-            } else {
-                if (result.endsWith(" ")) {
-                    speechList.get(speechList.size()-1).setText(result.trim());
-                    speechList.add(new SpeechText("..."));
-                } else {
-                    speechList.get(speechList.size()-1).setText(result);
-                }
-            }
-        }
+//        while (true) {
+//            String result = Recognize.getResult();
+//            if (Recognize.getFinished()) {
+//                break;
+//            } else {
+//                if (result.endsWith(" ")) {
+//                    speechList.get(speechList.size()-1).setText(result.trim());
+//                    speechList.add(new SpeechText("..."));
+//                } else {
+//                    speechList.get(speechList.size()-1).setText(result);
+//                }
+//            }
+//        }
     }
 
     public static Boolean checkRequestPermissions(Activity activity, Context context) {

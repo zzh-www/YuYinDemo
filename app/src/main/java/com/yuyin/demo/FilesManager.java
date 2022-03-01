@@ -62,12 +62,7 @@ public class FilesManager extends Fragment {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        File[] files = file.listFiles(new FilenameFilter() {
-            @Override
-            public boolean accept(File dir, String name) {
-                return name.endsWith(".txt");
-            }
-        });
+        File[] files = file.listFiles((dir, name) -> name.endsWith(".txt"));
 
         for (File item : files) {
             fileItemArrayList.add(new FileItem(item));

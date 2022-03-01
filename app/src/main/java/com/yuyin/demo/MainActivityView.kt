@@ -152,32 +152,21 @@ class MainActivityView : AppCompatActivity() {
                             }
                             .show()
                     } else{
-                        runOnUiThread {
-                            EasyFloat.show("Capture")
-                            EasyFloat.dragEnable(false,"Capture")
-                        }
+//                        runOnUiThread {
+//                            EasyFloat.show("Capture")
+//                            EasyFloat.dragEnable(false,"Capture")
+//                        }
                     }
 
 
                 } else {    // 导航到其他
-                    runOnUiThread {
-                        EasyFloat.dragEnable(false,"Capture")
-                        EasyFloat.hide("Capture")
-                    }
+//                    runOnUiThread {
+//                        EasyFloat.dragEnable(false,"Capture")
+//                        EasyFloat.hide("Capture")
+//                    }
                 }
             }
         })
-
-
-
-    }
-
-    override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
-    }
-
-    override fun onPause() {
-        super.onPause()
 
         // 权限
         YuYinUtil.checkRequestPermissions(this,this)
@@ -204,6 +193,16 @@ class MainActivityView : AppCompatActivity() {
         if (!yuYinDir.exists()) {
             yuYinDir.mkdir()
         }
+
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+    }
+
+    override fun onPause() {
+        super.onPause()
+
     }
 
 
