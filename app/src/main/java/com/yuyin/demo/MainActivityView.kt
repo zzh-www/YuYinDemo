@@ -1,21 +1,21 @@
 package com.yuyin.demo
 
-import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.util.Log
-import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.ButtonBarLayout
+import androidx.core.os.EnvironmentCompat
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination
 import androidx.navigation.findNavController
@@ -25,10 +25,6 @@ import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import androidx.preference.PreferenceManager
-import com.lzf.easyfloat.EasyFloat
-import com.lzf.easyfloat.enums.ShowPattern
-import com.lzf.easyfloat.enums.SidePattern
-import com.lzf.easyfloat.utils.DisplayUtils
 import com.mobvoi.wenet.MediaCaptureService.mcs_Binder
 import com.mobvoi.wenet.Recognize
 import com.yuyin.demo.databinding.ActivityMainViewBinding
@@ -42,19 +38,9 @@ class MainActivityView : AppCompatActivity() {
     // 视图绑定
     private lateinit var binding: ActivityMainViewBinding
 
-    // 所需请求的权限
-    val appPermissions: Array<String> = arrayOf<String>(
-        Manifest.permission.WRITE_EXTERNAL_STORAGE,
-        Manifest.permission.RECORD_AUDIO,
-        Manifest.permission.FOREGROUND_SERVICE,
-    )
     private val m_ALL_PERMISSIONS_PERMISSION_CODE = 1000
 
-
-    private val MY_PERMISSIONS_RECORD_AUDIO = 1
-    private var miniBufferSize = 0
     private val LOG_TAG = "YUYIN"
-    private val SAMPLE_RATE = 16000 // The sampling rate
 
     // 层级配置
     private lateinit var appBarConfiguration: AppBarConfiguration
@@ -126,48 +112,21 @@ class MainActivityView : AppCompatActivity() {
                 // 导航到 runningCapture 时
                 if (destination.id == R.id.runingCapture_dest) {
 
-                    if (EasyFloat.getFloatView("Capture") == null) //未创建
-                    {
-                        // 开启浮窗
-                        EasyFloat.with(this@MainActivityView)
-                            .setLayout(R.layout.floatviewtest)
-                            .setShowPattern(ShowPattern.BACKGROUND) // 应用后台时显示
-                            .setSidePattern(SidePattern.RESULT_HORIZONTAL) // 吸附 根据移动后的位置贴附到边缘
-                            .setTag("Capture") // 设置TAG管理
-                            .setDragEnable(true) // 可拖拽
-                            .hasEditText(false) // 无编辑框，无需适配键盘
-                            .setLocation(100,0)
-                            .setGravity(Gravity.END or Gravity.CENTER_VERTICAL,0,0)
-                            .setLayoutChangedGravity(Gravity.END)
-                            //  .setBorder()
-                            .setMatchParent(false,false)
-                            .setAnimator(com.lzf.easyfloat.anim.DefaultAnimator())
-                            .setFilter(SettingsActivity::class.java) // 过滤ACTIVITY
-                            .setDisplayHeight{context -> DisplayUtils.rejectedNavHeight(context)}
-                            .registerCallback {
-                                dragEnd {
-                                    //TODO 获取当前重新绘制
-                                    //it.draw()
-                                }
-                            }
-                            .show()
-                    } else{
-//                        runOnUiThread {
-//                            EasyFloat.show("Capture")
-//                            EasyFloat.dragEnable(false,"Capture")
-//                        }
-                    }
 
-
-                } else {    // 导航到其他
-//                    runOnUiThread {
-//                        EasyFloat.dragEnable(false,"Capture")
-//                        EasyFloat.hide("Capture")
-//                    }
                 }
             }
         })
 
+
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.R)
+    override fun onResume() {
+        super.onResume()
         // 权限
         YuYinUtil.checkRequestPermissions(this,this)
 
@@ -193,17 +152,8 @@ class MainActivityView : AppCompatActivity() {
         if (!yuYinDir.exists()) {
             yuYinDir.mkdir()
         }
-
     }
 
-    override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
-    }
-
-    override fun onPause() {
-        super.onPause()
-
-    }
 
 
 

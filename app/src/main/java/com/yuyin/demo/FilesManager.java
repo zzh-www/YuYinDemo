@@ -63,9 +63,11 @@ public class FilesManager extends Fragment {
             e.printStackTrace();
         }
         File[] files = file.listFiles((dir, name) -> name.endsWith(".txt"));
-
-        for (File item : files) {
-            fileItemArrayList.add(new FileItem(item));
+        // 返回null
+        if (files != null) {
+            for (File item : files) {
+                fileItemArrayList.add(new FileItem(item));
+            }
         }
         adapter = new FileAdapter(fileItemArrayList);
         recyclerView.setAdapter(adapter);
