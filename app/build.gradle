@@ -13,10 +13,10 @@ repositories {
 android {
     signingConfigs {
         release {
-//            storeFile file('com.yuyin.demo.keystore')
-//            storePassword '123456'
-//            keyAlias 'com.yuyin.demo'
-//            keyPassword '123456'
+            storeFile file('wenet.keystore')
+            storePassword '123456'
+            keyAlias 'wenet'
+            keyPassword '123456'
         }
     }  //  APP签名，非必须
     packagingOptions {
@@ -137,3 +137,10 @@ tasks.whenTaskAdded { task ->
         task.dependsOn(extractAARForNativeBuild)
     }
 }
+//
+//gradleEnterprise {
+//    buildScan {
+//        termsOfServiceUrl = "https://gradle.com/terms-of-service"
+//        termsOfServiceAgree = "yes"
+//    }
+//}

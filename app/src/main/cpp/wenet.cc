@@ -189,3 +189,9 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *) {
 
   return JNI_VERSION_1_6;
 }
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_yuyin_demo_MainActivityView_getME(JNIEnv *env, jobject thiz) {
+  // TODO: implement getME()
+}

@@ -51,6 +51,8 @@ class MainActivityView : AppCompatActivity() {
     var mBound = false
     private var mcs_binder: mcs_Binder? = null
 
+    external fun getME()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // 膨胀视图
