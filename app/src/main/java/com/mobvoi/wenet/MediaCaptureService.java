@@ -24,7 +24,6 @@ import android.os.Binder;
 import android.os.Environment;
 import android.os.IBinder;
 import android.os.Process;
-import android.util.Log;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
@@ -43,7 +42,7 @@ import java.util.concurrent.BlockingQueue;
 import com.yuyin.demo.MainActivityView;
 import com.yuyin.demo.R;
 import com.yuyin.demo.RuningCapture;
-
+import com.yuyin.demo.YuYinLog;
 
 public class MediaCaptureService extends Service {
 
@@ -67,6 +66,7 @@ public class MediaCaptureService extends Service {
     int BytesPerElement = 2; // 2 bytes in 16bit format
 
     private NotificationCompat.Builder m_notificationBuilder;
+    private NotificationCompat.Builder pre_notificationBUilder;
     NotificationManager m_notificationManager;
     AudioRecord m_recorder;
     AudioRecord m_recorderMic;
@@ -96,14 +96,15 @@ public class MediaCaptureService extends Service {
                             e.printStackTrace();
                         }
                     } else if (actionName.equalsIgnoreCase(RuningCapture.ACTION_START_RECORDING)) {
-//                        stopRecording(m_callingIntent);
-                        restartRecording();
+                        startRecording();
+                        changeYourUIToStop();
                     } else if (actionName.equalsIgnoreCase(RuningCapture.ACTION_STOP_RECORDING)) {
                         stopRecording();
+                        changeYourUIToStart();
                     } else if (actionName.equalsIgnoreCase(RuningCapture.ACTION_STOP)) {
                         releaseRecording();
-                    } else if (actionName.equalsIgnoreCase(RuningCapture.ACTION_STOP_RECORDING_To_Main)) {
-                        stopRecordingToMain();
+                    } else if (actionName.equalsIgnoreCase(RuningCapture.ACTION_STOP_NOW)) {
+                        stopRecording();
                     }
                 }
             }
@@ -111,19 +112,21 @@ public class MediaCaptureService extends Service {
     };
 
 
-
     private void startMediaProject(Intent intent) {
         m_mediaProjection = m_mediaProjectionManager.getMediaProjection(-1, intent);
-        startRecording(m_mediaProjection);
-        Log.e("ZZH", "start_recording");
+        prestartRecording(m_mediaProjection);
+        YuYinLog.e("ZZH", "start_recording");
     }
+
+
+
 
 
     /**
      * @method startRecording
      * @description 配置采样场景 配置音轨 输出音频样式等
      */
-    private void startRecording(MediaProjection mediaProjection) {
+    private void prestartRecording(MediaProjection mediaProjection) {
         // 录制场景
         AudioPlaybackCaptureConfiguration config =
                 new AudioPlaybackCaptureConfiguration.Builder(mediaProjection)
@@ -149,30 +152,6 @@ public class MediaCaptureService extends Service {
                 .setAudioFormat(audioFormat)
                 .setBufferSizeInBytes(miniBufferSize)
                 .setAudioPlaybackCaptureConfig(config).build();
-        m_isRecording = true;
-
-        new Thread(() -> {
-            Intent broad = new Intent();
-            broad.setAction(RuningCapture.CaptureAudio_ALL);
-            broad.putExtra(RuningCapture.EXTRA_CaptureAudio_NAME, RuningCapture.CaptureAudio_START_ASR);
-            this.sendBroadcast(broad);
-        }).start();
-
-        new Thread(() -> {
-            m_recorder.startRecording();
-            Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO);
-            while (m_isRecording) {
-                short[] buffer = new short[miniBufferSize / 2];
-                int read = m_recorder.read(buffer, 0, buffer.length);
-                try {
-                    if (AudioRecord.ERROR_INVALID_OPERATION != read) {
-                        bufferQueue.put(buffer);
-                    }
-                } catch (InterruptedException e) {
-                    Log.e(m_Log_TAG, e.getMessage());
-                }
-            }
-        }).start();
 
 
 //        new Thread(new Runnable() {
@@ -183,7 +162,7 @@ public class MediaCaptureService extends Service {
 //        }).start();
     }
 
-    private void restartRecording() {
+    private void startRecording() {
         m_isRecording = true;
         m_notificationBuilder = new NotificationCompat.Builder(this, m_NOTIFICATION_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
@@ -193,12 +172,6 @@ public class MediaCaptureService extends Service {
                 .addAction(R.drawable.ic_baseline_play_arrow_24, "stop", stopPendingIntent);
         Notification notification = m_notificationBuilder.build();
         m_notificationManager.notify(m_NOTIFICATION_ID,notification);
-        new Thread(() -> {
-            Intent broad = new Intent();
-            broad.setAction(RuningCapture.CaptureAudio_ALL);
-            broad.putExtra(RuningCapture.EXTRA_CaptureAudio_NAME, RuningCapture.CaptureAudio_RESTART_RECORDING);
-            this.sendBroadcast(broad);
-        }).start();
         new Thread(() -> {
             m_recorder.startRecording();
             Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO);
@@ -210,10 +183,18 @@ public class MediaCaptureService extends Service {
                         bufferQueue.put(buffer);
                     }
                 } catch (InterruptedException e) {
-                    Log.e(m_Log_TAG, e.getMessage());
+                    YuYinLog.e(m_Log_TAG, e.getMessage());
                 }
             }
         }).start();
+    }
+
+    private void changeYourUIToStop(){
+        Intent broad = new Intent();
+        broad.setAction(RuningCapture.CaptureAudio_ALL);
+        broad.putExtra(RuningCapture.EXTRA_CaptureAudio_NAME, RuningCapture.CaptureAudio_START_ASR);
+        this.sendBroadcast(broad);
+
     }
 
     private void stopRecording() {
@@ -230,20 +211,12 @@ public class MediaCaptureService extends Service {
         Notification notification = m_notificationBuilder.build();
         m_notificationManager.notify(m_NOTIFICATION_ID,notification);
 
-//            m_mediaProjection.stop();
-
-        new Thread(() -> {
-            Intent broad = new Intent();
-            broad.setAction(RuningCapture.CaptureAudio_ALL);
-            broad.putExtra(RuningCapture.EXTRA_CaptureAudio_NAME, RuningCapture.CaptureAudio_STOP);
-            this.sendBroadcast(broad);
-        }).start();
     }
-
-    private void stopRecordingToMain() {
-        m_isRecording = false;
-
-        m_recorder.stop();
+    private void changeYourUIToStart(){
+        Intent broad = new Intent();
+        broad.setAction(RuningCapture.CaptureAudio_ALL);
+        broad.putExtra(RuningCapture.EXTRA_CaptureAudio_NAME, RuningCapture.CaptureAudio_STOP);
+        this.sendBroadcast(broad);
     }
 
     private void releaseRecording() {
@@ -264,24 +237,27 @@ public class MediaCaptureService extends Service {
         super.onCreate();
         isCreate = true;
 
+        // 中至意图
         Intent broadStopCastIntent = new Intent();
         broadStopCastIntent.setAction(RuningCapture.CaptureAudio_ALL);
         broadStopCastIntent.putExtra(RuningCapture.EXTRA_CaptureAudio_NAME, RuningCapture.ACTION_STOP_RECORDING_From_Notification);
         stopPendingIntent = PendingIntent.getBroadcast(this, 333, broadStopCastIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+
+        // 开始意图
         Intent broadStartCastIntent = new Intent();
         broadStartCastIntent.setAction(RuningCapture.CaptureAudio_ALL);
         broadStartCastIntent.putExtra(RuningCapture.EXTRA_CaptureAudio_NAME, RuningCapture.ACTION_START_RECORDING_From_Notification);
         startPendingIntent = PendingIntent.getBroadcast(this, 334, broadStopCastIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+
+        // 开启通知
         Intent notificationIntent = new Intent(this, MainActivityView.class);
         //  Returns an existing or new PendingIntent matching the given parameters
         pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
-        m_notificationBuilder = new NotificationCompat.Builder(this, m_NOTIFICATION_CHANNEL_ID)
+        pre_notificationBUilder = new NotificationCompat.Builder(this, m_NOTIFICATION_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .setColor(ContextCompat.getColor(this, R.color.primaryDarkColor))
                 .setContentTitle("余音")
-                .setContentText("ASR working")
-                .setTicker(m_ONGING_NOTIFICATION_TICKER) //通知到来时低版本上会在系统状态栏显示一小段时间 5.0以上版本好像没有用了
-                .addAction(R.drawable.ic_baseline_stop_24, "stop", stopPendingIntent);
+                .setContentText("ASR");
         NotificationChannel channel = new NotificationChannel(m_NOTIFICATION_CHANNEL_ID, m_NOTIFICATION_CHANNEL_NAME, NotificationManager.IMPORTANCE_DEFAULT);
         channel.setDescription(m_NOTIFICATION_CHANNEL_DESC);
         m_notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -289,6 +265,8 @@ public class MediaCaptureService extends Service {
 
         m_mediaProjectionManager = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
 
+
+        // 注册广播
         IntentFilter filter = new IntentFilter();
         filter.addAction(RuningCapture.ACTION_ALL);
         registerReceiver(m_actionReceiver, filter);
@@ -301,13 +279,13 @@ public class MediaCaptureService extends Service {
 //        return super.onStartCommand(intent, flags, startId);
         // 启动
         m_callingIntent = intent;
-        Notification notification = m_notificationBuilder.build();
+        Notification notification = pre_notificationBUilder.build();
         startForeground(m_NOTIFICATION_ID, notification);
 
         // 通知服务已启动
         new Thread(() -> {
             Intent broad = new Intent();
-            broad.setAction(RuningCapture.CaptureAudio_ALL);
+            broad.setAction("MainActivityAction");
             broad.putExtra(RuningCapture.EXTRA_CaptureAudio_NAME, RuningCapture.CaptureAudio_START);
             this.sendBroadcast(broad);
         }).start();
@@ -327,7 +305,7 @@ public class MediaCaptureService extends Service {
         public short[] getAudioQueue() throws InterruptedException {
             return bufferQueue.take();
         }
-        public int getAudioQueueSize() throws InterruptedException {
+        public int getAudioQueueSize() {
             return bufferQueue.size();
         }
 
@@ -357,7 +335,7 @@ public class MediaCaptureService extends Service {
         PackageManager pm = getPackageManager();
         List<PackageInfo> packageInfos = pm.getInstalledPackages(0);
         for (PackageInfo info : packageInfos) {
-            Log.i("APPIFO", info.applicationInfo.toString());
+            YuYinLog.i("APPIFO", info.applicationInfo.toString());
         }
     }
 
@@ -377,7 +355,7 @@ public class MediaCaptureService extends Service {
     private void writeAudioDataToFile() {
         if (m_recorder == null) return;
         // Write the output audio in byte
-        Log.i("ZZH", "Recording started. Computing output file name");
+        YuYinLog.i("ZZH", "Recording started. Computing output file name");
         File sampleDir = new File(getExternalFilesDir(Environment.DIRECTORY_MUSIC), "/TestRecordingDasa1");
         if (!sampleDir.exists()) {
             sampleDir.mkdirs();
@@ -397,7 +375,7 @@ public class MediaCaptureService extends Service {
         while (m_isRecording) {
             // gets the voice output from microphone to byte format
             m_recorder.read(sData, 0, BufferElements2Rec);
-            Log.i("ZZH", "Short wirting to file" + sData.toString());
+            YuYinLog.i("ZZH", "Short wirting to file" + sData.toString());
             try {
                 // // writes the data to file from buffer
                 // // stores the voice buffer
@@ -405,7 +383,7 @@ public class MediaCaptureService extends Service {
                 os.write(bData, 0, BufferElements2Rec * BytesPerElement);
             } catch (IOException e) {
                 e.printStackTrace();
-                Log.i("ZZH", "record error:" + e.getMessage());
+                YuYinLog.i("ZZH", "record error:" + e.getMessage());
             }
         }
         try {
@@ -414,13 +392,13 @@ public class MediaCaptureService extends Service {
             e.printStackTrace();
         }
 
-        Log.i("ZZH", String.format("Recording finished. File saved to '%s'", filePath));
+        YuYinLog.i("ZZH", String.format("Recording finished. File saved to '%s'", filePath));
     }
 
     private void writeAudioDataToFileMic() {
         if (m_recorderMic == null) return;
         // Write the output audio in byte
-        Log.i("ZZH", "Recording started. Computing output file name");
+        YuYinLog.i("ZZH", "Recording started. Computing output file name");
         File sampleDir = new File(getExternalFilesDir(Environment.DIRECTORY_MUSIC), "/TestRecordingDasa1Mic");
         if (!sampleDir.exists()) {
             sampleDir.mkdirs();
@@ -440,7 +418,7 @@ public class MediaCaptureService extends Service {
         while (m_isRecording) {
             // gets the voice output from microphone to byte format
             m_recorderMic.read(sData, 0, BufferElements2Rec);
-            Log.i("ZZH", "Short wirting to file" + sData.toString());
+            YuYinLog.i("ZZH", "Short wirting to file" + sData.toString());
             try {
                 // // writes the data to file from buffer
                 // // stores the voice buffer
@@ -448,7 +426,7 @@ public class MediaCaptureService extends Service {
                 os.write(bData, 0, BufferElements2Rec * BytesPerElement);
             } catch (IOException e) {
                 e.printStackTrace();
-                Log.i("ZZH", "record error:" + e.getMessage());
+                YuYinLog.i("ZZH", "record error:" + e.getMessage());
             }
         }
         try {
@@ -457,6 +435,6 @@ public class MediaCaptureService extends Service {
             e.printStackTrace();
         }
 
-        Log.i("ZZH", String.format("Recording finished. File saved to '%s'", filePath));
+        YuYinLog.i("ZZH", String.format("Recording finished. File saved to '%s'", filePath));
     }
 }

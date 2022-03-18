@@ -1,7 +1,10 @@
 package com.yuyin.demo;
 
-import android.content.Intent;
 import android.os.Bundle;
+import android.os.Environment;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -9,18 +12,10 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import android.os.Environment;
-import android.provider.DocumentsContract;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-
 import com.yuyin.demo.databinding.FragmentFilesManagerBinding;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
-import java.lang.ref.PhantomReference;
 import java.util.ArrayList;
 
 

@@ -1,2 +1,8 @@
 include ':app'
 rootProject.name = "yuyin"
+//gradleEnterprise {
+//    buildScan {
+//        termsOfServiceUrl = "https://gradle.com/terms-of-service"
+//        termsOfServiceAgree = "yes"
+//    }
+//}

@@ -83,11 +83,9 @@ void accept_waveform(JNIEnv *env, jobject, jshortArray jWaveform) {
 }
 
 void set_input_finished() {
+  // 会检测模型有无finish 并会有死锁... 所以退出服务时不应该调用 而应该直接reset
 //  LOG(INFO) << "wenet input finished";
   feature_pipeline->set_input_finished();
-  while (!results.empty()) {
-    results.pop();
-  }
 }
 
 void decode_thread_func() {

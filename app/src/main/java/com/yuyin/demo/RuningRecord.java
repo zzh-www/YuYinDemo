@@ -1,41 +1,34 @@
 package com.yuyin.demo;
+
 import android.Manifest;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Bundle;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.core.app.ActivityCompat;
-import androidx.fragment.app.Fragment;
-import androidx.lifecycle.ViewModelProvider;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
-import android.os.Environment;
 import android.os.Process;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.mobvoi.wenet.Recognize;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
+import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.preference.PreferenceManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
+import com.mobvoi.wenet.Recognize;
 import com.yuyin.demo.databinding.FragmentRuningRecordBinding;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
-
 import java.util.ArrayList;
-
-import java.util.Date;
 
 
 public class RuningRecord extends Fragment {
@@ -60,6 +53,10 @@ public class RuningRecord extends Fragment {
     private YuyinViewModel model;
 
 
+    @Override
+    public void onAttach(@NonNull Context context) {
+        super.onAttach(context);
+    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -77,6 +74,8 @@ public class RuningRecord extends Fragment {
         return view;
 //        return inflater.inflate(R.layout.fragment_runing_record, container, false);
     }
+
+
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
@@ -123,10 +122,21 @@ public class RuningRecord extends Fragment {
         });
     }
 
+
     @Override
-    public void onConfigurationChanged(@NonNull Configuration newConfig) {
-        super.onConfigurationChanged(newConfig);
-        model.setChange_senor(true); // 标记屏幕旋转
+    public void onStart() {
+        super.onStart();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+    }
+
+
+    @Override
+    public void onStop() {
+        super.onStop();
     }
 
     @Override
@@ -142,10 +152,21 @@ public class RuningRecord extends Fragment {
     }
     @Override
     public void onDestroy() {
-        Recognize.setInputFinished();
         model.getResults().getValue().clear();
         model.getBufferQueue().clear();
         super.onDestroy();
+    }
+
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
+    }
+
+    @Override
+    public void onConfigurationChanged(@NonNull Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        model.setChange_senor(true); // 标记屏幕旋转
     }
 
     private void initRunner() {
@@ -192,6 +213,7 @@ public class RuningRecord extends Fragment {
             startAsrThread();
         }
     }
+
 
     private void initRecorder() {
 //    // buffer size in bytes 1280

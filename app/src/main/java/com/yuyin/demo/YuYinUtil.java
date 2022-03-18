@@ -2,29 +2,17 @@ package com.yuyin.demo;
 
 import android.Manifest;
 import android.app.Activity;
-import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
-import android.content.Intent;
-import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
-import android.media.projection.MediaProjectionManager;
 import android.os.Environment;
-import android.os.IBinder;
-import android.widget.Toast;
 
-import androidx.activity.result.ActivityResultCallback;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.navigation.Navigation;
-
-import com.mobvoi.wenet.MediaCaptureService;
-import com.mobvoi.wenet.Recognize;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
@@ -100,5 +88,27 @@ public class YuYinUtil {
         return true;
     }
 
+
+    public static String assetFilePath(Context context, String assetName) {
+        File file = new File(context.getFilesDir(), assetName);
+        if (file.exists() && file.length() > 0) {
+            return file.getAbsolutePath();
+        }
+
+        try (InputStream is = context.getAssets().open(assetName)) {
+            try (OutputStream os = new FileOutputStream(file)) {
+                byte[] buffer = new byte[4 * 1024];
+                int read;
+                while ((read = is.read(buffer)) != -1) {
+                    os.write(buffer, 0, read);
+                }
+                os.flush();
+            }
+            return file.getAbsolutePath();
+        } catch (IOException e) {
+            YuYinLog.e("YUYINUTIl", "Error process asset " + assetName + " to file path");
+        }
+        return null;
+    }
 
 }

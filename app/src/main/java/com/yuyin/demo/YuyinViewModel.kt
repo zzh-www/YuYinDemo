@@ -10,6 +10,7 @@ import java.util.concurrent.BlockingQueue
 class YuyinViewModel : ViewModel(){
 
 
+
     //    private val speechList: List<SpeechText> = ArrayList()
     val results: MutableLiveData<ArrayList<SpeechText>> = MutableLiveData<ArrayList<SpeechText>>()
 
@@ -30,7 +31,6 @@ class YuyinViewModel : ViewModel(){
 
     var mBound = false
     var mcs_binder: mcs_Binder? = null
-    lateinit var m_actionReceiver: RuningCapture.CaptureAudioReceiver
 
 
 }
