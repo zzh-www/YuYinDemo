@@ -3,7 +3,6 @@ package com.yuyin.demo
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
@@ -24,7 +23,6 @@ import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import androidx.preference.PreferenceManager
-import com.mobvoi.wenet.MediaCaptureService.mcs_Binder
 import com.mobvoi.wenet.Recognize
 import com.yuyin.demo.databinding.ActivityMainViewBinding
 import java.io.File
@@ -48,9 +46,7 @@ class MainActivityView : AppCompatActivity() {
 
     // 服务
     var mBound = false
-    private var mcs_binder: mcs_Binder? = null
 
-    external fun getME()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -111,12 +107,6 @@ class MainActivityView : AppCompatActivity() {
                     }
 
                 }
-
-                // 导航到 runningCapture 时
-                if (destination.id == R.id.runingCapture_dest) {
-
-
-                }
             }
         })
 
@@ -134,8 +124,8 @@ class MainActivityView : AppCompatActivity() {
         var dic_name = "words"
         val sharedPreference = PreferenceManager.getDefaultSharedPreferences(this)
         val mod = sharedPreference.getString("languageOfModule", "zh")
-        model_name = "$`model_name`_$`mod`.zip"
-        dic_name = "$`dic_name`_$`mod`.txt"
+        model_name = "$`model_name`_$mod.zip"
+        dic_name = "$`dic_name`_$mod.txt"
         try {
             init_model(model_name, dic_name)
         } catch (exception: Exception) {
@@ -153,8 +143,8 @@ class MainActivityView : AppCompatActivity() {
 
 
     fun init_model(model: String, dic: String) {
-        val model_path = File(assetFilePath(this, model)).absolutePath
-        val dic_path = File(assetFilePath(this, dic)).absolutePath
+        val model_path = assetFilePath(this, model)?.let { File(it).absolutePath }
+        val dic_path = assetFilePath(this, dic)?.let { File(it).absolutePath }
         Recognize.init(model_path, dic_path)
     }
 

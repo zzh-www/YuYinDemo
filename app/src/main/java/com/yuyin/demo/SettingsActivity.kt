@@ -1,6 +1,5 @@
 package com.yuyin.demo
 
-import android.content.res.Configuration
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.PreferenceFragmentCompat
