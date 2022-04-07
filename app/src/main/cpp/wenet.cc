@@ -159,7 +159,7 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *) {
     return JNI_ERR;
   }
 
-  jclass c = env->FindClass("com/mobvoi/wenet/`Recognize.java`");
+  jclass c = env->FindClass("com/mobvoi/wenet/Recognize");
   if (c == nullptr) {
     return JNI_ERR;
   }
