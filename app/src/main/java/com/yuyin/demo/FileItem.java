@@ -3,9 +3,10 @@ package com.yuyin.demo;
 import java.io.File;
 
 public class FileItem {
+    private final File file_path;
     private String file_name = "";
-    private File file_path;
-    public FileItem(File path ) {
+
+    public FileItem(File path) {
 
         this.file_name = path.getName();
         this.file_path = path;

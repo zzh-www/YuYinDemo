@@ -8,11 +8,10 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-
 import java.util.List;
 
 public class SpeechTextAdapter extends RecyclerView.Adapter<SpeechTextAdapter.ViewHolder> {
-    private List<SpeechText> dataList;
+    private final List<SpeechText> dataList;
 
     public SpeechTextAdapter(List<SpeechText> data) {
         dataList = data;
@@ -39,15 +38,16 @@ public class SpeechTextAdapter extends RecyclerView.Adapter<SpeechTextAdapter.Vi
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
         private final TextView speech_view;
+
         public ViewHolder(View view) {
             super(view);
             this.speech_view = (TextView) view.findViewById(R.id.speechText);
         }
+
         public TextView getSpeech_view() {
             return speech_view;
         }
     }
-
 
 
 }

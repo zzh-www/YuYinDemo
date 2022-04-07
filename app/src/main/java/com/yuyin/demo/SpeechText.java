@@ -1,7 +1,8 @@
 package com.yuyin.demo;
 
 public class SpeechText {
-    private String speech_Text="";
+    private String speech_Text = "";
+
     public SpeechText(String text) {
         this.speech_Text = text;
     }

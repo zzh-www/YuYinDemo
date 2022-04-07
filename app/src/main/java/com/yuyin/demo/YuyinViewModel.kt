@@ -7,7 +7,7 @@ import com.mobvoi.wenet.MediaCaptureService.mcs_Binder
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.BlockingQueue
 
-class YuyinViewModel : ViewModel(){
+class YuyinViewModel : ViewModel() {
 
 
     //    private val speechList: List<SpeechText> = ArrayList()

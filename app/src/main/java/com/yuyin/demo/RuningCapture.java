@@ -1,9 +1,6 @@
 package com.yuyin.demo;
 
 import android.app.Activity;
-import android.app.Notification;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -11,26 +8,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.res.Configuration;
-
 import android.media.projection.MediaProjectionManager;
-
 import android.os.Bundle;
-
-
-import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
-import androidx.core.content.ContextCompat;
-import androidx.fragment.app.Fragment;
-import androidx.lifecycle.ViewModelProvider;
-
-import androidx.navigation.Navigation;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
-
 import android.os.IBinder;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -38,11 +17,19 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.Navigation;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
 import com.lzf.easyfloat.EasyFloat;
 import com.mobvoi.wenet.MediaCaptureService;
 import com.mobvoi.wenet.Recognize;
 import com.yuyin.demo.databinding.FragmentRuningCaptureBinding;
-
 
 import java.util.ArrayList;
 
@@ -80,7 +67,18 @@ public class RuningCapture extends Fragment {
 
     // ViewModel
     private YuyinViewModel model;
+    private final ServiceConnection connection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            model.setMcs_binder((MediaCaptureService.mcs_Binder) service);
+            model.setMBound(true);
+        }
 
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            model.setMBound(false);
+        }
+    };
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -154,7 +152,6 @@ public class RuningCapture extends Fragment {
         });
     }
 
-
     @Override
     public void onAttach(@NonNull Context context) {
         super.onAttach(context);
@@ -171,11 +168,13 @@ public class RuningCapture extends Fragment {
         });
     }
 
-
     @Override
     public void onDetach() {
         super.onDetach();
     }
+
+
+    // 广播服务
 
     // init view
     private void initRunner() {
@@ -237,81 +236,6 @@ public class RuningCapture extends Fragment {
         }
     }
 
-
-    // 广播服务
-
-    // 不可以耗时操作  在主线程中
-    public class CaptureAudioReceiver extends BroadcastReceiver {
-
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-            if (action.equalsIgnoreCase(CaptureAudio_ALL)) {
-                String actionName = intent.getStringExtra(EXTRA_CaptureAudio_NAME);
-                if (actionName != null && !actionName.isEmpty()) {
-                    if (actionName.equalsIgnoreCase(CaptureAudio_START)) {
-
-                        // 接收服务已启动的通知
-                        // 通知服务开启录制
-                        startRecordingService();
-                    } else if (actionName.equalsIgnoreCase(CaptureAudio_START_ASR)) {
-                        // binding 变为了null？？？
-                        model.getContext().runOnUiThread(() -> {
-                            model.getContext().findViewById(R.id.stop_bt_run_cap).setEnabled(true);
-                            model.setStartRecord(true);
-                        });
-                        // 接收录制已启动通知 只有第一次需要
-                        if (!model.getStartAsr()) {
-                            Recognize.reset();
-                            startAsrThread();
-                            Recognize.startDecode();
-                            model.setStartAsr(true);
-                        }
-                    } else if (actionName.equalsIgnoreCase(CaptureAudio_STOP)) {
-                        model.getContext().runOnUiThread(() -> {
-                            model.setStartRecord(false);
-                            TextView floatText = EasyFloat.getFloatView("Capture").findViewById(R.id.flow_text);
-                            floatText.setText("");
-                            // 跳出当前fragment后
-                            try {
-                                model.getContext().findViewById(R.id.stop_bt_run_cap).setEnabled(true);
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-                        });
-                    } else if (actionName.equalsIgnoreCase(CaptureAudio_RESTART_RECORDING)) {
-                        model.getContext().runOnUiThread(() -> {
-                            model.getContext().findViewById(R.id.stop_bt_run_cap).setEnabled(true);
-                            model.setStartRecord(true);
-                        });
-
-                        if (model.getStartAsr()==false) {
-                            model.setStartAsr(true);
-                            startAsrThread();
-                        }
-                    } else if (actionName.equalsIgnoreCase(ACTION_STOP_RECORDING_From_Notification)) {
-                        model.context.runOnUiThread(()->{
-                            binding.stopBtRunCap.setEnabled(false);
-                            stopRecording();
-                            binding.stopBtRunCap.setText("start");
-                            binding.saveBtRunCap.setVisibility(View.VISIBLE);
-                            binding.saveBtRunCap.setEnabled(true);
-                        });
-                    } else if (actionName.equalsIgnoreCase(ACTION_START_RECORDING_From_Notification)) {
-                        model.context.runOnUiThread(() -> {
-                            binding.stopBtRunCap.setEnabled(false);
-                            restartRecording();
-                            binding.stopBtRunCap.setText("stop");
-                            binding.saveBtRunCap.setVisibility(View.INVISIBLE);
-                            binding.saveBtRunCap.setEnabled(false);
-                        });
-                    }
-                }
-            }
-        }
-    }
-
-
     private void startRecordingService() {
 
         try {
@@ -344,20 +268,6 @@ public class RuningCapture extends Fragment {
         broadCastIntent.putExtra(EXTRA_ACTION_NAME, ACTION_STOP_RECORDING_To_Main);
         model.getContext().sendBroadcast(broadCastIntent);
     }
-
-    private final ServiceConnection connection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            model.setMcs_binder((MediaCaptureService.mcs_Binder) service);
-            model.setMBound(true);
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            model.setMBound(false);
-        }
-    };
-
 
     private void initAudioCapture() {
 
@@ -412,8 +322,8 @@ public class RuningCapture extends Fragment {
 
                     String result = Recognize.getResult();
 
-                    if (Recognize.getResult()=="") {
-                        model.context.runOnUiThread(()->{
+                    if (Recognize.getResult() == "") {
+                        model.context.runOnUiThread(() -> {
                             TextView floatText = EasyFloat.getFloatView("Capture").findViewById(R.id.flow_text);
                             floatText.setText(result);
                         });
@@ -449,6 +359,77 @@ public class RuningCapture extends Fragment {
         }).start();
 
         model.setStartAsr(false);
+    }
+
+    // 不可以耗时操作  在主线程中
+    public class CaptureAudioReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (action.equalsIgnoreCase(CaptureAudio_ALL)) {
+                String actionName = intent.getStringExtra(EXTRA_CaptureAudio_NAME);
+                if (actionName != null && !actionName.isEmpty()) {
+                    if (actionName.equalsIgnoreCase(CaptureAudio_START)) {
+
+                        // 接收服务已启动的通知
+                        // 通知服务开启录制
+                        startRecordingService();
+                    } else if (actionName.equalsIgnoreCase(CaptureAudio_START_ASR)) {
+                        // binding 变为了null？？？
+                        model.getContext().runOnUiThread(() -> {
+                            model.getContext().findViewById(R.id.stop_bt_run_cap).setEnabled(true);
+                            model.setStartRecord(true);
+                        });
+                        // 接收录制已启动通知 只有第一次需要
+                        if (!model.getStartAsr()) {
+                            Recognize.reset();
+                            startAsrThread();
+                            Recognize.startDecode();
+                            model.setStartAsr(true);
+                        }
+                    } else if (actionName.equalsIgnoreCase(CaptureAudio_STOP)) {
+                        model.getContext().runOnUiThread(() -> {
+                            model.setStartRecord(false);
+                            TextView floatText = EasyFloat.getFloatView("Capture").findViewById(R.id.flow_text);
+                            floatText.setText("");
+                            // 跳出当前fragment后
+                            try {
+                                model.getContext().findViewById(R.id.stop_bt_run_cap).setEnabled(true);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        });
+                    } else if (actionName.equalsIgnoreCase(CaptureAudio_RESTART_RECORDING)) {
+                        model.getContext().runOnUiThread(() -> {
+                            model.getContext().findViewById(R.id.stop_bt_run_cap).setEnabled(true);
+                            model.setStartRecord(true);
+                        });
+
+                        if (model.getStartAsr() == false) {
+                            model.setStartAsr(true);
+                            startAsrThread();
+                        }
+                    } else if (actionName.equalsIgnoreCase(ACTION_STOP_RECORDING_From_Notification)) {
+                        model.context.runOnUiThread(() -> {
+                            binding.stopBtRunCap.setEnabled(false);
+                            stopRecording();
+                            binding.stopBtRunCap.setText("start");
+                            binding.saveBtRunCap.setVisibility(View.VISIBLE);
+                            binding.saveBtRunCap.setEnabled(true);
+                        });
+                    } else if (actionName.equalsIgnoreCase(ACTION_START_RECORDING_From_Notification)) {
+                        model.context.runOnUiThread(() -> {
+                            binding.stopBtRunCap.setEnabled(false);
+                            restartRecording();
+                            binding.stopBtRunCap.setText("stop");
+                            binding.saveBtRunCap.setVisibility(View.INVISIBLE);
+                            binding.saveBtRunCap.setEnabled(false);
+                        });
+                    }
+                }
+            }
+        }
     }
 
 }

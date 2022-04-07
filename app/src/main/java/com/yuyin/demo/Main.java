@@ -1,19 +1,16 @@
 package com.yuyin.demo;
 
-import android.media.projection.MediaProjectionManager;
 import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
 
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-
 import com.yuyin.demo.databinding.FragmentMainBinding;
-
 
 
 public class Main extends Fragment {
@@ -41,17 +38,17 @@ public class Main extends Fragment {
 
 
         binding.recordAsrBt.setOnClickListener(v -> {
-            if (YuYinUtil.checkRequestPermissions(requireActivity(),requireContext())) {
+            if (YuYinUtil.checkRequestPermissions(requireActivity(), requireContext())) {
                 Navigation.findNavController(
                         requireActivity(),
                         R.id.yuyin_nav_host_container_fragment)
-                            .navigate(R.id.action_main_dest_to_runingRecord_dest);
+                        .navigate(R.id.action_main_dest_to_runingRecord_dest);
             }
         });
 
 
         binding.captureAsrBt.setOnClickListener(v -> {
-            if (YuYinUtil.checkRequestPermissions(requireActivity(),requireContext())) {
+            if (YuYinUtil.checkRequestPermissions(requireActivity(), requireContext())) {
                 Navigation.findNavController(
                         requireActivity(),
                         R.id.yuyin_nav_host_container_fragment)

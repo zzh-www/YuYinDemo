@@ -2,25 +2,12 @@ package com.yuyin.demo;
 
 import android.Manifest;
 import android.app.Activity;
-import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
-import android.content.Intent;
-import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
-import android.media.projection.MediaProjectionManager;
 import android.os.Environment;
-import android.os.IBinder;
-import android.widget.Toast;
 
-import androidx.activity.result.ActivityResultCallback;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.navigation.Navigation;
-
-import com.mobvoi.wenet.MediaCaptureService;
-import com.mobvoi.wenet.Recognize;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -44,15 +31,15 @@ public class YuYinUtil {
     public static final int m_ALL_PERMISSIONS_PERMISSION_CODE = 1000;
 
 
-    public static void save_file(Context context, ArrayList<SpeechText> speechList){
+    public static void save_file(Context context, ArrayList<SpeechText> speechList) {
         Long timeStamp = System.currentTimeMillis();
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss", Locale.CHINA);
-        String filename = sdf.format(new Date(Long.parseLong(String.valueOf(timeStamp))))+".txt";
+        String filename = sdf.format(new Date(Long.parseLong(String.valueOf(timeStamp)))) + ".txt";
         File dir_path = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS);
-        File file = new File(dir_path.getAbsoluteFile()+File.separator+"YuYin"+File.separator+filename);
+        File file = new File(dir_path.getAbsoluteFile() + File.separator + "YuYin" + File.separator + filename);
         StringBuilder total_result = new StringBuilder();
 
-        for (SpeechText i : speechList ) {
+        for (SpeechText i : speechList) {
             total_result.append(i.getText());
             total_result.append("\n");
         }
@@ -85,14 +72,14 @@ public class YuYinUtil {
     }
 
     public static Boolean checkRequestPermissions(Activity activity, Context context) {
-        List< String > listPermissionsNeeded = new ArrayList<>();
-        for(String permission : appPermissions){
-            if(ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED){
+        List<String> listPermissionsNeeded = new ArrayList<>();
+        for (String permission : appPermissions) {
+            if (ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
                 listPermissionsNeeded.add(permission);
             }
         }
 
-        if(!listPermissionsNeeded.isEmpty()){
+        if (!listPermissionsNeeded.isEmpty()) {
             ActivityCompat.requestPermissions(activity, listPermissionsNeeded.toArray(new String[listPermissionsNeeded.size()]), m_ALL_PERMISSIONS_PERMISSION_CODE);
             return false;
         }

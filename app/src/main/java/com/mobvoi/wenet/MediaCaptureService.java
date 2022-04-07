@@ -13,7 +13,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-
 import android.media.AudioAttributes;
 import android.media.AudioFormat;
 import android.media.AudioPlaybackCaptureConfiguration;
@@ -30,6 +29,10 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 
+import com.yuyin.demo.MainActivityView;
+import com.yuyin.demo.R;
+import com.yuyin.demo.RuningCapture;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -40,13 +43,12 @@ import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
-import com.yuyin.demo.MainActivityView;
-import com.yuyin.demo.R;
-import com.yuyin.demo.RuningCapture;
-
 
 public class MediaCaptureService extends Service {
 
+    public static final String m_NOTIFICATION_CHANNEL_ID = "Yuyin_ChannelId";
+    public static final String m_NOTIFICATION_CHANNEL_NAME = "Yuyin_Channel";
+    public static final String m_NOTIFICATION_CHANNEL_DESC = "Yuyin is working";
     private static final int m_RECORDER_SAMPLERATE = 16000;
     private static final int m_RECORDER_CHANNELS = AudioFormat.CHANNEL_IN_MONO;
     private static final int m_RECORDER_AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT;
@@ -54,24 +56,18 @@ public class MediaCaptureService extends Service {
     private static final int MAX_QUEUE_SIZE = 2500;
     private static int miniBufferSize;
     private static boolean m_isRecording = false;
-    private final String m_Log_TAG = "MediaCaptureService";
-    public static final String m_NOTIFICATION_CHANNEL_ID = "Yuyin_ChannelId";
-    public static final String m_NOTIFICATION_CHANNEL_NAME = "Yuyin_Channel";
-    public static final String m_NOTIFICATION_CHANNEL_DESC = "Yuyin is working";
-
-    private final IBinder binder = new mcs_Binder();
     public final BlockingQueue<short[]> bufferQueue = new ArrayBlockingQueue<>(MAX_QUEUE_SIZE);
-    private boolean isCreate = false;
-
+    private final String m_Log_TAG = "MediaCaptureService";
+    private final IBinder binder = new mcs_Binder();
+    private final int m_NOTIFICATION_ID = 1000;
     int BufferElements2Rec = 1024; // want to play 2048 (2K) since 2 bytes we use only 1024
     int BytesPerElement = 2; // 2 bytes in 16bit format
-
-    private NotificationCompat.Builder m_notificationBuilder;
     NotificationManager m_notificationManager;
     AudioRecord m_recorder;
     AudioRecord m_recorderMic;
     Intent m_callingIntent;
-    private final int m_NOTIFICATION_ID = 1000;
+    private boolean isCreate = false;
+    private NotificationCompat.Builder m_notificationBuilder;
     private MediaProjectionManager m_mediaProjectionManager;
     private MediaProjection m_mediaProjection;
 
@@ -109,7 +105,6 @@ public class MediaCaptureService extends Service {
             }
         }
     };
-
 
 
     private void startMediaProject(Intent intent) {
@@ -192,7 +187,7 @@ public class MediaCaptureService extends Service {
                 .setContentText("ASR working")
                 .addAction(R.drawable.ic_baseline_play_arrow_24, "stop", stopPendingIntent);
         Notification notification = m_notificationBuilder.build();
-        m_notificationManager.notify(m_NOTIFICATION_ID,notification);
+        m_notificationManager.notify(m_NOTIFICATION_ID, notification);
         new Thread(() -> {
             Intent broad = new Intent();
             broad.setAction(RuningCapture.CaptureAudio_ALL);
@@ -228,7 +223,7 @@ public class MediaCaptureService extends Service {
                 .setContentText("ASR stop")
                 .addAction(R.drawable.ic_baseline_play_arrow_24, "start", startPendingIntent);
         Notification notification = m_notificationBuilder.build();
-        m_notificationManager.notify(m_NOTIFICATION_ID,notification);
+        m_notificationManager.notify(m_NOTIFICATION_ID, notification);
 
 //            m_mediaProjection.stop();
 
@@ -323,29 +318,10 @@ public class MediaCaptureService extends Service {
         unregisterReceiver(m_actionReceiver);
     }
 
-    public class mcs_Binder extends Binder {
-        public short[] getAudioQueue() throws InterruptedException {
-            return bufferQueue.take();
-        }
-        public int getAudioQueueSize() throws InterruptedException {
-            return bufferQueue.size();
-        }
-
-        public void clearQueue() {
-            bufferQueue.clear();
-        }
-
-        public boolean getIsCreate() {
-            return isCreate;
-        }
-    }
-
-
     @Override
     public IBinder onBind(Intent intent) {
         return binder;
     }
-
 
     /**
      * @method getUidExample
@@ -360,7 +336,6 @@ public class MediaCaptureService extends Service {
             Log.i("APPIFO", info.applicationInfo.toString());
         }
     }
-
 
     private byte[] short2byte(short[] sData) {
         int shortArrsize = sData.length;
@@ -385,7 +360,7 @@ public class MediaCaptureService extends Service {
         String fileName = "Record-" + new SimpleDateFormat("dd-MM-yyyy-hh-mm-ss").format(new Date()) + ".pcm";
         String filePath = sampleDir.getAbsolutePath() + "/" + fileName;
         //String filePath = "/sdcard/voice8K16bitmono.pcm";
-        short sData[] = new short[BufferElements2Rec];
+        short[] sData = new short[BufferElements2Rec];
 
         FileOutputStream os = null;
         try {
@@ -401,7 +376,7 @@ public class MediaCaptureService extends Service {
             try {
                 // // writes the data to file from buffer
                 // // stores the voice buffer
-                byte bData[] = short2byte(sData);
+                byte[] bData = short2byte(sData);
                 os.write(bData, 0, BufferElements2Rec * BytesPerElement);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -428,7 +403,7 @@ public class MediaCaptureService extends Service {
         String fileName = "Record-" + new SimpleDateFormat("dd-MM-yyyy-hh-mm-ss").format(new Date()) + ".pcm";
         String filePath = sampleDir.getAbsolutePath() + "/" + fileName;
         //String filePath = "/sdcard/voice8K16bitmono.pcm";
-        short sData[] = new short[BufferElements2Rec];
+        short[] sData = new short[BufferElements2Rec];
 
         FileOutputStream os = null;
         try {
@@ -444,7 +419,7 @@ public class MediaCaptureService extends Service {
             try {
                 // // writes the data to file from buffer
                 // // stores the voice buffer
-                byte bData[] = short2byte(sData);
+                byte[] bData = short2byte(sData);
                 os.write(bData, 0, BufferElements2Rec * BytesPerElement);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -458,5 +433,23 @@ public class MediaCaptureService extends Service {
         }
 
         Log.i("ZZH", String.format("Recording finished. File saved to '%s'", filePath));
+    }
+
+    public class mcs_Binder extends Binder {
+        public short[] getAudioQueue() throws InterruptedException {
+            return bufferQueue.take();
+        }
+
+        public int getAudioQueueSize() throws InterruptedException {
+            return bufferQueue.size();
+        }
+
+        public void clearQueue() {
+            bufferQueue.clear();
+        }
+
+        public boolean getIsCreate() {
+            return isCreate;
+        }
     }
 }

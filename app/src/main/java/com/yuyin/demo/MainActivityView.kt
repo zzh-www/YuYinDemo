@@ -15,7 +15,6 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.os.EnvironmentCompat
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination
 import androidx.navigation.findNavController
@@ -64,24 +63,26 @@ class MainActivityView : AppCompatActivity() {
         setSupportActionBar(binding.actionBar)
 
         // 获取NavHostFragment
-        val host: NavHostFragment = supportFragmentManager.findFragmentById(R.id.yuyin_nav_host_container_fragment) as NavHostFragment? ?: return
+        val host: NavHostFragment =
+            supportFragmentManager.findFragmentById(R.id.yuyin_nav_host_container_fragment) as NavHostFragment?
+                ?: return
         val navController: NavController = host.navController
 
         // 设定顶层
         appBarConfiguration = AppBarConfiguration(
-            setOf(R.id.main_dest,R.id.filesManager_dest),
+            setOf(R.id.main_dest, R.id.filesManager_dest),
         )
 
         // 使得 actionbar 适应导航图 在非顶层可以返回
-        setupActionBar(navController,appBarConfiguration)
+        setupActionBar(navController, appBarConfiguration)
 
         // 应用底层导航菜单
         setupBottomNavMenu(navController)
 
 
-
         // 控制底部导航条只出现在main_dest fileManager_dest
-        navController.addOnDestinationChangedListener(object : NavController.OnDestinationChangedListener {
+        navController.addOnDestinationChangedListener(object :
+            NavController.OnDestinationChangedListener {
             override fun onDestinationChanged(
                 controller: NavController,
                 destination: NavDestination,
@@ -89,14 +90,14 @@ class MainActivityView : AppCompatActivity() {
             ) {
                 if (destination.id == R.id.runingCapture_dest || destination.id == R.id.runingRecord_dest) {
                     runOnUiThread {
-                        binding.mainBottomNavigation.visibility =  View.INVISIBLE
+                        binding.mainBottomNavigation.visibility = View.INVISIBLE
                         binding.mainBottomNavigation.isEnabled = false
                         model.context = this@MainActivityView
                         actionBar?.show()
                     }
                 } else {
                     runOnUiThread {
-                        binding.mainBottomNavigation.visibility =  View.VISIBLE
+                        binding.mainBottomNavigation.visibility = View.VISIBLE
                         binding.mainBottomNavigation.isEnabled = true
                         // 回到顶层清除数据
                         model.results.value?.clear()
@@ -122,30 +123,24 @@ class MainActivityView : AppCompatActivity() {
 
     }
 
-    override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
-    }
-
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onResume() {
         super.onResume()
         // 权限
-        YuYinUtil.checkRequestPermissions(this,this)
+        YuYinUtil.checkRequestPermissions(this, this)
 
         // 模型
         var model_name = "final"
         var dic_name = "words"
         val sharedPreference = PreferenceManager.getDefaultSharedPreferences(this)
-        val mod = sharedPreference.getString("languageOfModule","zh")
+        val mod = sharedPreference.getString("languageOfModule", "zh")
         model_name = "$`model_name`_$`mod`.zip"
         dic_name = "$`dic_name`_$`mod`.txt"
         try {
-            init_model(model_name,dic_name)
-        } catch (exception:Exception) {
+            init_model(model_name, dic_name)
+        } catch (exception: Exception) {
             Log.e(LOG_TAG, "can not init model")
         }
-
-
 
 
 //        getExternalFilesDir()
@@ -157,24 +152,17 @@ class MainActivityView : AppCompatActivity() {
     }
 
 
-
-
     fun init_model(model: String, dic: String) {
-        val model_path = File(assetFilePath(this,model)).absolutePath
-        val dic_path = File(assetFilePath(this,dic)).absolutePath
-        Recognize.init(model_path,dic_path)
+        val model_path = File(assetFilePath(this, model)).absolutePath
+        val dic_path = File(assetFilePath(this, dic)).absolutePath
+        Recognize.init(model_path, dic_path)
     }
 
-
-    override fun onStart() {
-        super.onStart()
-
-    }
 
     override fun onDestroy() {
         super.onDestroy()
 
-        Thread{
+        Thread {
             val broadCastIntent = Intent()
             broadCastIntent.action = RuningCapture.ACTION_ALL
             broadCastIntent.putExtra(
@@ -187,7 +175,7 @@ class MainActivityView : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         // 在actionbar应用自定义菜单
-        menuInflater.inflate(R.menu.bar_menu,menu)
+        menuInflater.inflate(R.menu.bar_menu, menu)
         return true
     }
 
@@ -195,7 +183,7 @@ class MainActivityView : AppCompatActivity() {
         return when (item.itemId) {
             // 跳转至设定界面
             R.id.setting_option -> {
-                val intent = Intent(this,SettingsActivity::class.java)
+                val intent = Intent(this, SettingsActivity::class.java)
                 startActivity(intent)
                 true
             }
@@ -205,7 +193,9 @@ class MainActivityView : AppCompatActivity() {
 
     override fun onSupportNavigateUp(): Boolean {
         //
-        return findNavController(R.id.yuyin_nav_host_container_fragment).navigateUp(appBarConfiguration)
+        return findNavController(R.id.yuyin_nav_host_container_fragment).navigateUp(
+            appBarConfiguration
+        )
     }
 
     private fun setupBottomNavMenu(navController: NavController) {
@@ -213,13 +203,9 @@ class MainActivityView : AppCompatActivity() {
         bottomNav.setupWithNavController(navController)
     }
 
-    private fun setupActionBar(navController: NavController, appBarConfig : AppBarConfiguration) {
-        setupActionBarWithNavController(navController,appBarConfig)
+    private fun setupActionBar(navController: NavController, appBarConfig: AppBarConfiguration) {
+        setupActionBarWithNavController(navController, appBarConfig)
     }
-
-
-
-
 
 
     override fun onRequestPermissionsResult(

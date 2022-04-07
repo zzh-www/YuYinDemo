@@ -1,4 +1,5 @@
 package com.yuyin.demo;
+
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
@@ -6,6 +7,11 @@ import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Bundle;
+import android.os.Process;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -15,36 +21,18 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import android.os.Environment;
-import android.os.Process;
-import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-
 import com.mobvoi.wenet.Recognize;
-
 import com.yuyin.demo.databinding.FragmentRuningRecordBinding;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
 
 import java.util.ArrayList;
 
-import java.util.Date;
 
-
-public class RuningRecord extends Fragment {
-
-    private FragmentRuningRecordBinding binding;
-    private final String LOG_TAG = "YUYIN_RECORD";
+public class RunningRecord extends Fragment {
 
     // record
     private static final int SAMPLE_RATE = 16000;  // The sampling rate
+    private final String LOG_TAG = "YUYIN_RECORD";
+    private FragmentRuningRecordBinding binding;
     private AudioRecord record = null;
 
     private int miniBufferSize = 0;
@@ -52,13 +40,12 @@ public class RuningRecord extends Fragment {
 
     // 滚动视图
     private LinearLayoutManager linearLayoutManager;
-    private ArrayList<SpeechText> speechList = new ArrayList<SpeechText>();
+    private ArrayList<SpeechText> speechList = new ArrayList<>();
     private SpeechTextAdapter adapter;
     private RecyclerView recyclerView;
 
     // ViewModel
     private YuyinViewModel model;
-
 
 
     @Override
@@ -68,13 +55,12 @@ public class RuningRecord extends Fragment {
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         binding = FragmentRuningRecordBinding.inflate(inflater, container, false);
-        View view = binding.getRoot();
 
-        return view;
+        return binding.getRoot();
 //        return inflater.inflate(R.layout.fragment_runing_record, container, false);
     }
 
@@ -91,7 +77,7 @@ public class RuningRecord extends Fragment {
             public void onClick(View v) {
                 //只需停止录音即可
                 if (model.getStartRecord()) {
-                    getActivity().runOnUiThread(()->{
+                    getActivity().runOnUiThread(() -> {
                         binding.stopBtRunRecord.setEnabled(false);
                         model.setStartRecord(false);
                         binding.stopBtRunRecord.setText("start");
@@ -117,7 +103,7 @@ public class RuningRecord extends Fragment {
                 // get all Result
                 YuYinUtil.get_all_result(speechList);
                 // saveToFile
-                YuYinUtil.save_file(requireContext(),speechList);
+                YuYinUtil.save_file(requireContext(), speechList);
 
             }
         });
@@ -132,7 +118,7 @@ public class RuningRecord extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        getActivity().runOnUiThread(()->{
+        getActivity().runOnUiThread(() -> {
             model.setStartRecord(false);
             model.setStartAsr(false);
             binding = null;
@@ -140,6 +126,7 @@ public class RuningRecord extends Fragment {
 
         model.getResults().setValue(speechList);
     }
+
     @Override
     public void onDestroy() {
         Recognize.setInputFinished();
@@ -155,7 +142,7 @@ public class RuningRecord extends Fragment {
         linearLayoutManager = new LinearLayoutManager(getContext());
         recyclerView = binding.recyclerRunRecord;
         recyclerView.setLayoutManager(linearLayoutManager);
-        if (model.getResultsSize()==null || model.getResultsSize()<1) {
+        if (model.getResultsSize() == null || model.getResultsSize() < 1) {
             speechList.add(new SpeechText("Hi"));
         } else {
             speechList = model.getResults().getValue();
@@ -226,7 +213,7 @@ public class RuningRecord extends Fragment {
         new Thread(() -> {
 //      VoiceRectView voiceView = findViewById(R.id.voiceRectView);
             record.startRecording();
-            getActivity().runOnUiThread(()->{
+            getActivity().runOnUiThread(() -> {
                 binding.stopBtRunRecord.setText("stop");
             });
             Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO);
@@ -247,9 +234,10 @@ public class RuningRecord extends Fragment {
             record.stop();
 
             if (binding != null) {
-                getActivity().runOnUiThread(()->{
+                getActivity().runOnUiThread(() -> {
                     if (binding != null)
-                        binding.stopBtRunRecord.setEnabled(true); });
+                        binding.stopBtRunRecord.setEnabled(true);
+                });
             }
 //      voiceView.zero();
         }).start();
@@ -261,10 +249,10 @@ public class RuningRecord extends Fragment {
             model.setStartAsr(true);
             while (model.getStartAsr() || model.getBufferQueue().size() > 0) {
                 try {
-                    if(binding==null) break;
+                    if (binding == null) break;
                     short[] data = model.getBufferQueue().take();
 
-                    if (data!=null) {
+                    if (data != null) {
                         // 1. add data to C++ interface
                         Recognize.acceptWaveform(data);// 将音频传到模型
                     }
@@ -274,27 +262,26 @@ public class RuningRecord extends Fragment {
                     String result = Recognize.getResult();
                     if (result.equals("")) continue;
                     if (result.endsWith(" ")) {
-                        getActivity().runOnUiThread(()->{
-                            speechList.get(speechList.size()-1).setText(result.trim());
-                            adapter.notifyItemChanged(speechList.size()-1);
+                        getActivity().runOnUiThread(() -> {
+                            speechList.get(speechList.size() - 1).setText(result.trim());
+                            adapter.notifyItemChanged(speechList.size() - 1);
                             speechList.add(new SpeechText("..."));
-                            adapter.notifyItemInserted(speechList.size()-1);
-                            recyclerView.scrollToPosition(speechList.size()-1);
+                            adapter.notifyItemInserted(speechList.size() - 1);
+                            recyclerView.scrollToPosition(speechList.size() - 1);
                         });
                     } else {
-                        getActivity().runOnUiThread(()->{
-                            speechList.get(speechList.size()-1).setText(result);
-                            adapter.notifyItemChanged(speechList.size()-1);
+                        getActivity().runOnUiThread(() -> {
+                            speechList.get(speechList.size() - 1).setText(result);
+                            adapter.notifyItemChanged(speechList.size() - 1);
 //                            recyclerView.scrollToPosition(speechList.size()-1);
                         });
                         // 部分结果
                     }
 
 
-
                 } catch (Exception e) {
                     Log.e(LOG_TAG, e.getMessage());
-                    Log.e(LOG_TAG+"GETWRONG","runonui");
+                    Log.e(LOG_TAG + "GETWRONG", "runonui");
                 }
             }
 
