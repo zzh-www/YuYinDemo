@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.util.Log
+import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -15,7 +16,6 @@ import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.NavController
-import androidx.navigation.NavDestination
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
@@ -23,6 +23,10 @@ import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import androidx.preference.PreferenceManager
+import com.lzf.easyfloat.EasyFloat
+import com.lzf.easyfloat.enums.ShowPattern
+import com.lzf.easyfloat.enums.SidePattern
+import com.lzf.easyfloat.utils.DisplayUtils
 import com.mobvoi.wenet.Recognize
 import com.yuyin.demo.databinding.ActivityMainViewBinding
 import java.io.File
@@ -77,39 +81,57 @@ class MainActivityView : AppCompatActivity() {
 
 
         // 控制底部导航条只出现在main_dest fileManager_dest
-        navController.addOnDestinationChangedListener(object :
-            NavController.OnDestinationChangedListener {
-            override fun onDestinationChanged(
-                controller: NavController,
-                destination: NavDestination,
-                arguments: Bundle?
-            ) {
-                if (destination.id == R.id.runingCapture_dest || destination.id == R.id.runingRecord_dest) {
-                    runOnUiThread {
-                        binding.mainBottomNavigation.visibility = View.INVISIBLE
-                        binding.mainBottomNavigation.isEnabled = false
-                        model.context = this@MainActivityView
-                        actionBar?.show()
-                    }
-                } else {
-                    runOnUiThread {
-                        binding.mainBottomNavigation.visibility = View.VISIBLE
-                        binding.mainBottomNavigation.isEnabled = true
-                        // 回到顶层清除数据
-                        model.results.value?.clear()
-                        model.bufferQueue.clear()
-                        model.startAsr = true
-                        model.startRecord = true
-                        if (mBound) {
-                            model.mcs_binder?.clearQueue()
-                        }
-                        actionBar?.hide()
-                    }
+        navController.addOnDestinationChangedListener { controller, destination, arguments ->
+            if (destination.id == R.id.runingCapture_dest || destination.id == R.id.runingRecord_dest) {
+                runOnUiThread {
+                    binding.mainBottomNavigation.visibility = View.INVISIBLE
+                    binding.mainBottomNavigation.isEnabled = false
+                    model.context = this@MainActivityView
+                    actionBar?.show()
 
                 }
-            }
-        })
+            } else {
+                runOnUiThread {
+                    binding.mainBottomNavigation.visibility = View.VISIBLE
+                    binding.mainBottomNavigation.isEnabled = true
+                    // 回到顶层清除数据
+                    model.results.value?.clear()
+                    model.bufferQueue.clear()
+                    model.startAsr = true
+                    model.startRecord = true
+                    if (mBound) {
+                        model.mcs_binder?.clearQueue()
+                    }
+                    actionBar?.hide()
 
+                }
+
+            }
+        }
+        // 开启浮窗
+        EasyFloat.with(this@MainActivityView)
+            .setLayout(R.layout.floatviewtest)
+            .setShowPattern(ShowPattern.BACKGROUND) // 应用后台时显示
+            .setSidePattern(SidePattern.RESULT_HORIZONTAL) // 吸附 根据移动后的位置贴附到边缘
+            .setTag("Capture") // 设置TAG管理
+            .setDragEnable(true) // 可拖拽
+            .hasEditText(false) // 无编辑框，无需适配键盘
+            .setLocation(100, 0)
+            .setGravity(Gravity.END or Gravity.CENTER_VERTICAL, 0, 0)
+            .setLayoutChangedGravity(Gravity.END)
+            //  .setBorder()
+            .setMatchParent(false, false)
+            .setAnimator(com.lzf.easyfloat.anim.DefaultAnimator())
+            .setFilter(SettingsActivity::class.java) // 过滤ACTIVITY
+            .setFilter(MainActivityView::class.java)
+            .setDisplayHeight { context -> DisplayUtils.rejectedNavHeight(context) }
+            .registerCallback {
+                dragEnd {
+                    //TODO 获取当前重新绘制
+                    //it.draw()
+                }
+            }
+            .show()
 
     }
 
