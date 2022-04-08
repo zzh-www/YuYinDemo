@@ -85,7 +85,7 @@ class RunningRecord : Fragment() {
             } else {
                 model.viewModelScope.launch(Dispatchers.Default) {
                     Recognize.reset()
-                    startRecordThread()
+                    startRecord()
                     withContext(Dispatchers.Main) {
                         model.recordState = true
                         model.asrState = true
@@ -116,11 +116,11 @@ class RunningRecord : Fragment() {
         model.asrState = false
         model.recordState = false
         model.record.release()
+        Recognize.setInputFinished()
         Recognize.reset()
     }
 
     override fun onDestroy() {
-        Recognize.setInputFinished()
         super.onDestroy()
     }
 
@@ -144,7 +144,7 @@ class RunningRecord : Fragment() {
     private fun initRecorder() {
         // buffer size in bytes 1280
         model.miniBufferSize = AudioRecord.getMinBufferSize(
-            SAMPLE_RATE,
+            model.SAMPLE_RATE,
             AudioFormat.CHANNEL_IN_MONO,
             AudioFormat.ENCODING_PCM_16BIT
         )
@@ -161,7 +161,7 @@ class RunningRecord : Fragment() {
         }
         model.record = AudioRecord(
             MediaRecorder.AudioSource.DEFAULT,
-            SAMPLE_RATE,
+            model.SAMPLE_RATE,
             AudioFormat.CHANNEL_IN_MONO,
             AudioFormat.ENCODING_PCM_16BIT,
             model.miniBufferSize
@@ -172,7 +172,7 @@ class RunningRecord : Fragment() {
         }
     }
 
-    private fun startRecordThread() {
+    private fun startRecord() {
 //      VoiceRectView voiceView = findViewById(R.id.voiceRectView);
         model.record.startRecording()
         binding.stopBtRunRecord.text = "stop"
@@ -180,8 +180,4 @@ class RunningRecord : Fragment() {
     }
 
 
-    companion object {
-        // record
-        private const val SAMPLE_RATE = 16000 // The sampling rate
-    }
 }

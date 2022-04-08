@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 import java.lang.Exception
 import kotlin.random.Random
 
-class RunningRecordViewModel : ViewModel() {
+class RunningCaptureViewModel : ViewModel() {
     private val LOGTAG = "RunningRecordViewModel"
 
     // record
@@ -81,7 +81,7 @@ class RunningRecordViewModel : ViewModel() {
                 }
             }.collect {
                 results.value = it
-//                Log.i(LOGTAG, "collect in decode $it $i $i")
+                Log.i(LOGTAG, "collect in decode $it $i $i")
             }
         }
     }

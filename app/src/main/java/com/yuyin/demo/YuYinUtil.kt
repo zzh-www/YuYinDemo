@@ -92,7 +92,7 @@ object YuYinUtil {
 
 
     object YuYinLog {
-        private const val level = Log.VERBOSE
+        private const val level = Log.ERROR
         fun v(tag: String?, msg: String?) {
             if (level <= Log.VERBOSE) {
                 Log.v(tag, msg!!)
