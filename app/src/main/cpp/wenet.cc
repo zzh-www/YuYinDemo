@@ -108,7 +108,7 @@ void decode_thread_func() {
       break;
     } else if (state == kEndpoint) {
 //      LOG(INFO) << "wenet endpoint final result: " << result;
-      if (result!="") {
+      if (!result.empty()) {
         results.push(result+" ");
       }
       total_result += result + ",";
@@ -122,6 +122,10 @@ void decode_thread_func() {
 }
 
 void start_decode() {
+
+  if (decoder == nullptr) {
+      return;
+  }
   std::thread decode_thread(decode_thread_func);
   decode_thread.detach();
 }
@@ -139,7 +143,7 @@ jboolean get_finished(JNIEnv *env, jobject) {
 
 // 更改以获取段句
 jstring get_result(JNIEnv *env, jobject) {
-  std::string result = decoder->result()[0].sentence;
+  std::string result = decoder->DecodedSomething() ? decoder->result()[0].sentence : "";
   if (!results.empty()) {
     result = results.front();
     results.pop();

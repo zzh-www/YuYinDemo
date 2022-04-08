@@ -6,7 +6,7 @@ import android.content.res.Configuration
 import android.media.projection.MediaProjectionManager
 import android.os.Bundle
 import android.os.IBinder
-import android.util.Log
+import com.yuyin.demo.YuYinUtil.YuYinLog as Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -22,7 +22,6 @@ import com.lzf.easyfloat.EasyFloat
 import com.mobvoi.wenet.MediaCaptureService
 import com.mobvoi.wenet.MediaCaptureService.mcs_Binder
 import com.mobvoi.wenet.Recognize
-import com.yuyin.demo.YuYinUtil.get_all_result
 import com.yuyin.demo.YuYinUtil.save_file
 import com.yuyin.demo.databinding.FragmentRuningCaptureBinding
 import com.yuyin.demo.models.YuyinViewModel
@@ -79,7 +78,6 @@ class RuningCapture : Fragment() {
             }
         }
         binding!!.saveBtRunCap.setOnClickListener { // get all Resukt
-            get_all_result(speechList)
             // saveToFile
             save_file(model.context, speechList)
         }
@@ -384,7 +382,6 @@ class RuningCapture : Fragment() {
         const val ACTION_STOP_RECORDING_To_Main = "CaptureAudio_STOP_RECORDING_To_Main"
         const val ACTION_START_RECORDING_From_Notification =
             "CaptureAudio_START_RECORDING_From_Notification"
-
         // view
         private const val LOG_TAG = "YUYIN_RECORD"
     }

@@ -7,13 +7,14 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.Bundle
-import android.util.Log
+import com.yuyin.demo.YuYinUtil.YuYinLog as Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.viewModelScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -23,16 +24,16 @@ import com.mobvoi.wenet.Recognize
 import com.yuyin.demo.YuYinUtil.save_file
 import com.yuyin.demo.databinding.FragmentRuningRecordBinding
 import com.yuyin.demo.models.RunningRecordViewModel
+import com.yuyin.demo.models.YuyinViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 
 class RunningRecord : Fragment() {
     private val LOG_TAG = "YUYIN_RECORD"
     private var _binding: FragmentRuningRecordBinding? = null
     private val binding get() = _binding!!
-    private var miniBufferSize = 0
 
     // 滚动视图
     private lateinit var recyclerView: RecyclerView
@@ -42,6 +43,8 @@ class RunningRecord : Fragment() {
 
     // ViewModel
     private val model: RunningRecordViewModel by viewModels()
+
+    private val yuYinModel: YuyinViewModel by activityViewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -55,26 +58,43 @@ class RunningRecord : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         initRunner()
+
+        model.viewModelScope.launch(Dispatchers.IO) {
+            YuYinUtil.prepareModel(requireActivity() as MainActivityView)
+            Recognize.init(yuYinModel.model_path, yuYinModel.dic_path)  // 初始化模型
+            // 订阅结果
+            model.updateFlow(flowView, recyclerView)
+        }
         binding.stopBtRunRecord.setOnClickListener {
-            //只需停止录音即可
             if (model.recordState) {
-                binding.stopBtRunRecord.isEnabled = false
-                model.recordState = false
-                model.asrState = false
-                binding.stopBtRunRecord.text = "start"
-                binding.saveBtRunRecord.visibility = View.VISIBLE
-                binding.saveBtRunRecord.isEnabled = true
+                model.viewModelScope.launch(Dispatchers.Default) {
+                    withContext(Dispatchers.Main) {
+                        binding.stopBtRunRecord.isEnabled = true
+                        model.recordState = false
+                        model.asrState = false
+                        flowView.text = ""
+                    }
+                    model.record.stop()
+                    Recognize.setInputFinished()
+                    withContext(Dispatchers.Main) {
+                        binding.stopBtRunRecord.text = "start"
+                        binding.saveBtRunRecord.visibility = View.VISIBLE
+                        binding.saveBtRunRecord.isEnabled = true
+                    }
+                }
             } else {
-                initRecorder()
-                startRecordThread()
-                model.recordState = true
-                model.asrState = true
-                binding.saveBtRunRecord.visibility = View.INVISIBLE
-                binding.saveBtRunRecord.isEnabled = false
-//                Recognize.startDecode();
-//                startAsrThread();
-                model.getTextFlow()
-                model.updateFlow(flowView, recyclerView)
+                model.viewModelScope.launch(Dispatchers.Default) {
+                    Recognize.reset()
+                    startRecordThread()
+                    withContext(Dispatchers.Main) {
+                        model.recordState = true
+                        model.asrState = true
+                        binding.saveBtRunRecord.visibility = View.INVISIBLE
+                        binding.saveBtRunRecord.isEnabled = false
+                    }
+                    Recognize.startDecode()
+                    model.getTextFlow()
+                }
             }
         }
         binding.saveBtRunRecord.setOnClickListener { // get all Result
@@ -87,12 +107,16 @@ class RunningRecord : Fragment() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-//        model.change_senor = true // 标记屏幕旋转
+        model.change_senor = false // 标记屏幕旋转
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+        model.asrState = false
+        model.recordState = false
+        model.record.release()
+        Recognize.reset()
     }
 
     override fun onDestroy() {
@@ -100,9 +124,7 @@ class RunningRecord : Fragment() {
         super.onDestroy()
     }
 
-    @OptIn(InternalCoroutinesApi::class)
     private fun initRunner() {
-
         // 滚动视图
         model.linearLayoutManager = LinearLayoutManager(context)
         recyclerView = binding.recyclerRunRecord
@@ -110,41 +132,23 @@ class RunningRecord : Fragment() {
         recyclerView.adapter = model.adapter
         // false false
         // true true
-        if (model.change_senor) {
-            // 屏幕旋转 而重构
-
-            // 旋转前正在录制 应该继续录制
-            if (model.recordState) {
-                initRecorder()
-//                startRecordThread()
-                binding.stopBtRunRecord.text = "stop"
-                binding.saveBtRunRecord.visibility = View.INVISIBLE
-                binding.saveBtRunRecord.isEnabled = false
-            } else {
-                binding.stopBtRunRecord.text = "start"
-                binding.saveBtRunRecord.visibility = View.VISIBLE
-                binding.saveBtRunRecord.isEnabled = true
-            }
-        } else {
+        if (!model.change_senor) {
             // 正常启动绘制
             initRecorder()
             binding.stopBtRunRecord.text = "start"
             binding.saveBtRunRecord.visibility = View.VISIBLE
             binding.saveBtRunRecord.isEnabled = true
-//            Recognize.reset()
-//            Recognize.startDecode()
-//            startAsrThread()
         }
     }
 
     private fun initRecorder() {
         // buffer size in bytes 1280
-        miniBufferSize = AudioRecord.getMinBufferSize(
+        model.miniBufferSize = AudioRecord.getMinBufferSize(
             SAMPLE_RATE,
             AudioFormat.CHANNEL_IN_MONO,
             AudioFormat.ENCODING_PCM_16BIT
         )
-        if (miniBufferSize == AudioRecord.ERROR || miniBufferSize == AudioRecord.ERROR_BAD_VALUE) {
+        if (model.miniBufferSize == AudioRecord.ERROR || model.miniBufferSize == AudioRecord.ERROR_BAD_VALUE) {
             Log.e(LOG_TAG, "Audio buffer can't initialize!")
             return
         }
@@ -160,7 +164,7 @@ class RunningRecord : Fragment() {
             SAMPLE_RATE,
             AudioFormat.CHANNEL_IN_MONO,
             AudioFormat.ENCODING_PCM_16BIT,
-            miniBufferSize
+            model.miniBufferSize
         )
         Log.i(LOG_TAG, "Record init okay")
         if (model.record.state != AudioRecord.STATE_INITIALIZED) {

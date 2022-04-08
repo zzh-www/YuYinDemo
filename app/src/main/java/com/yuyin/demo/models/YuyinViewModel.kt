@@ -12,6 +12,10 @@ import java.util.concurrent.BlockingQueue
 class YuyinViewModel : ViewModel() {
 
 
+    var dic_path = ""
+    var model_path = ""
+
+
     //    private val speechList: List<SpeechText> = ArrayList()
     val results: MutableLiveData<ArrayList<SpeechText>> = MutableLiveData<ArrayList<SpeechText>>()
 

@@ -3,17 +3,14 @@ package com.yuyin.demo
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.os.Environment
-import android.util.Log
 import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.NavController
 import androidx.navigation.findNavController
@@ -22,20 +19,17 @@ import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
-import androidx.preference.PreferenceManager
 import com.lzf.easyfloat.EasyFloat
 import com.lzf.easyfloat.enums.ShowPattern
 import com.lzf.easyfloat.enums.SidePattern
 import com.lzf.easyfloat.utils.DisplayUtils
-import com.mobvoi.wenet.Recognize
 import com.yuyin.demo.databinding.ActivityMainViewBinding
-import com.yuyin.demo.models.RunningRecordViewModel
 import com.yuyin.demo.models.YuyinViewModel
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.nio.file.Paths
-
+import com.yuyin.demo.YuYinUtil.YuYinLog as Log
 class MainActivityView : AppCompatActivity() {
 
     // 视图绑定
@@ -43,18 +37,15 @@ class MainActivityView : AppCompatActivity() {
 
     private val m_ALL_PERMISSIONS_PERMISSION_CODE = 1000
 
-    private val LOG_TAG = "YUYIN"
+    private val YuYinLog_TAG = "YUYIN"
 
     // 层级配置
     private lateinit var appBarConfiguration: AppBarConfiguration
 
     val model: YuyinViewModel by viewModels()
 
-    val RecordModel: RunningRecordViewModel by viewModels()
-
     // 服务
     var mBound = false
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -87,29 +78,22 @@ class MainActivityView : AppCompatActivity() {
         // 控制底部导航条只出现在main_dest fileManager_dest
         navController.addOnDestinationChangedListener { controller, destination, arguments ->
             if (destination.id == R.id.runingCapture_dest || destination.id == R.id.runingRecord_dest) {
-                runOnUiThread {
-                    binding.mainBottomNavigation.visibility = View.INVISIBLE
-                    binding.mainBottomNavigation.isEnabled = false
-                    model.context = this@MainActivityView
-                    actionBar?.show()
-
-                }
+                binding.mainBottomNavigation.visibility = View.INVISIBLE
+                binding.mainBottomNavigation.isEnabled = false
+                model.context = this@MainActivityView
+                actionBar?.show()
             } else {
-                runOnUiThread {
-                    binding.mainBottomNavigation.visibility = View.VISIBLE
-                    binding.mainBottomNavigation.isEnabled = true
-                    // 回到顶层清除数据
-                    model.results.value?.clear()
-                    model.bufferQueue.clear()
-                    model.startAsr = true
-                    model.startRecord = true
-                    if (mBound) {
-                        model.mcs_binder?.clearQueue()
-                    }
-                    actionBar?.hide()
-
+                binding.mainBottomNavigation.visibility = View.VISIBLE
+                binding.mainBottomNavigation.isEnabled = true
+                // 回到顶层清除数据
+                model.results.value?.clear()
+                model.bufferQueue.clear()
+                model.startAsr = true
+                model.startRecord = true
+                if (mBound) {
+                    model.mcs_binder?.clearQueue()
                 }
-
+                actionBar?.hide()
             }
         }
         // 开启浮窗
@@ -139,25 +123,10 @@ class MainActivityView : AppCompatActivity() {
 
     }
 
-    @RequiresApi(Build.VERSION_CODES.R)
     override fun onResume() {
         super.onResume()
         // 权限
         YuYinUtil.checkRequestPermissions(this, this)
-
-        // 模型
-        var model_name = "final"
-        var dic_name = "words"
-        val sharedPreference = PreferenceManager.getDefaultSharedPreferences(this)
-        val mod = sharedPreference.getString("languageOfModule", "zh")
-        model_name = "$`model_name`_$mod.zip"
-        dic_name = "$`dic_name`_$mod.txt"
-        try {
-            init_model(model_name, dic_name)
-        } catch (exception: Exception) {
-            Log.e(LOG_TAG, "can not init model")
-        }
-
 
 //        getExternalFilesDir()
         val docDirPath = getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
@@ -165,13 +134,6 @@ class MainActivityView : AppCompatActivity() {
         if (!yuYinDir.exists()) {
             yuYinDir.mkdir()
         }
-    }
-
-
-    fun init_model(model: String, dic: String) {
-        val model_path = assetFilePath(this, model)?.let { File(it).absolutePath }
-        val dic_path = assetFilePath(this, dic)?.let { File(it).absolutePath }
-        Recognize.init(model_path, dic_path)
     }
 
 
@@ -266,12 +228,13 @@ class MainActivityView : AppCompatActivity() {
             }
         } catch (e: IOException) {
             Log.e(
-                LOG_TAG,
+                YuYinLog_TAG,
                 "Error process asset $assetName to file path"
             )
         }
         return null
     }
+
 }
 
 

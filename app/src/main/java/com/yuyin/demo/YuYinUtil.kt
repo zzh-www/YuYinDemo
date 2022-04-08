@@ -5,8 +5,10 @@ import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Environment
+import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.preference.PreferenceManager
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -53,23 +55,6 @@ object YuYinUtil {
     }
 
     @JvmStatic
-    fun get_all_result(speechList: List<SpeechText>) {
-//        while (true) {
-//            String result = Recognize.getResult();
-//            if (Recognize.getFinished()) {
-//                break;
-//            } else {
-//                if (result.endsWith(" ")) {
-//                    speechList.get(speechList.size()-1).setText(result.trim());
-//                    speechList.add(new SpeechText("..."));
-//                } else {
-//                    speechList.get(speechList.size()-1).setText(result);
-//                }
-//            }
-//        }
-    }
-
-    @JvmStatic
     fun checkRequestPermissions(activity: Activity?, context: Context?): Boolean {
         val listPermissionsNeeded: MutableList<String> = ArrayList()
         for (permission in appPermissions) {
@@ -91,4 +76,52 @@ object YuYinUtil {
         }
         return true
     }
+
+    @JvmStatic
+    fun prepareModel(activity: MainActivityView) {
+        var model_name = "final"
+        var dic_name = "words"
+        val sharedPreference =
+            PreferenceManager.getDefaultSharedPreferences(activity)
+        val mod = sharedPreference.getString("languageOfModule", "zh")
+        model_name = "$`model_name`_$mod.zip"
+        dic_name = "$`dic_name`_$mod.txt"
+        activity.model.model_path = File(activity.assetFilePath(activity, model_name)).absolutePath
+        activity.model.dic_path = File(activity.assetFilePath(activity, dic_name)).absolutePath
+    }
+
+
+    object YuYinLog {
+        private const val level = Log.VERBOSE
+        fun v(tag: String?, msg: String?) {
+            if (level <= Log.VERBOSE) {
+                Log.v(tag, msg!!)
+            }
+        }
+
+        fun d(tag: String?, msg: String?) {
+            if (level <= Log.DEBUG) {
+                Log.v(tag, msg!!)
+            }
+        }
+
+        fun i(tag: String?, msg: String?) {
+            if (level <= Log.INFO) {
+                Log.v(tag, msg!!)
+            }
+        }
+
+        fun w(tag: String?, msg: String?) {
+            if (level <= Log.WARN) {
+                Log.v(tag, msg!!)
+            }
+        }
+
+        fun e(tag: String?, msg: String?) {
+            if (level <= Log.ERROR) {
+                Log.v(tag, msg!!)
+            }
+        }
+    }
 }
+
