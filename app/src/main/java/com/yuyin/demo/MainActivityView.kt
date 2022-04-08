@@ -29,6 +29,8 @@ import com.lzf.easyfloat.enums.SidePattern
 import com.lzf.easyfloat.utils.DisplayUtils
 import com.mobvoi.wenet.Recognize
 import com.yuyin.demo.databinding.ActivityMainViewBinding
+import com.yuyin.demo.models.RunningRecordViewModel
+import com.yuyin.demo.models.YuyinViewModel
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -47,6 +49,8 @@ class MainActivityView : AppCompatActivity() {
     private lateinit var appBarConfiguration: AppBarConfiguration
 
     val model: YuyinViewModel by viewModels()
+
+    val RecordModel: RunningRecordViewModel by viewModels()
 
     // 服务
     var mBound = false
@@ -268,8 +272,6 @@ class MainActivityView : AppCompatActivity() {
         }
         return null
     }
-
-
 }
 
 

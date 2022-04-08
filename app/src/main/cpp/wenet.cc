@@ -139,12 +139,8 @@ jboolean get_finished(JNIEnv *env, jobject) {
 
 // 更改以获取段句
 jstring get_result(JNIEnv *env, jobject) {
-  std::string result = "";
-  if (results.empty()) {
-    if(decoder->DecodedSomething()) {
-        result = decoder->result()[0].sentence;
-    }
-  } else {
+  std::string result = decoder->result()[0].sentence;
+  if (!results.empty()) {
     result = results.front();
     results.pop();
   }

@@ -25,6 +25,7 @@ import com.mobvoi.wenet.Recognize
 import com.yuyin.demo.YuYinUtil.get_all_result
 import com.yuyin.demo.YuYinUtil.save_file
 import com.yuyin.demo.databinding.FragmentRuningCaptureBinding
+import com.yuyin.demo.models.YuyinViewModel
 
 class RuningCapture : Fragment() {
     private var binding: FragmentRuningCaptureBinding? = null

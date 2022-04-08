@@ -1,9 +1,11 @@
-package com.yuyin.demo
+package com.yuyin.demo.models
 
 import android.app.Activity
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.mobvoi.wenet.MediaCaptureService.mcs_Binder
+import com.yuyin.demo.RuningCapture
+import com.yuyin.demo.SpeechText
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.BlockingQueue
 

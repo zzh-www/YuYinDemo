@@ -29,8 +29,7 @@ class Main : Fragment() {
                 findNavController(
                     requireActivity(),
                     R.id.yuyin_nav_host_container_fragment
-                )
-                    .navigate(R.id.action_main_dest_to_runingRecord_dest)
+                ).navigate(R.id.action_main_dest_to_runingRecord_dest)
             }
         }
         binding!!.captureAsrBt.setOnClickListener { v: View? ->
@@ -38,8 +37,7 @@ class Main : Fragment() {
                 findNavController(
                     requireActivity(),
                     R.id.yuyin_nav_host_container_fragment
-                )
-                    .navigate(R.id.action_main_dest_to_runingCapture_dest)
+                ).navigate(R.id.action_main_dest_to_runingCapture_dest)
             }
         }
     }

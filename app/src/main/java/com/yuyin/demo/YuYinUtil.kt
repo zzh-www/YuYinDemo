@@ -25,7 +25,7 @@ object YuYinUtil {
     const val m_ALL_PERMISSIONS_PERMISSION_CODE = 1000
 
     @JvmStatic
-    fun save_file(context: Context, speechList: ArrayList<SpeechText>) {
+    fun save_file(context: Context, speechList: List<SpeechText>) {
         val timeStamp = System.currentTimeMillis()
         val sdf = SimpleDateFormat("yyyyMMddHHmmss", Locale.CHINA)
         val filename = sdf.format(Date(timeStamp.toString().toLong())) + ".txt"
@@ -33,13 +33,9 @@ object YuYinUtil {
         val file =
             File(dir_path!!.absoluteFile.toString() + File.separator + "YuYin" + File.separator + filename)
         val total_result = StringBuilder()
-        if (speechList != null) {
-            for (i in speechList) {
-                if (i != null) {
-                    total_result.append(i.text)
-                }
-                total_result.append("\n")
-            }
+        for (i in speechList) {
+            total_result.append(i.text)
+            total_result.append("\n")
         }
         try {
             if (file.createNewFile()) {
@@ -57,7 +53,7 @@ object YuYinUtil {
     }
 
     @JvmStatic
-    fun get_all_result(speechList: ArrayList<SpeechText>) {
+    fun get_all_result(speechList: List<SpeechText>) {
 //        while (true) {
 //            String result = Recognize.getResult();
 //            if (Recognize.getFinished()) {
