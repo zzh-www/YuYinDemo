@@ -63,6 +63,8 @@ void init(JNIEnv *env, jobject, jstring jModelPath, jstring jDictPath) {
 
   decoder = std::make_shared<TorchAsrDecoder>(feature_pipeline, resource,
                                               *decode_config);
+
+  state = kEndFeats;
 }
 
 void reset(JNIEnv *env, jobject) {
@@ -85,9 +87,6 @@ void accept_waveform(JNIEnv *env, jobject, jshortArray jWaveform) {
 void set_input_finished() {
 //  LOG(INFO) << "wenet input finished";
   feature_pipeline->set_input_finished();
-  while (!results.empty()) {
-    results.pop();
-  }
 }
 
 void decode_thread_func() {
@@ -122,10 +121,6 @@ void decode_thread_func() {
 }
 
 void start_decode() {
-
-  if (decoder == nullptr) {
-      return;
-  }
   std::thread decode_thread(decode_thread_func);
   decode_thread.detach();
 }
@@ -138,7 +133,10 @@ jboolean get_finished(JNIEnv *env, jobject) {
   return JNI_FALSE;
 }
 
-
+// 返回模型是否初始化
+jboolean get_inited(JNIEnv *env, jobject) {
+  return decoder == nullptr ? JNI_FALSE : JNI_TRUE;
+}
 
 
 // 更改以获取段句
@@ -175,6 +173,8 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *) {
      reinterpret_cast<void *>(wenet::set_input_finished)},
     {"getFinished", "()Z",
      reinterpret_cast<void *>(wenet::get_finished)},
+     {"getInit", "()Z",
+      reinterpret_cast<void *>(wenet::get_inited)},
     {"startDecode", "()V",
      reinterpret_cast<void *>(wenet::start_decode)},
     {"getResult", "()Ljava/lang/String;",

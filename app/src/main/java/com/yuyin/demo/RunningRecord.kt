@@ -25,9 +25,8 @@ import com.yuyin.demo.YuYinUtil.save_file
 import com.yuyin.demo.databinding.FragmentRuningRecordBinding
 import com.yuyin.demo.models.RunningRecordViewModel
 import com.yuyin.demo.models.YuyinViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
+import java.lang.Exception
 
 
 class RunningRecord : Fragment() {
@@ -46,6 +45,8 @@ class RunningRecord : Fragment() {
 
     private val yuYinModel: YuyinViewModel by activityViewModels()
 
+    private var initModel = false
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -58,16 +59,22 @@ class RunningRecord : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         initRunner()
-
+        // init model
         model.viewModelScope.launch(Dispatchers.IO) {
             YuYinUtil.prepareModel(requireActivity() as MainActivityView)
             Recognize.init(yuYinModel.model_path, yuYinModel.dic_path)  // 初始化模型
-            // 订阅结果
-            model.updateFlow(flowView, recyclerView)
+            initModel = true
+            withContext(Dispatchers.Main){
+                // 订阅结果
+                model.updateFlow(flowView, recyclerView)
+            }
         }
         binding.stopBtRunRecord.setOnClickListener {
             if (model.recordState) {
-                model.viewModelScope.launch(Dispatchers.Default) {
+                model.viewModelScope.launch(Dispatchers.IO) {
+                    while (!initModel) {
+
+                    }
                     withContext(Dispatchers.Main) {
                         binding.stopBtRunRecord.isEnabled = true
                         model.recordState = false
@@ -75,7 +82,8 @@ class RunningRecord : Fragment() {
                         flowView.text = ""
                     }
                     model.record.stop()
-                    Recognize.setInputFinished()
+                    if (!Recognize.getFinished())
+                        Recognize.setInputFinished()
                     withContext(Dispatchers.Main) {
                         binding.stopBtRunRecord.text = "start"
                         binding.saveBtRunRecord.visibility = View.VISIBLE
@@ -83,7 +91,10 @@ class RunningRecord : Fragment() {
                     }
                 }
             } else {
-                model.viewModelScope.launch(Dispatchers.Default) {
+                model.viewModelScope.launch(Dispatchers.IO) {
+                    while (!initModel) {
+
+                    }
                     Recognize.reset()
                     startRecord()
                     withContext(Dispatchers.Main) {
@@ -116,8 +127,6 @@ class RunningRecord : Fragment() {
         model.asrState = false
         model.recordState = false
         model.record.release()
-        Recognize.setInputFinished()
-        Recognize.reset()
     }
 
     override fun onDestroy() {

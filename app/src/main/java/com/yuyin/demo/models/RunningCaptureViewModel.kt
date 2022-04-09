@@ -14,6 +14,7 @@ import com.yuyin.demo.SpeechTextAdapter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.random.Random
 
 class RunningCaptureViewModel : ViewModel() {
@@ -78,16 +79,18 @@ class RunningCaptureViewModel : ViewModel() {
                 }
             }.collect {
                 results.value = it
-                Log.i(LOGTAG, "collect in decode $it $i")
+//                Log.i(LOGTAG, "collect in decode $it $i")
             }
         }
     }
 
+    // 或许考虑不使用热流 避免过于频繁更新界面
     fun updateFlow(flowText: TextView, recyclerView: RecyclerView) {
         viewModelScope.launch(Dispatchers.Main) {
             results.collect {
                 flowText.text = it
                 if (it.endsWith(" ")) {
+
                     speechList[speechList.size - 1].text = it
                     adapter.notifyItemChanged(speechList.size - 1)
                     speechList.add(SpeechText(" ")) // add new para

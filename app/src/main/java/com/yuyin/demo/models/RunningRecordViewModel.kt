@@ -58,7 +58,7 @@ class RunningRecordViewModel : ViewModel() {
                 Log.e(LOGTAG, it.message ?: "error in audioflow")
             }.buffer(MAX_QUEUE_SIZE).collect {
                 Recognize.acceptWaveform(it)
-                Log.i(LOGTAG, "${it.size} : size of audio")
+//                Log.i(LOGTAG, "${it.size} : size of audio")
 //                Log.i(LOGTAG, "$it")
             }
         }

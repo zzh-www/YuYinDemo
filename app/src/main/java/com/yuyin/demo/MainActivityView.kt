@@ -33,12 +33,8 @@ import com.lzf.easyfloat.utils.DisplayUtils
 import com.mobvoi.wenet.MediaCaptureService
 import com.mobvoi.wenet.MediaCaptureService.Companion.m_NOTIFICATION_CHANNEL_ID
 import com.yuyin.demo.YuYinUtil.ACTION_ALL
-import com.yuyin.demo.YuYinUtil.ACTION_START_RECORDING_From_Notification
-import com.yuyin.demo.YuYinUtil.ACTION_STOP_RECORDING_From_Notification
 import com.yuyin.demo.YuYinUtil.CaptureAudio_ALL
 import com.yuyin.demo.YuYinUtil.CaptureAudio_START
-import com.yuyin.demo.YuYinUtil.CaptureAudio_START_ASR
-import com.yuyin.demo.YuYinUtil.CaptureAudio_STOP
 import com.yuyin.demo.YuYinUtil.EXTRA_CaptureAudio_NAME
 import com.yuyin.demo.YuYinUtil.EXTRA_RESULT_CODE
 import com.yuyin.demo.YuYinUtil.m_CREATE_SCREEN_CAPTURE
@@ -66,7 +62,7 @@ class MainActivityView : AppCompatActivity() {
 
     // 服务
     private lateinit var actionReceiver: CaptureAudioReceiver
-    private lateinit var mcs_binder: MediaCaptureService.mcs_Binder
+    private lateinit var mediaService_binder: MediaCaptureService.MediaServiceBinder
     private var mBound = false
 
     // 通知
@@ -159,6 +155,12 @@ class MainActivityView : AppCompatActivity() {
         return true
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        model.recorder?.release()
+        model.recorder = null
+    }
+
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             // 跳转至设定界面
@@ -239,7 +241,7 @@ class MainActivityView : AppCompatActivity() {
 
     private val connection: ServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
-            mcs_binder = service as MediaCaptureService.mcs_Binder
+            mediaService_binder = service as MediaCaptureService.MediaServiceBinder
             mBound = true
         }
 
@@ -263,15 +265,11 @@ class MainActivityView : AppCompatActivity() {
         if (!notificationManager.areNotificationsEnabled()) {
             val intent = Intent().apply {
                 this.action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
-                this.data = Uri.fromParts("package", packageName,null)
+                this.data = Uri.fromParts("package", packageName, null)
             }
             registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
                 if (it.resultCode == RESULT_OK) {
-                    if (notificationManager.areNotificationsEnabled()) {
-                        initAudioCapture()
-                    } else {
-                        finish()
-                    }
+                    initAudioCapture()
                 }
             }.launch(intent)
         } else {
@@ -300,9 +298,9 @@ class MainActivityView : AppCompatActivity() {
 
                 var i = Intent(this, MediaCaptureService::class.java)
                 this.bindService(
-                        i,
-                        connection,
-                        BIND_AUTO_CREATE
+                    i,
+                    connection,
+                    BIND_AUTO_CREATE
                 )
                 // 启动前台服务
                 i = Intent(this, MediaCaptureService::class.java)
@@ -312,7 +310,7 @@ class MainActivityView : AppCompatActivity() {
                 i.putExtras(result.data!!)
                 this.startForegroundService(i)
             } else {
-                // 直接推出应用
+                // 退出应用
                 finish()
             }
         }.launch(intent)
@@ -336,7 +334,7 @@ class MainActivityView : AppCompatActivity() {
                         )
                     ) {
                         // 服务开启
-                        model.recorder = mcs_binder.serviceRecorder()!!
+                        model.recorder = mediaService_binder.serviceRecorder()
                     }
                 }
             }

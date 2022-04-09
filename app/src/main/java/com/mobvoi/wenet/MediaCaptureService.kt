@@ -1,7 +1,7 @@
 package com.mobvoi.wenet
 
 import android.Manifest
-import android.app.NotificationManager
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.app.Service
 import android.content.BroadcastReceiver
@@ -18,23 +18,16 @@ import android.media.projection.MediaProjectionManager
 import android.os.Binder
 import android.os.Environment
 import android.os.IBinder
-import android.os.Process
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.yuyin.demo.MainActivityView
 import com.yuyin.demo.R
 import com.yuyin.demo.YuYinUtil.ACTION_ALL
-import com.yuyin.demo.YuYinUtil.ACTION_START
-import com.yuyin.demo.YuYinUtil.ACTION_START_RECORDING
 import com.yuyin.demo.YuYinUtil.ACTION_START_RECORDING_From_Notification
-import com.yuyin.demo.YuYinUtil.ACTION_STOP
-import com.yuyin.demo.YuYinUtil.ACTION_STOP_RECORDING
 import com.yuyin.demo.YuYinUtil.ACTION_STOP_RECORDING_From_Notification
 import com.yuyin.demo.YuYinUtil.CaptureAudio_ALL
 import com.yuyin.demo.YuYinUtil.CaptureAudio_START
-import com.yuyin.demo.YuYinUtil.CaptureAudio_START_ASR
-import com.yuyin.demo.YuYinUtil.CaptureAudio_STOP
 import com.yuyin.demo.YuYinUtil.EXTRA_ACTION_NAME
 import com.yuyin.demo.YuYinUtil.EXTRA_CaptureAudio_NAME
 import java.io.File
@@ -43,68 +36,37 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
-import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.BlockingQueue
 import com.yuyin.demo.YuYinUtil.YuYinLog as Log
 
 
 class MediaCaptureService : Service() {
-    private val m_Log_TAG = "MediaCaptureService"
-    private val binder: IBinder = mcs_Binder()
-    val bufferQueue: BlockingQueue<ShortArray> = ArrayBlockingQueue(
-        MAX_QUEUE_SIZE
-    )
+    private val LogTag = "MediaCaptureService"
+    private val binder: IBinder = MediaServiceBinder()
+
     private var isCreate = false
-    var BufferElements2Rec = 1024 // want to play 2048 (2K) since 2 bytes we use only 1024
-    var BytesPerElement = 2 // 2 bytes in 16bit format
-    private var m_notificationBuilder: NotificationCompat.Builder? = null
     private lateinit var pre_notificationBUilder: NotificationCompat.Builder
-    private lateinit var m_notificationManager: NotificationManager
-    lateinit var m_recorder: AudioRecord
-    var m_recorderMic: AudioRecord? = null
+    var m_recorder: AudioRecord? = null
+    private var m_recorderMic: AudioRecord? = null
     var m_callingIntent: Intent? = null
     private lateinit var m_mediaProjectionManager: MediaProjectionManager
     private lateinit var m_mediaProjection: MediaProjection
     private var pendingIntent: PendingIntent? = null
     private var stopPendingIntent: PendingIntent? = null
     private var startPendingIntent: PendingIntent? = null
-    var m_actionReceiver: BroadcastReceiver = object : BroadcastReceiver() {
+    private var m_actionReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val action = intent.action
             if (action.equals(ACTION_ALL, ignoreCase = true)) {
                 val actionName = intent.getStringExtra(EXTRA_ACTION_NAME)
-                if (actionName != null && !actionName.isEmpty()) {
-                    if (actionName.equals(ACTION_START, ignoreCase = true)) {
-                        // 接受通知启动录制
-                        try {
-                            startMediaProject(m_callingIntent!!)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
-                    } else if (actionName.equals(
-                            ACTION_START_RECORDING,
-                            ignoreCase = true
-                        )
-                    ) {
-                        startRecording()
-                        changeYourUIToStop()
-                    } else if (actionName.equals(
-                            ACTION_STOP_RECORDING,
-                            ignoreCase = true
-                        )
-                    ) {
-                        stopRecording()
-                        changeYourUIToStart()
-                    } else if (actionName.equals(ACTION_STOP, ignoreCase = true)) {
-                        releaseRecording()
-                    }
+                if (actionName != null && actionName.isNotEmpty()) {
+                    // TODO accept some broadcast
                 }
             }
         }
     }
 
     private fun startMediaProject(intent: Intent) {
-        m_mediaProjection = m_mediaProjectionManager.getMediaProjection(-1, intent!!)
+        m_mediaProjection = m_mediaProjectionManager.getMediaProjection(-1, intent)
         preStartRecording(m_mediaProjection)
         Log.e("ZZH", "start_recording")
     }
@@ -146,70 +108,6 @@ class MediaCaptureService : Service() {
 
     }
 
-    private fun startRecording() {
-        m_isRecording = true
-        m_notificationBuilder = NotificationCompat.Builder(this, m_NOTIFICATION_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setColor(ContextCompat.getColor(this, R.color.primaryDarkColor))
-            .setContentTitle("余音")
-            .setContentText("ASR working")
-            .addAction(R.drawable.ic_baseline_play_arrow_24, "stop", stopPendingIntent)
-        val notification = m_notificationBuilder!!.build()
-        m_notificationManager.notify(m_NOTIFICATION_ID, notification)
-        Thread {
-            m_recorder.startRecording()
-            Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO)
-            while (m_isRecording) {
-                val buffer =
-                    ShortArray(miniBufferSize / 2)
-                val read = m_recorder.read(buffer, 0, buffer.size)
-                try {
-                    if (AudioRecord.ERROR_INVALID_OPERATION != read) {
-                        bufferQueue.put(buffer)
-                    }
-                } catch (e: InterruptedException) {
-                    Log.e(m_Log_TAG, e.message)
-                }
-            }
-        }.start()
-    }
-
-    private fun changeYourUIToStop() {
-        val broad = Intent()
-        broad.action = CaptureAudio_ALL
-        broad.putExtra(EXTRA_CaptureAudio_NAME, CaptureAudio_START_ASR)
-        this.sendBroadcast(broad)
-    }
-
-    private fun stopRecording() {
-        m_isRecording = false
-        m_recorder.stop()
-        m_notificationBuilder = NotificationCompat.Builder(this, m_NOTIFICATION_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setColor(ContextCompat.getColor(this, R.color.primaryDarkColor))
-            .setContentTitle("余音")
-            .setContentText("ASR stop")
-            .addAction(R.drawable.ic_baseline_play_arrow_24, "start", startPendingIntent)
-        val notification = m_notificationBuilder!!.build()
-        m_notificationManager.notify(m_NOTIFICATION_ID, notification)
-    }
-
-    private fun changeYourUIToStart() {
-        val broad = Intent()
-        broad.action = CaptureAudio_ALL
-        broad.putExtra(EXTRA_CaptureAudio_NAME, CaptureAudio_STOP)
-        this.sendBroadcast(broad)
-    }
-
-    private fun releaseRecording() {
-
-        m_isRecording = false
-        m_recorder.stop()
-        m_recorder.release()
-        m_mediaProjection.stop()
-        stopForeground(true)
-        stopSelf()
-    }
 
     override fun onCreate() {
         super.onCreate()
@@ -267,17 +165,21 @@ class MediaCaptureService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
 //        return super.onStartCommand(intent, flags, startId);
         // 启动前台服务
-        if (m_callingIntent==null)
-            m_callingIntent = intent
-        val notification = pre_notificationBUilder.build()
-        startForeground(m_NOTIFICATION_ID, notification)
-        // 配置 recorder
-        startMediaProject(m_callingIntent!!)
-        // 通知activity 服务已启动
-        val broad = Intent()
-        broad.action = CaptureAudio_ALL
-        broad.putExtra(EXTRA_CaptureAudio_NAME, CaptureAudio_START)
-        this.sendBroadcast(broad)
+        if (intent==null) {
+            Log.e(LogTag,"null start service")
+        } else {
+            if (m_callingIntent == null)
+                m_callingIntent = intent
+            val notification = pre_notificationBUilder.build()
+            startForeground(m_NOTIFICATION_ID, notification)
+            // 配置 recorder
+            startMediaProject(m_callingIntent!!)
+            // 通知activity 服务已启动
+            val broad = Intent()
+            broad.action = CaptureAudio_ALL
+            broad.putExtra(EXTRA_CaptureAudio_NAME, CaptureAudio_START)
+            this.sendBroadcast(broad)
+        }
         return START_STICKY //因内存被销毁后， 重新创建
     }
 
@@ -286,30 +188,11 @@ class MediaCaptureService : Service() {
         unregisterReceiver(m_actionReceiver)
     }
 
-    inner class mcs_Binder : Binder() {
-        @get:Throws(InterruptedException::class)
-        val audioQueue: ShortArray
-            get() = bufferQueue.take()
-
-        fun getAudioQueueSize(): Int {
-            return bufferQueue.size
-        }
-
-        fun clearQueue() {
-            bufferQueue.clear()
-        }
-
-        fun getIsCreate(): Boolean {
-            return isCreate
-        }
-
+    inner class MediaServiceBinder : Binder() {
         fun serviceRecorder(): AudioRecord? {
             return m_recorder
         }
 
-        fun recordMiniBufferSize(): Int {
-            return miniBufferSize
-        }
     }
 
     override fun onBind(intent: Intent): IBinder {
@@ -341,6 +224,7 @@ class MediaCaptureService : Service() {
         return bytes
     }
 
+    @SuppressLint("SimpleDateFormat")
     private fun writeAudioDataToFile() {
         if (m_recorder == null) return
         // Write the output audio in byte
@@ -362,7 +246,7 @@ class MediaCaptureService : Service() {
         }
         while (m_isRecording) {
             // gets the voice output from microphone to byte format
-            m_recorder.read(sData, 0, BufferElements2Rec)
+            m_recorder?.read(sData, 0, BufferElements2Rec)
             Log.i("ZZH", "Short wirting to file$sData")
             try {
                 // // writes the data to file from buffer
@@ -382,6 +266,7 @@ class MediaCaptureService : Service() {
         Log.i("ZZH", String.format("Recording finished. File saved to '%s'", filePath))
     }
 
+    @SuppressLint("SimpleDateFormat")
     private fun writeAudioDataToFileMic() {
         if (m_recorderMic == null) return
         // Write the output audio in byte
@@ -434,5 +319,7 @@ class MediaCaptureService : Service() {
         const val m_NOTIFICATION_CHANNEL_NAME = "Yuyin_Channel"
         const val m_NOTIFICATION_CHANNEL_DESC = "Yuyin is working"
         const val m_NOTIFICATION_ID = 1000
+        var BufferElements2Rec = 1024 // want to play 2048 (2K) since 2 bytes we use only 1024
+        var BytesPerElement = 2 // 2 bytes in 16bit format
     }
 }

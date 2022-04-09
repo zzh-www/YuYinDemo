@@ -13,6 +13,6 @@ class YuyinViewModel : ViewModel() {
     var startAsr = false
     var change_senor = false
 
-    lateinit var recorder: AudioRecord
+    var recorder: AudioRecord? = null
 
 }
