@@ -1,15 +1,22 @@
 package com.yuyin.demo
 
-import android.content.Context
-import android.content.Intent
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.*
 import android.content.pm.PackageManager
+import android.media.projection.MediaProjectionManager
+import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
+import android.os.IBinder
+import android.provider.Settings
 import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.NavController
@@ -23,6 +30,18 @@ import com.lzf.easyfloat.EasyFloat
 import com.lzf.easyfloat.enums.ShowPattern
 import com.lzf.easyfloat.enums.SidePattern
 import com.lzf.easyfloat.utils.DisplayUtils
+import com.mobvoi.wenet.MediaCaptureService
+import com.mobvoi.wenet.MediaCaptureService.Companion.m_NOTIFICATION_CHANNEL_ID
+import com.yuyin.demo.YuYinUtil.ACTION_ALL
+import com.yuyin.demo.YuYinUtil.ACTION_START_RECORDING_From_Notification
+import com.yuyin.demo.YuYinUtil.ACTION_STOP_RECORDING_From_Notification
+import com.yuyin.demo.YuYinUtil.CaptureAudio_ALL
+import com.yuyin.demo.YuYinUtil.CaptureAudio_START
+import com.yuyin.demo.YuYinUtil.CaptureAudio_START_ASR
+import com.yuyin.demo.YuYinUtil.CaptureAudio_STOP
+import com.yuyin.demo.YuYinUtil.EXTRA_CaptureAudio_NAME
+import com.yuyin.demo.YuYinUtil.EXTRA_RESULT_CODE
+import com.yuyin.demo.YuYinUtil.m_CREATE_SCREEN_CAPTURE
 import com.yuyin.demo.databinding.ActivityMainViewBinding
 import com.yuyin.demo.models.YuyinViewModel
 import java.io.File
@@ -30,6 +49,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.nio.file.Paths
 import com.yuyin.demo.YuYinUtil.YuYinLog as Log
+
 class MainActivityView : AppCompatActivity() {
 
     // 视图绑定
@@ -45,7 +65,12 @@ class MainActivityView : AppCompatActivity() {
     val model: YuyinViewModel by viewModels()
 
     // 服务
-    var mBound = false
+    private lateinit var actionReceiver: CaptureAudioReceiver
+    private lateinit var mcs_binder: MediaCaptureService.mcs_Binder
+    private var mBound = false
+
+    // 通知
+    private lateinit var notificationManager: NotificationManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,26 +99,14 @@ class MainActivityView : AppCompatActivity() {
         // 应用底层导航菜单
         setupBottomNavMenu(navController)
 
-
         // 控制底部导航条只出现在main_dest fileManager_dest
         navController.addOnDestinationChangedListener { controller, destination, arguments ->
             if (destination.id == R.id.runingCapture_dest || destination.id == R.id.runingRecord_dest) {
                 binding.mainBottomNavigation.visibility = View.INVISIBLE
                 binding.mainBottomNavigation.isEnabled = false
-                model.context = this@MainActivityView
-                actionBar?.show()
             } else {
                 binding.mainBottomNavigation.visibility = View.VISIBLE
                 binding.mainBottomNavigation.isEnabled = true
-                // 回到顶层清除数据
-                model.results.value?.clear()
-                model.bufferQueue.clear()
-                model.startAsr = true
-                model.startRecord = true
-                if (mBound) {
-                    model.mcs_binder?.clearQueue()
-                }
-                actionBar?.hide()
             }
         }
         // 开启浮窗
@@ -121,6 +134,8 @@ class MainActivityView : AppCompatActivity() {
             }
             .show()
 
+        initNotification()
+
     }
 
     override fun onResume() {
@@ -134,22 +149,9 @@ class MainActivityView : AppCompatActivity() {
         if (!yuYinDir.exists()) {
             yuYinDir.mkdir()
         }
+
     }
 
-
-    override fun onDestroy() {
-        super.onDestroy()
-
-        Thread {
-            val broadCastIntent = Intent()
-            broadCastIntent.action = RuningCapture.ACTION_ALL
-            broadCastIntent.putExtra(
-                RuningCapture.EXTRA_ACTION_NAME,
-                RuningCapture.ACTION_STOP
-            )
-            model.context.sendBroadcast(broadCastIntent)
-        }
-    }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         // 在actionbar应用自定义菜单
@@ -235,6 +237,111 @@ class MainActivityView : AppCompatActivity() {
         return null
     }
 
+    private val connection: ServiceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName, service: IBinder) {
+            mcs_binder = service as MediaCaptureService.mcs_Binder
+            mBound = true
+        }
+
+        override fun onServiceDisconnected(name: ComponentName) {
+            mBound = false
+        }
+    }
+
+    private fun initNotification() {
+        // 未启动服务
+        val channel = NotificationChannel(
+            m_NOTIFICATION_CHANNEL_ID,
+            MediaCaptureService.m_NOTIFICATION_CHANNEL_NAME,
+            NotificationManager.IMPORTANCE_HIGH
+        )
+        channel.description = MediaCaptureService.m_NOTIFICATION_CHANNEL_DESC
+        notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannel(channel)
+        notificationManager.notificationChannels
+
+        if (!notificationManager.areNotificationsEnabled()) {
+            val intent = Intent().apply {
+                this.action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+                this.data = Uri.fromParts("package", packageName,null)
+            }
+            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+                if (it.resultCode == RESULT_OK) {
+                    if (notificationManager.areNotificationsEnabled()) {
+                        initAudioCapture()
+                    } else {
+                        finish()
+                    }
+                }
+            }.launch(intent)
+        } else {
+            initAudioCapture()
+        }
+    }
+
+    private fun initAudioCapture() {
+
+        val filter = IntentFilter()
+        filter.addAction(CaptureAudio_ALL)
+        actionReceiver = CaptureAudioReceiver()
+        this.registerReceiver(actionReceiver, filter)
+        // 注册广播
+
+
+        // Service
+        val m_mediaProjectionManager =
+            this.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+        val intent = m_mediaProjectionManager.createScreenCaptureIntent()
+        // 获取录制屏幕权限 并启动服务
+        registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result: ActivityResult ->
+            if (result.resultCode == RESULT_OK) {
+
+                var i = Intent(this, MediaCaptureService::class.java)
+                this.bindService(
+                        i,
+                        connection,
+                        BIND_AUTO_CREATE
+                )
+                // 启动前台服务
+                i = Intent(this, MediaCaptureService::class.java)
+                i.action = ACTION_ALL
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                i.putExtra(EXTRA_RESULT_CODE, m_CREATE_SCREEN_CAPTURE)
+                i.putExtras(result.data!!)
+                this.startForegroundService(i)
+            } else {
+                // 直接推出应用
+                finish()
+            }
+        }.launch(intent)
+    }
+
+    // 广播服务
+    // 不可以耗时操作  在主线程中
+    // 避免使用 binding 可能是全局创建的唯一实例...
+    // 不要直接启动线程
+    inner class CaptureAudioReceiver : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val action = intent.action
+            // 获取frg
+            // 每次都会重新创建一个新的实例,所以要强制更新,之前frag会被销毁,不更新或者调用之前fra会导致null错误
+            if (action.equals(CaptureAudio_ALL, ignoreCase = true)) {
+                val actionName = intent.getStringExtra(EXTRA_CaptureAudio_NAME)
+                if (actionName != null && !actionName.isEmpty()) {
+                    if (actionName.equals(
+                            CaptureAudio_START,
+                            ignoreCase = true
+                        )
+                    ) {
+                        // 服务开启
+                        model.recorder = mcs_binder.serviceRecorder()!!
+                    }
+                }
+            }
+        }
+    }
 }
 
 

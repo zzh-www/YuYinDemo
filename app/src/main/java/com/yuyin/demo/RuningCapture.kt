@@ -95,7 +95,7 @@ class RuningCapture : Fragment() {
                 }
             } else {
                 model.viewModelScope.launch(Dispatchers.Default) {
-                    Recognize.reset()
+//                    Recognize.reset()
                     startRecord()
                     withContext(Dispatchers.Main) {
                         model.recordState = true
@@ -158,94 +158,10 @@ class RuningCapture : Fragment() {
 
     }
 
-    private fun configRecorder(mediaProjection: MediaProjection) {
-        // 配置所需录制的音频流
-        val config = AudioPlaybackCaptureConfiguration.Builder(mediaProjection)
-            .addMatchingUsage(AudioAttributes.USAGE_MEDIA)
-            .addMatchingUsage(AudioAttributes.USAGE_UNKNOWN)
-            .addMatchingUsage(AudioAttributes.USAGE_GAME)
-            .build()
-
-        // 配置采样格式
-        val audioFormat = AudioFormat.Builder()
-            .setSampleRate(model.SAMPLE_RATE)
-            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-            .setChannelMask(AudioFormat.CHANNEL_IN_MONO)
-            .build()
-
-        model.miniBufferSize = AudioRecord.getMinBufferSize(
-            model.SAMPLE_RATE,
-            AudioFormat.CHANNEL_IN_MONO,
-            AudioFormat.ENCODING_PCM_16BIT
-        )
-
-        if (ActivityCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.RECORD_AUDIO
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            Log.e(LOG_TAG, "Can not init")
-            return
-        }
-
-        model.record = AudioRecord.Builder()
-            .setAudioFormat(audioFormat)
-            .setBufferSizeInBytes(model.miniBufferSize)
-            .setAudioPlaybackCaptureConfig(config)
-            .build()
-
-
-    }
 
 
     private fun initRecorder() {
-
-        m_mediaProjectionManager =
-            requireActivity().getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        val intent = m_mediaProjectionManager.createScreenCaptureIntent()
-
-        // 获取录制屏幕权限 并启动服务
-        registerForActivityResult(
-            ActivityResultContracts.StartActivityForResult()
-        ) { result: ActivityResult ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                // 获取权限成功，初始化 recorder
-                val mediaProject = m_mediaProjectionManager.getMediaProjection(-1, result.data!!)
-                configRecorder(mediaProject)
-            } else {
-                // 否则直接回退
-                findNavController(
-                    requireActivity(),
-                    R.id.yuyin_nav_host_container_fragment
-                ).popBackStack()
-            }
-        }.launch(intent)
-
+        model.record = yuYinModel.recorder
     }
 
-
-    companion object {
-        const val CaptureAudio_ALL = "CaptureAudio"
-        const val CaptureAudio_START = "CaptureAudio_START"
-        const val CaptureAudio_RESTART_RECORDING = "CaptureAudio_RESTART_RECORDING"
-        const val CaptureAudio_START_ASR = "CaptureAudio_START_ASR"
-        const val CaptureAudio_STOP = "CaptureAudio_STOP"
-        const val EXTRA_RESULT_CODE = "EXTRA_RESULT_CODE"
-        const val EXTRA_CaptureAudio_NAME = "CaptureAudio_NAME"
-        const val m_CREATE_SCREEN_CAPTURE = 1001
-        const val EXTRA_ACTION_NAME = "ACTION_NAME"
-        const val ACTION_ALL = "ALL"
-        const val ACTION_START = "ACTION_START"
-        const val ACTION_STOP = "ACTION_STOP"
-        const val ACTION_START_RECORDING = "CaptureAudio_START_RECORDING"
-        const val ACTION_STOP_RECORDING = "CaptureAudio_STOP_RECORDING"
-        const val ACTION_STOP_RECORDING_From_Notification =
-            "ACTION_STOP_RECORDING_From_Notification"
-        const val ACTION_STOP_RECORDING_To_Main = "CaptureAudio_STOP_RECORDING_To_Main"
-        const val ACTION_START_RECORDING_From_Notification =
-            "CaptureAudio_START_RECORDING_From_Notification"
-
-        // view
-        private const val LOG_TAG = "YUYIN_RECORD"
-    }
 }

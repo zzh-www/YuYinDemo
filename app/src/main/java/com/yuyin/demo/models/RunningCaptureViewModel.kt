@@ -7,25 +7,22 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.mobvoi.wenet.MediaCaptureService
 import com.mobvoi.wenet.Recognize
 import com.yuyin.demo.SpeechText
 import com.yuyin.demo.SpeechTextAdapter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.lang.Exception
 import kotlin.random.Random
 
 class RunningCaptureViewModel : ViewModel() {
-    private val LOGTAG = "RunningRecordViewModel"
+    private val LOGTAG = "RunningCaptureViewModel"
 
     // record
     lateinit var record: AudioRecord
     var recordState = false
-    var miniBufferSize = 0
-    private val MAX_QUEUE_SIZE = 2500
-    // 100 seconds audio, 1 / 0.04 * 100
-    val SAMPLE_RATE = 16000 // The sampling rate
+    var miniBufferSize = MediaCaptureService.miniBufferSize
 
     var asrState = false
     var change_senor = false
@@ -56,9 +53,9 @@ class RunningCaptureViewModel : ViewModel() {
                 }
             }.catch {
                 Log.e(LOGTAG, it.message ?: "error in audioflow")
-            }.buffer(MAX_QUEUE_SIZE).collect {
+            }.buffer(MediaCaptureService.MAX_QUEUE_SIZE).collect {
                 Recognize.acceptWaveform(it)
-                Log.i(LOGTAG, "${it.size} : size of audio")
+//                Log.i(LOGTAG, "${it.size} : size of audio")
 //                Log.i(LOGTAG, "$it")
             }
         }
@@ -69,19 +66,19 @@ class RunningCaptureViewModel : ViewModel() {
             val i = random.nextInt()
             flow {
                 while (asrState) {
-//                    emit(",,,, ")
+//                    var result = "....${random.nextInt()}"
                     try {
                         val result = Recognize.getResult()
-                        if (result!="")
+                        if (result != "")
                             emit(result)
 //                        Log.d(LOGTAG,"decode $i")
                     } catch (e: Exception) {
-                        Log.e(LOGTAG,"error in decode : ${e.message}")
+                        Log.e(LOGTAG, "error in decode : ${e.message}")
                     }
                 }
             }.collect {
                 results.value = it
-                Log.i(LOGTAG, "collect in decode $it $i $i")
+                Log.i(LOGTAG, "collect in decode $it $i")
             }
         }
     }

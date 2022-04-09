@@ -15,9 +15,33 @@ import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.text.SimpleDateFormat
 import java.util.*
-import kotlin.collections.ArrayList
 
 object YuYinUtil {
+
+
+    const val CaptureAudio_ALL = "CaptureAudioService"
+    const val CaptureAudio_START = "CaptureAudioServiceSTART"
+    const val CaptureAudio_START_ASR = "CaptureAudio_START_ASR"
+    const val CaptureAudio_STOP = "CaptureAudio_STOP"
+    const val EXTRA_RESULT_CODE = "EXTRA_RESULT_CODE"
+    const val EXTRA_CaptureAudio_NAME = "CaptureAudio_NAME"
+    const val m_CREATE_SCREEN_CAPTURE = 1001
+    const val EXTRA_ACTION_NAME = "ACTION_NAME"
+    const val ACTION_ALL = "ALL"
+    const val ACTION_START = "ACTION_START"
+    const val ACTION_STOP = "ACTION_STOP"
+    const val ACTION_START_RECORDING = "CaptureAudio_START_RECORDING"
+    const val ACTION_STOP_RECORDING = "CaptureAudio_STOP_RECORDING"
+    const val ACTION_STOP_RECORDING_From_Notification =
+        "ACTION_STOP_RECORDING_From_Notification"
+    const val ACTION_STOP_RECORDING_To_Main = "CaptureAudio_STOP_RECORDING_To_Main"
+    const val ACTION_START_RECORDING_From_Notification =
+        "CaptureAudio_START_RECORDING_From_Notification"
+
+    // view
+    private const val LOG_TAG = "YUYIN_RECORD"
+
+
     // 所需请求的权限
     val appPermissions = arrayOf(
         Manifest.permission.WRITE_EXTERNAL_STORAGE,
