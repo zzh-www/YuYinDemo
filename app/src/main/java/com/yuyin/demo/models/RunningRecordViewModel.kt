@@ -90,15 +90,16 @@ class RunningRecordViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.Main) {
             results.collect {
                 flowText.text = it
+                val position = speechList.size - 1
                 if (it.endsWith(" ")) {
-                    speechList[speechList.size - 1].text = it
-                    adapter.notifyItemChanged(speechList.size - 1)
+                    speechList[position].text = it
+                    adapter.notifyItemChanged(position)
                     speechList.add(SpeechText(" ")) // add new para
-                    adapter.notifyItemInserted(speechList.size - 1)
-                    recyclerView.scrollToPosition(speechList.size - 1)
+                    adapter.notifyItemInserted(position+1)
+                    recyclerView.scrollToPosition(position+1)
                 } else {
-                    speechList[speechList.size - 1].text = it // update latest para
-                    adapter.notifyItemChanged(speechList.size - 1)
+                    speechList[position].text = it // update latest para
+                    adapter.notifyItemChanged(position)
                 }
             }
         }

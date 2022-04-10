@@ -39,6 +39,8 @@ class RuningCapture : Fragment() {
 
     private var initModel = false
 
+    private var startModel = false
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -69,8 +71,8 @@ class RuningCapture : Fragment() {
 
         binding.stopBtRunCap.setOnClickListener {
             if (model.recordState) {
-                model.viewModelScope.launch(Dispatchers.IO) {
-                    if (!initModel && !Recognize.getFinished() && Recognize.getInit()) {
+                model.viewModelScope.launch(Dispatchers.Main) {
+                    if (!initModel && Recognize.getInit()) {
                          //延迟10毫秒
                         withContext(Dispatchers.Main) {
                             binding.stopBtRunCap.isEnabled = true
@@ -79,24 +81,25 @@ class RuningCapture : Fragment() {
                             flowView.text = ""
                         }
                         model.record.stop()
-                        if (!Recognize.getFinished())
+//                        if (!Recognize.getFinished())
                             // 调用的条件是 必须为false 因为就是为了设置为false
-                            Recognize.setInputFinished()
+//                            Recognize.setInputFinished()
                         withContext(Dispatchers.Main) {
                             binding.stopBtRunCap.text = "start"
                             binding.saveBtRunCap.visibility = View.VISIBLE
                             binding.saveBtRunCap.isEnabled = true
                         }
                     } else {
-                        Log.e(LOG_TAG,"no init")
+                        YuYinUtil.prepareModel(requireActivity() as MainActivityView)
+                        Recognize.init(yuYinModel.model_path, yuYinModel.dic_path)
                     }
                 }
             } else {
                 model.viewModelScope.launch(Dispatchers.IO) {
                     // 确保上一轮次确实已经结束
                     //TODO 可以考虑不终止转录 只终止record
-                    if (!initModel && Recognize.getFinished() && Recognize.getInit()) {
-                        Recognize.reset()
+                    if (!initModel && Recognize.getInit()) {
+//                        Recognize.reset()
                         startRecord()
                         withContext(Dispatchers.Main) {
                             model.recordState = true
@@ -104,10 +107,15 @@ class RuningCapture : Fragment() {
                             binding.saveBtRunCap.visibility = View.INVISIBLE
                             binding.saveBtRunCap.isEnabled = false
                         }
-                        Recognize.startDecode()
+                        if (startModel==false) {
+                            Recognize.startDecode()
+                            startModel=true
+                        }
+//                        Recognize.startDecode()
                         model.getTextFlow()
                     } else {
-                        Log.e(LOG_TAG,"no init")
+                        YuYinUtil.prepareModel(requireActivity() as MainActivityView)
+                        Recognize.init(yuYinModel.model_path, yuYinModel.dic_path)
                     }
                 }
             }
