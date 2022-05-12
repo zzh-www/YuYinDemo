@@ -63,6 +63,7 @@ class RunningRecord : Fragment() {
         model.viewModelScope.launch(Dispatchers.IO) {
             YuYinUtil.prepareModel(requireActivity() as MainActivityView)
             Recognize.init(yuYinModel.model_path, yuYinModel.dic_path)  // 初始化模型
+            Recognize.reset()
             initModel = true
             withContext(Dispatchers.Main){
                 // 订阅结果

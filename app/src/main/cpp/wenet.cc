@@ -51,6 +51,11 @@ void init(JNIEnv *env, jobject, jstring jModelPath, jstring jDictPath) {
   resource->symbol_table = std::shared_ptr<fst::SymbolTable>(
           fst::SymbolTable::ReadText(dictPath));
 
+
+  //TODO add context_path  参看 wenet::InitDecodeResourceFromFlags()
+  // decoder/params.h
+
+
   PostProcessOptions post_process_opts;
   resource->post_processor =
     std::make_shared<PostProcessor>(std::move(post_process_opts));

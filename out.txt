@@ -1,0 +1,2948 @@
+// Copyright (c) 2021 Mobvoi Inc (authors: Xiaoyu Chen)
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+#include <jni.h>
+
+#include "torch/script.h"
+#include "torch/torch.h"
+
+#include "decoder/torch_asr_decoder.h"
+#include "decoder/torch_asr_model.h"
+#include "frontend/feature_pipeline.h"
+#include "frontend/wav.h"
+#include "post_processor/post_processor.h"
+#include "utils/log.h"
+#include "utils/string.h"
+#include "queue"
+
+namespace wenet {
+
+std::shared_ptr<DecodeOptions> decode_config;
+std::shared_ptr<FeaturePipelineConfig> feature_config;
+std::shared_ptr<FeaturePipeline> feature_pipeline;
+std::shared_ptr<TorchAsrDecoder> decoder;
+std::shared_ptr<DecodeResource> resource;
+DecodeState state = kEndBatch;
+std::string total_result;  // NOLINT
+std::queue<std::string> results;
+std::string current_string;
+
+void init(JNIEnv *env, jobject, jstring jModelPath, jstring jDictPath) {
+  resource = std::make_shared<DecodeResource>();
+  resource->model = std::make_shared<TorchAsrModel>();
+  const char *pModelPath = (env)->GetStringUTFChars(jModelPath, nullptr);
+  std::string modelPath = std::string(pModelPath);
+//  LOG(INFO) << "model path: " << modelPath;
+  resource->model->Read(modelPath);
+
+  const char *pDictPath = (env)->GetStringUTFChars(jDictPath, nullptr);
+  std::string dictPath = std::string(pDictPath);
+//  LOG(INFO) << "dict path: " << dictPath;
+  resource->symbol_table = std::shared_ptr<fst::SymbolTable>(
+          fst::SymbolTable::ReadText(dictPath));
+
+
+  //TODO add context_path  参看 wenet::InitDecodeResourceFromFlags()
+  // decoder/params.h
+
+
+  PostProcessOptions post_process_opts;
+  resource->post_processor =
+    std::make_shared<PostProcessor>(std::move(post_process_opts));
+
+  feature_config = std::make_shared<FeaturePipelineConfig>(80, 16000);
+  feature_pipeline = std::make_shared<FeaturePipeline>(*feature_config);
+
+  decode_config = std::make_shared<DecodeOptions>();
+  decode_config->chunk_size = 16;
+
+  decoder = std::make_shared<TorchAsrDecoder>(feature_pipeline, resource,
+                                              *decode_config);
+
+  state = kEndFeats;
+}
+
+void reset(JNIEnv *env, jobject) {
+//  LOG(INFO) << "wenet reset";
+  decoder->Reset();
+  state = kEndBatch;
+  total_result = "";
+}
+
+void accept_waveform(JNIEnv *env, jobject, jshortArray jWaveform) {
+  jsize size = env->GetArrayLength(jWaveform);
+  std::vector<int16_t> waveform(size);
+  env->GetShortArrayRegion(jWaveform, 0, size, &waveform[0]);
+  std::vector<float> floatWaveform(waveform.begin(), waveform.end());
+  feature_pipeline->AcceptWaveform(floatWaveform);
+//  LOG(INFO) << "com.demo.wenet accept waveform in ms: "
+//            << int(floatWaveform.size() / 16);
+}
+
+void set_input_finished() {
+//  LOG(INFO) << "wenet input finished";
+  feature_pipeline->set_input_finished();
+}
+
+void decode_thread_func() {
+  while (true) {
+    state = decoder->Decode();
+    if (state == kEndFeats || state == kEndpoint) {
+      decoder->Rescoring();
+    }
+
+    std::string result;
+    if (decoder->DecodedSomething()) {
+      result = decoder->result()[0].sentence;
+    }
+
+    if (state == kEndFeats) {
+//      LOG(INFO) << "wenet endfeats final result: " << result;
+      total_result += result;
+      break;
+    } else if (state == kEndpoint) {
+//      LOG(INFO) << "wenet endpoint final result: " << result;
+      if (!result.empty()) {
+        results.push(result+" ");
+      }
+      total_result += result + ",";
+      decoder->ResetContinuousDecoding();
+    } else {
+      if (decoder->DecodedSomething()) {
+//        LOG(INFO) << "wenet partial result: " << result;
+      }
+    }
+  }
+}
+
+void start_decode() {
+  std::thread decode_thread(decode_thread_func);
+  decode_thread.detach();
+}
+
+jboolean get_finished(JNIEnv *env, jobject) {
+  if (state == kEndFeats) {
+//    LOG(INFO) << "wenet recognize finished";
+    return JNI_TRUE;
+  }
+  return JNI_FALSE;
+}
+
+// 返回模型是否初始化
+jboolean get_inited(JNIEnv *env, jobject) {
+  return decoder == nullptr ? JNI_FALSE : JNI_TRUE;
+}
+
+
+// 更改以获取段句
+jstring get_result(JNIEnv *env, jobject) {
+  std::string result = decoder->DecodedSomething() ? decoder->result()[0].sentence : "";
+  if (!results.empty()) {
+    result = results.front();
+    results.pop();
+  }
+
+  return env->NewStringUTF(result.c_str());
+}
+}  // namespace wenet
+
+JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *) {
+  JNIEnv *env;
+  if (vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) != JNI_OK) {
+    return JNI_ERR;
+  }
+
+  jclass c = env->FindClass("com/mobvoi/wenet/Recognize");
+  if (c == nullptr) {
+    return JNI_ERR;
+  }
+
+  static const JNINativeMethod methods[] = {
+    {"init", "(Ljava/lang/String;Ljava/lang/String;)V",
+     reinterpret_cast<void *>(wenet::init)},
+    {"reset", "()V",
+     reinterpret_cast<void *>(wenet::reset)},
+    {"acceptWaveform", "([S)V",
+     reinterpret_cast<void *>(wenet::accept_waveform)},
+    {"setInputFinished", "()V",
+     reinterpret_cast<void *>(wenet::set_input_finished)},
+    {"getFinished", "()Z",
+     reinterpret_cast<void *>(wenet::get_finished)},
+     {"getInit", "()Z",
+      reinterpret_cast<void *>(wenet::get_inited)},
+    {"startDecode", "()V",
+     reinterpret_cast<void *>(wenet::start_decode)},
+    {"getResult", "()Ljava/lang/String;",
+     reinterpret_cast<void *>(wenet::get_result)},
+  };
+  int rc = env->RegisterNatives(c, methods,
+                                sizeof(methods) / sizeof(JNINativeMethod));
+
+  if (rc != JNI_OK) {
+    return rc;
+  }
+
+  return JNI_VERSION_1_6;
+}
+
+package com.mobvoi.wenet
+
+import android.Manifest
+import android.annotation.SuppressLint
+import android.app.PendingIntent
+import android.app.Service
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.PackageManager
+import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioPlaybackCaptureConfiguration
+import android.media.AudioRecord
+import android.media.projection.MediaProjection
+import android.media.projection.MediaProjectionManager
+import android.os.Binder
+import android.os.Environment
+import android.os.IBinder
+import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import com.yuyin.demo.MainActivityView
+import com.yuyin.demo.R
+import com.yuyin.demo.YuYinUtil.ACTION_ALL
+import com.yuyin.demo.YuYinUtil.ACTION_START_RECORDING_From_Notification
+import com.yuyin.demo.YuYinUtil.ACTION_STOP_RECORDING_From_Notification
+import com.yuyin.demo.YuYinUtil.CaptureAudio_ALL
+import com.yuyin.demo.YuYinUtil.CaptureAudio_START
+import com.yuyin.demo.YuYinUtil.EXTRA_ACTION_NAME
+import com.yuyin.demo.YuYinUtil.EXTRA_CaptureAudio_NAME
+import java.io.File
+import java.io.FileNotFoundException
+import java.io.FileOutputStream
+import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.*
+import com.yuyin.demo.YuYinUtil.YuYinLog as Log
+
+
+class MediaCaptureService : Service() {
+    private val LogTag = "MediaCaptureService"
+    private val binder: IBinder = MediaServiceBinder()
+
+    private var isCreate = false
+    private lateinit var pre_notificationBUilder: NotificationCompat.Builder
+    var m_recorder: AudioRecord? = null
+    private var m_recorderMic: AudioRecord? = null
+    var m_callingIntent: Intent? = null
+    private lateinit var m_mediaProjectionManager: MediaProjectionManager
+    private lateinit var m_mediaProjection: MediaProjection
+    private var pendingIntent: PendingIntent? = null
+    private var stopPendingIntent: PendingIntent? = null
+    private var startPendingIntent: PendingIntent? = null
+    private var m_actionReceiver: BroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val action = intent.action
+            if (action.equals(ACTION_ALL, ignoreCase = true)) {
+                val actionName = intent.getStringExtra(EXTRA_ACTION_NAME)
+                if (actionName != null && actionName.isNotEmpty()) {
+                    // TODO accept some broadcast
+                }
+            }
+        }
+    }
+
+    private fun startMediaProject(intent: Intent) {
+        m_mediaProjection = m_mediaProjectionManager.getMediaProjection(-1, intent)
+        preStartRecording(m_mediaProjection)
+        Log.e("ZZH", "start_recording")
+    }
+
+    /**
+     * @method startRecording
+     * @description 配置采样场景 配置音轨 输出音频样式等
+     */
+    private fun preStartRecording(mediaProjection: MediaProjection?) {
+        // 录制场景
+        val config = AudioPlaybackCaptureConfiguration.Builder(mediaProjection!!)
+            .addMatchingUsage(AudioAttributes.USAGE_MEDIA)
+            .addMatchingUsage(AudioAttributes.USAGE_UNKNOWN)
+            .addMatchingUsage(AudioAttributes.USAGE_GAME)
+            .build()
+
+        // 采样率 编码 掩码
+        val audioFormat = AudioFormat.Builder()
+            .setSampleRate(m_RECORDER_SAMPLERATE)
+            .setEncoding(m_RECORDER_AUDIO_ENCODING)
+            .setChannelMask(m_RECORDER_CHANNELS)
+            .build()
+        miniBufferSize = AudioRecord.getMinBufferSize(
+            m_RECORDER_SAMPLERATE,
+            m_RECORDER_CHANNELS,
+            m_RECORDER_AUDIO_ENCODING
+        )
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.RECORD_AUDIO
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        m_recorder = AudioRecord.Builder()
+            .setAudioFormat(audioFormat)
+            .setBufferSizeInBytes(miniBufferSize)
+            .setAudioPlaybackCaptureConfig(config).build()
+
+    }
+
+
+    override fun onCreate() {
+        super.onCreate()
+        isCreate = true
+
+        // 中止意图
+        val broadStopCastIntent = Intent()
+        broadStopCastIntent.action = CaptureAudio_ALL
+        broadStopCastIntent.putExtra(
+            EXTRA_CaptureAudio_NAME,
+            ACTION_STOP_RECORDING_From_Notification
+        )
+        stopPendingIntent = PendingIntent.getBroadcast(
+            this,
+            333,
+            broadStopCastIntent,
+            PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // 开始意图
+        val broadStartCastIntent = Intent()
+        broadStartCastIntent.action = CaptureAudio_ALL
+        broadStartCastIntent.putExtra(
+            EXTRA_CaptureAudio_NAME,
+            ACTION_START_RECORDING_From_Notification
+        )
+        startPendingIntent = PendingIntent.getBroadcast(
+            this,
+            334,
+            broadStopCastIntent,
+            PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // 开启通知
+        val notificationIntent = Intent(this, MainActivityView::class.java)
+        //  Returns an existing or new PendingIntent matching the given parameters
+        pendingIntent =
+            PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
+        pre_notificationBUilder = NotificationCompat.Builder(this, m_NOTIFICATION_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setColor(ContextCompat.getColor(this, R.color.primaryDarkColor))
+            .setContentTitle("余音")
+            .setContentText("ASR")
+        m_mediaProjectionManager =
+            getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+
+
+        // 注册广播
+        val filter = IntentFilter()
+        filter.addAction(ACTION_ALL)
+        registerReceiver(m_actionReceiver, filter)
+    }
+
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+//        return super.onStartCommand(intent, flags, startId);
+        // 启动前台服务
+        if (intent==null) {
+            Log.e(LogTag,"null start service")
+        } else {
+            if (m_callingIntent == null)
+                m_callingIntent = intent
+            val notification = pre_notificationBUilder.build()
+            startForeground(m_NOTIFICATION_ID, notification)
+            // 配置 recorder
+            startMediaProject(m_callingIntent!!)
+            // 通知activity 服务已启动
+            val broad = Intent()
+            broad.action = CaptureAudio_ALL
+            broad.putExtra(EXTRA_CaptureAudio_NAME, CaptureAudio_START)
+            this.sendBroadcast(broad)
+        }
+        return START_STICKY //因内存被销毁后， 重新创建
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(m_actionReceiver)
+    }
+
+    inner class MediaServiceBinder : Binder() {
+        fun serviceRecorder(): AudioRecord? {
+            return m_recorder
+        }
+
+    }
+
+    override fun onBind(intent: Intent): IBinder {
+        return binder
+    }
+
+    /**
+     * @method getUidExample
+     * @description 获取Uid
+     * @date: 2021/11/11 2:05
+     * @Author: zzh
+     */
+    fun getUidExample() {
+        val pm = packageManager
+        val packageInfos = pm.getInstalledPackages(0)
+        for (info in packageInfos) {
+            Log.i("APPIFO", info.applicationInfo.toString())
+        }
+    }
+
+    private fun short2byte(sData: ShortArray): ByteArray {
+        val shortArrsize = sData.size
+        val bytes = ByteArray(shortArrsize * 2)
+        for (i in 0 until shortArrsize) {
+            bytes[i * 2] = (sData[i].toInt() and 0x00FF).toByte()
+            bytes[i * 2 + 1] = (sData[i].toInt() shr 8).toByte()
+            sData[i] = 0
+        }
+        return bytes
+    }
+
+    @SuppressLint("SimpleDateFormat")
+    private fun writeAudioDataToFile() {
+        if (m_recorder == null) return
+        // Write the output audio in byte
+        Log.i("ZZH", "Recording started. Computing output file name")
+        val sampleDir =
+            File(getExternalFilesDir(Environment.DIRECTORY_MUSIC), "/TestRecordingDasa1")
+        if (!sampleDir.exists()) {
+            sampleDir.mkdirs()
+        }
+        val fileName = "Record-" + SimpleDateFormat("dd-MM-yyyy-hh-mm-ss").format(Date()) + ".pcm"
+        val filePath = sampleDir.absolutePath + "/" + fileName
+        //String filePath = "/sdcard/voice8K16bitmono.pcm";
+        val sData = ShortArray(BufferElements2Rec)
+        var os: FileOutputStream? = null
+        try {
+            os = FileOutputStream(filePath)
+        } catch (e: FileNotFoundException) {
+            e.printStackTrace()
+        }
+        while (m_isRecording) {
+            // gets the voice output from microphone to byte format
+            m_recorder?.read(sData, 0, BufferElements2Rec)
+            Log.i("ZZH", "Short wirting to file$sData")
+            try {
+                // // writes the data to file from buffer
+                // // stores the voice buffer
+                val bData = short2byte(sData)
+                os!!.write(bData, 0, BufferElements2Rec * BytesPerElement)
+            } catch (e: IOException) {
+                e.printStackTrace()
+                Log.i("ZZH", "record error:" + e.message)
+            }
+        }
+        try {
+            os!!.close()
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+        Log.i("ZZH", String.format("Recording finished. File saved to '%s'", filePath))
+    }
+
+    @SuppressLint("SimpleDateFormat")
+    private fun writeAudioDataToFileMic() {
+        if (m_recorderMic == null) return
+        // Write the output audio in byte
+        Log.i("ZZH", "Recording started. Computing output file name")
+        val sampleDir =
+            File(getExternalFilesDir(Environment.DIRECTORY_MUSIC), "/TestRecordingDasa1Mic")
+        if (!sampleDir.exists()) {
+            sampleDir.mkdirs()
+        }
+        val fileName = "Record-" + SimpleDateFormat("dd-MM-yyyy-hh-mm-ss").format(Date()) + ".pcm"
+        val filePath = sampleDir.absolutePath + "/" + fileName
+        //String filePath = "/sdcard/voice8K16bitmono.pcm";
+        val sData = ShortArray(BufferElements2Rec)
+        var os: FileOutputStream? = null
+        try {
+            os = FileOutputStream(filePath)
+        } catch (e: FileNotFoundException) {
+            e.printStackTrace()
+        }
+        while (m_isRecording) {
+            // gets the voice output from microphone to byte format
+            m_recorderMic!!.read(sData, 0, BufferElements2Rec)
+            Log.i("ZZH", "Short wirting to file$sData")
+            try {
+                // // writes the data to file from buffer
+                // // stores the voice buffer
+                val bData = short2byte(sData)
+                os!!.write(bData, 0, BufferElements2Rec * BytesPerElement)
+            } catch (e: IOException) {
+                e.printStackTrace()
+                Log.i("ZZH", "record error:" + e.message)
+            }
+        }
+        try {
+            os!!.close()
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+        Log.i("ZZH", String.format("Recording finished. File saved to '%s'", filePath))
+    }
+
+    companion object {
+        const val m_RECORDER_SAMPLERATE = 16000
+        const val m_RECORDER_CHANNELS = AudioFormat.CHANNEL_IN_MONO
+        const val m_RECORDER_AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT
+        const val MAX_QUEUE_SIZE = 2500
+        var miniBufferSize = 0
+        private var m_isRecording = false
+        const val m_NOTIFICATION_CHANNEL_ID = "Yuyin_ChannelId"
+        const val m_NOTIFICATION_CHANNEL_NAME = "Yuyin_Channel"
+        const val m_NOTIFICATION_CHANNEL_DESC = "Yuyin is working"
+        const val m_NOTIFICATION_ID = 1000
+        var BufferElements2Rec = 1024 // want to play 2048 (2K) since 2 bytes we use only 1024
+        var BytesPerElement = 2 // 2 bytes in 16bit format
+    }
+}package com.mobvoi.wenet
+
+import android.content.Context
+import android.graphics.Canvas
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.Shader
+import android.util.AttributeSet
+import android.view.View
+import androidx.core.content.ContextCompat
+import com.yuyin.demo.R
+import java.util.*
+
+/**
+ * 自定义的音频模拟条形图 Created by shize on 2016/9/5.
+ */
+class VoiceRectView @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0
+) : View(context, attrs, defStyleAttr) {
+    // 音频矩形的数量
+    private var mRectCount = 0
+
+    // 音频矩形的画笔
+    private var mRectPaint: Paint? = null
+
+    // 渐变颜色的两种
+    private var topColor = 0
+    private var downColor = 0
+
+    // 音频矩形的宽和高
+    private var mRectWidth = 0f
+    private var mRectHeight = 0f
+
+    // 偏移量
+    private var offset = 0
+
+    // 频率速度
+    private var mSpeed = 0
+    private var mEnergyBuffer: DoubleArray? = null
+    fun setPaint(context: Context, attrs: AttributeSet?) {
+        // 将属性存储到TypedArray中
+        val ta = context.obtainStyledAttributes(attrs, R.styleable.VoiceRect)
+        mRectPaint = Paint()
+        // 添加矩形画笔的基础颜色
+        mRectPaint!!.color = ta.getColor(
+            R.styleable.VoiceRect_RectTopColor,
+            ContextCompat.getColor(context, R.color.top_color)
+        )
+        // 添加矩形渐变色的上面部分
+        topColor = ta.getColor(
+            R.styleable.VoiceRect_RectTopColor,
+            ContextCompat.getColor(context, R.color.top_color)
+        )
+        // 添加矩形渐变色的下面部分
+        downColor = ta.getColor(
+            R.styleable.VoiceRect_RectDownColor,
+            ContextCompat.getColor(context, R.color.down_color)
+        )
+        // 设置矩形的数量
+        mRectCount = ta.getInt(R.styleable.VoiceRect_RectCount, 10)
+        mEnergyBuffer = DoubleArray(mRectCount)
+
+        // 设置重绘的时间间隔，也就是变化速度
+        mSpeed = ta.getInt(R.styleable.VoiceRect_RectSpeed, 300)
+        // 每个矩形的间隔
+        offset = ta.getInt(R.styleable.VoiceRect_RectOffset, 0)
+        // 回收TypeArray
+        ta.recycle()
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldW: Int, oldH: Int) {
+        super.onSizeChanged(w, h, oldW, oldH)
+        // 渐变效果
+        val mLinearGradient: LinearGradient
+        // 画布的宽
+        // 获取画布的宽
+        val mWidth = width.toFloat()
+        // 获取矩形的最大高度
+        mRectHeight = height.toFloat()
+        // 获取单个矩形的宽度(减去的部分为到右边界的间距)
+        mRectWidth = (mWidth - offset) / mRectCount
+        // 实例化一个线性渐变
+
+        mLinearGradient = LinearGradient(
+            0f,
+            0f,
+            mRectWidth,
+            mRectHeight,
+            topColor,
+            downColor,
+            Shader.TileMode.CLAMP
+        )
+        // 添加进画笔的着色器
+        mRectPaint!!.shader = mLinearGradient
+    }
+
+    fun add(energy: Double) {
+        if (mEnergyBuffer!!.size - 1 >= 0) {
+            System.arraycopy(mEnergyBuffer, 1, mEnergyBuffer, 0, mEnergyBuffer!!.size - 1)
+        }
+        mEnergyBuffer!![mEnergyBuffer!!.size - 1] = energy
+    }
+
+    fun zero() {
+        Arrays.fill(mEnergyBuffer, 0.0)
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        var mRandom: Double
+        var currentHeight: Float
+        for (i in 0 until mRectCount) {
+            // 由于只是简单的案例就不监听音频输入，随机模拟一些数字即可
+            mRandom = Math.random()
+
+            //if (i < 1 || i > mRectCount - 2) mRandom = 0;
+            currentHeight = (mRectHeight * mEnergyBuffer!![i]).toFloat()
+
+            // 矩形的绘制是从左边开始到上、右、下边（左右边距离左边画布边界的距离，上下边距离上边画布边界的距离）
+            canvas.drawRect(
+                (mRectWidth * i + offset).toFloat(),
+                (mRectHeight - currentHeight) / 2,
+                (mRectWidth * (i + 1)).toFloat(),
+                mRectHeight / 2 + currentHeight / 2,
+                mRectPaint!!
+            )
+        }
+        // 使得view延迟重绘
+        postInvalidateDelayed(mSpeed.toLong())
+    }
+
+    init {
+        setPaint(context, attrs)
+    }
+}package com.yuyin.demo
+
+import android.content.Intent
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
+import androidx.appcompat.widget.AppCompatImageView
+import androidx.core.content.FileProvider
+import androidx.recyclerview.widget.RecyclerView
+
+class FileAdapter(private val data_list: List<FileItem>) :
+    RecyclerView.Adapter<FileAdapter.ViewHolder>() {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.file_item, parent, false)
+        val viewHolder = ViewHolder(view)
+        viewHolder.file_text.setOnClickListener { v: View? ->
+            val txt_path = data_list[viewHolder.bindingAdapterPosition].file_path
+            // 打开txt文件
+            val intent = Intent(Intent.ACTION_VIEW)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            val uri = FileProvider.getUriForFile(
+                parent.context,
+                "com.yuyin.demo.fileprovider",
+                txt_path
+            )
+            intent.flags = Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+            intent.setDataAndType(uri, "text/plain")
+            /*
+                MIME 媒体类型，如 image/jpeg 或 audio/mpeg4-generic。子类型可以是星号通配符 (*)，以指示任何子类型都匹配。
+                Intent 过滤器经常会声明仅包含 android:mimeType 属性的 <data>。
+                intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, file_path);
+            */parent.context.startActivity(intent)
+        }
+        viewHolder.file_bt.setOnClickListener { v: View? ->
+            val text_path = data_list[viewHolder.bindingAdapterPosition].file_path
+            val intent = Intent(Intent.ACTION_SEND)
+            val uri = FileProvider.getUriForFile(
+                parent.context,
+                "com.yuyin.demo.fileprovider",
+                text_path
+            )
+            intent.putExtra(Intent.EXTRA_STREAM, uri)
+            intent.type = "text/plain"
+            parent.context.startActivity(intent)
+        }
+        return viewHolder
+    }
+
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        val fileItem = data_list[position]
+        holder.file_text.text = fileItem.file_name
+    }
+
+    override fun getItemCount(): Int {
+        return data_list.size
+    }
+
+    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val file_text: TextView
+        val file_bt: AppCompatImageView
+
+        init {
+            file_text = view.findViewById<View>(R.id.file_card_text) as TextView
+            file_bt = view.findViewById(R.id.file_card_bt)
+        }
+    }
+}package com.yuyin.demo
+
+import java.io.File
+
+class FileItem(path: File) {
+    val file_path: File
+    var file_name = ""
+
+    init {
+        file_name = path.name
+        file_path = path
+    }
+}package com.yuyin.demo
+
+import android.os.Bundle
+import android.os.Environment
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import androidx.fragment.app.Fragment
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.yuyin.demo.databinding.FragmentFilesManagerBinding
+import java.io.File
+import java.io.IOException
+
+class FilesManager : Fragment() {
+    private var binding: FragmentFilesManagerBinding? = null
+    private val fileItemArrayList = ArrayList<FileItem>()
+    private var adapter: FileAdapter? = null
+    private var recyclerView: RecyclerView? = null
+
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        // Inflate the layout for this fragment
+//        return inflater.inflate(R.layout.fragment_files_manager, container, false);
+        binding = FragmentFilesManagerBinding.inflate(inflater, container, false)
+        return binding!!.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        val linearLayoutManager = LinearLayoutManager(context)
+        recyclerView = binding!!.recyclerFile
+        recyclerView!!.layoutManager = linearLayoutManager
+        val dir_path = requireContext().getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+        var file: File? = null
+        try {
+            file = File(dir_path!!.canonicalPath + File.separator + "YuYin")
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+        val files = file!!.listFiles { dir: File?, name: String -> name.endsWith(".txt") }
+        // 返回null
+        if (files != null) {
+            for (item in files) {
+                fileItemArrayList.add(FileItem(item))
+            }
+        }
+        adapter = FileAdapter(fileItemArrayList)
+        recyclerView!!.adapter = adapter
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        binding = null
+    }
+}package com.yuyin.demo
+
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import androidx.navigation.Navigation.findNavController
+import com.yuyin.demo.YuYinUtil.checkRequestPermissions
+import com.yuyin.demo.databinding.FragmentMainBinding
+import com.yuyin.demo.models.YuyinViewModel
+
+class Main : Fragment() {
+    private var binding: FragmentMainBinding? = null
+
+    private val yuyinViewModel: YuyinViewModel by activityViewModels()
+
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        // Inflate the layout for this fragment
+        binding =
+            FragmentMainBinding.inflate(inflater, container, false)
+        return binding!!.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        binding!!.recordAsrBt.setOnClickListener { v: View? ->
+            if (checkRequestPermissions(requireActivity(), requireContext())) {
+                findNavController(
+                    requireActivity(),
+                    R.id.yuyin_nav_host_container_fragment
+                ).navigate(R.id.action_main_dest_to_runingRecord_dest)
+            }
+        }
+        binding!!.captureAsrBt.setOnClickListener { v: View? ->
+            if (checkRequestPermissions(requireActivity(), requireContext()) && yuyinViewModel.recorder != null) {
+                findNavController(
+                    requireActivity(),
+                    R.id.yuyin_nav_host_container_fragment
+                ).navigate(R.id.action_main_dest_to_runingCapture_dest)
+            }
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        binding = null
+    }
+}package com.yuyin.demo
+
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.*
+import android.content.pm.PackageManager
+import android.media.projection.MediaProjectionManager
+import android.net.Uri
+import android.os.Bundle
+import android.os.Environment
+import android.os.IBinder
+import android.provider.Settings
+import android.view.Gravity
+import android.view.Menu
+import android.view.MenuItem
+import android.view.View
+import android.widget.Toast
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
+import androidx.appcompat.app.AppCompatActivity
+import androidx.navigation.NavController
+import androidx.navigation.findNavController
+import androidx.navigation.fragment.NavHostFragment
+import androidx.navigation.ui.AppBarConfiguration
+import androidx.navigation.ui.navigateUp
+import androidx.navigation.ui.setupActionBarWithNavController
+import androidx.navigation.ui.setupWithNavController
+import com.lzf.easyfloat.EasyFloat
+import com.lzf.easyfloat.enums.ShowPattern
+import com.lzf.easyfloat.enums.SidePattern
+import com.lzf.easyfloat.utils.DisplayUtils
+import com.mobvoi.wenet.MediaCaptureService
+import com.mobvoi.wenet.MediaCaptureService.Companion.m_NOTIFICATION_CHANNEL_ID
+import com.yuyin.demo.YuYinUtil.ACTION_ALL
+import com.yuyin.demo.YuYinUtil.CaptureAudio_ALL
+import com.yuyin.demo.YuYinUtil.CaptureAudio_START
+import com.yuyin.demo.YuYinUtil.EXTRA_CaptureAudio_NAME
+import com.yuyin.demo.YuYinUtil.EXTRA_RESULT_CODE
+import com.yuyin.demo.YuYinUtil.m_CREATE_SCREEN_CAPTURE
+import com.yuyin.demo.databinding.ActivityMainViewBinding
+import com.yuyin.demo.models.YuyinViewModel
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.nio.file.Paths
+import com.yuyin.demo.YuYinUtil.YuYinLog as Log
+
+class MainActivityView : AppCompatActivity() {
+
+    // 视图绑定
+    private lateinit var binding: ActivityMainViewBinding
+
+    private val m_ALL_PERMISSIONS_PERMISSION_CODE = 1000
+
+    private val YuYinLog_TAG = "YUYIN"
+
+    // 层级配置
+    private lateinit var appBarConfiguration: AppBarConfiguration
+
+    val model: YuyinViewModel by viewModels()
+
+    // 服务
+    private lateinit var actionReceiver: CaptureAudioReceiver
+    private lateinit var mediaService_binder: MediaCaptureService.MediaServiceBinder
+    private var mBound = false
+
+    // 通知
+    private lateinit var notificationManager: NotificationManager
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // 膨胀视图
+        binding = ActivityMainViewBinding.inflate(layoutInflater)
+        val view: View = binding.root
+        setContentView(view)
+
+        // 应用自定义toolbar
+        setSupportActionBar(binding.actionBar)
+
+        // 获取NavHostFragment
+        val host: NavHostFragment =
+            supportFragmentManager.findFragmentById(R.id.yuyin_nav_host_container_fragment) as NavHostFragment?
+                ?: return
+        val navController: NavController = host.navController
+
+        // 设定顶层
+        appBarConfiguration = AppBarConfiguration(
+            setOf(R.id.main_dest, R.id.filesManager_dest),
+        )
+
+        // 使得 actionbar 适应导航图 在非顶层可以返回
+        setupActionBar(navController, appBarConfiguration)
+
+        // 应用底层导航菜单
+        setupBottomNavMenu(navController)
+
+        // 控制底部导航条只出现在main_dest fileManager_dest
+        navController.addOnDestinationChangedListener { controller, destination, arguments ->
+            if (destination.id == R.id.runingCapture_dest || destination.id == R.id.runingRecord_dest) {
+                binding.mainBottomNavigation.visibility = View.INVISIBLE
+                binding.mainBottomNavigation.isEnabled = false
+            } else {
+                binding.mainBottomNavigation.visibility = View.VISIBLE
+                binding.mainBottomNavigation.isEnabled = true
+            }
+        }
+        // 开启浮窗
+        EasyFloat.with(this@MainActivityView)
+            .setLayout(R.layout.floatviewtest)
+            .setShowPattern(ShowPattern.BACKGROUND) // 应用后台时显示
+            .setSidePattern(SidePattern.RESULT_HORIZONTAL) // 吸附 根据移动后的位置贴附到边缘
+            .setTag("Capture") // 设置TAG管理
+            .setDragEnable(true) // 可拖拽
+            .hasEditText(false) // 无编辑框，无需适配键盘
+            .setLocation(100, 0)
+            .setGravity(Gravity.END or Gravity.CENTER_VERTICAL, 0, 0)
+            .setLayoutChangedGravity(Gravity.END)
+            //  .setBorder()
+            .setMatchParent(false, false)
+            .setAnimator(com.lzf.easyfloat.anim.DefaultAnimator())
+            .setFilter(SettingsActivity::class.java) // 过滤ACTIVITY
+            .setFilter(MainActivityView::class.java)
+            .setDisplayHeight { context -> DisplayUtils.rejectedNavHeight(context) }
+            .registerCallback {
+                dragEnd {
+                    //TODO 获取当前重新绘制
+                    //it.draw()
+                }
+            }
+            .show()
+
+        initNotification()
+
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // 权限
+        YuYinUtil.checkRequestPermissions(this, this)
+
+//        getExternalFilesDir()
+        val docDirPath = getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+        val yuYinDir = Paths.get(docDirPath?.absolutePath, "YuYin").toFile()
+        if (!yuYinDir.exists()) {
+            yuYinDir.mkdir()
+        }
+
+    }
+
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        // 在actionbar应用自定义菜单
+        menuInflater.inflate(R.menu.bar_menu, menu)
+        return true
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        model.recorder?.release()
+        model.recorder = null
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            // 跳转至设定界面
+            R.id.setting_option -> {
+                val intent = Intent(this, SettingsActivity::class.java)
+                startActivity(intent)
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    override fun onSupportNavigateUp(): Boolean {
+        //
+        return findNavController(R.id.yuyin_nav_host_container_fragment).navigateUp(
+            appBarConfiguration
+        )
+    }
+
+    private fun setupBottomNavMenu(navController: NavController) {
+        val bottomNav = binding.mainBottomNavigation
+        bottomNav.setupWithNavController(navController)
+    }
+
+    private fun setupActionBar(navController: NavController, appBarConfig: AppBarConfiguration) {
+        setupActionBarWithNavController(navController, appBarConfig)
+    }
+
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+//        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == m_ALL_PERMISSIONS_PERMISSION_CODE) {
+            val permissionResults = HashMap<String, Int>()
+            var deniedCount = 0
+            for (permissionIndx in permissions.indices) {
+                if (grantResults[permissionIndx] != PackageManager.PERMISSION_GRANTED) {
+                    permissionResults[permissions[permissionIndx]] = grantResults[permissionIndx]
+                    deniedCount++
+                }
+            }
+            if (deniedCount != 0) {
+                Toast.makeText(this, "must allow", Toast.LENGTH_SHORT).show()
+            }
+
+        }
+    }
+
+    fun assetFilePath(context: Context, assetName: String): String? {
+        val file = File(context.filesDir, assetName)
+        if (file.exists() && file.length() > 0) {
+            return file.absolutePath
+        }
+        try {
+            context.assets.open(assetName).use { `is` ->
+                FileOutputStream(file).use { os ->
+                    val buffer = ByteArray(4 * 1024)
+                    var read: Int
+                    while (`is`.read(buffer).also { read = it } != -1) {
+                        os.write(buffer, 0, read)
+                    }
+                    os.flush()
+                }
+                return file.absolutePath
+            }
+        } catch (e: IOException) {
+            Log.e(
+                YuYinLog_TAG,
+                "Error process asset $assetName to file path"
+            )
+        }
+        return null
+    }
+
+    private val connection: ServiceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName, service: IBinder) {
+            mediaService_binder = service as MediaCaptureService.MediaServiceBinder
+            mBound = true
+        }
+
+        override fun onServiceDisconnected(name: ComponentName) {
+            mBound = false
+        }
+    }
+
+    private fun initNotification() {
+        // 未启动服务
+        val channel = NotificationChannel(
+            m_NOTIFICATION_CHANNEL_ID,
+            MediaCaptureService.m_NOTIFICATION_CHANNEL_NAME,
+            NotificationManager.IMPORTANCE_HIGH
+        )
+        channel.description = MediaCaptureService.m_NOTIFICATION_CHANNEL_DESC
+        notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannel(channel)
+        notificationManager.notificationChannels
+
+        if (!notificationManager.areNotificationsEnabled()) {
+            val intent = Intent().apply {
+                this.action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+                this.data = Uri.fromParts("package", packageName, null)
+            }
+            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+                if (it.resultCode == RESULT_OK) {
+                    initAudioCapture()
+                }
+            }.launch(intent)
+        } else {
+            initAudioCapture()
+        }
+    }
+
+    private fun initAudioCapture() {
+
+        val filter = IntentFilter()
+        filter.addAction(CaptureAudio_ALL)
+        actionReceiver = CaptureAudioReceiver()
+        this.registerReceiver(actionReceiver, filter)
+        // 注册广播
+
+
+        // Service
+        val m_mediaProjectionManager =
+            this.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+        val intent = m_mediaProjectionManager.createScreenCaptureIntent()
+        // 获取录制屏幕权限 并启动服务
+        registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result: ActivityResult ->
+            if (result.resultCode == RESULT_OK) {
+
+                var i = Intent(this, MediaCaptureService::class.java)
+                this.bindService(
+                    i,
+                    connection,
+                    BIND_AUTO_CREATE
+                )
+                // 启动前台服务
+                i = Intent(this, MediaCaptureService::class.java)
+                i.action = ACTION_ALL
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                i.putExtra(EXTRA_RESULT_CODE, m_CREATE_SCREEN_CAPTURE)
+                i.putExtras(result.data!!)
+                this.startForegroundService(i)
+            } else {
+                // 退出应用
+                finish()
+            }
+        }.launch(intent)
+    }
+
+    // 广播服务
+    // 不可以耗时操作  在主线程中
+    // 避免使用 binding 可能是全局创建的唯一实例...
+    // 不要直接启动线程
+    inner class CaptureAudioReceiver : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val action = intent.action
+            // 获取frg
+            // 每次都会重新创建一个新的实例,所以要强制更新,之前frag会被销毁,不更新或者调用之前fra会导致null错误
+            if (action.equals(CaptureAudio_ALL, ignoreCase = true)) {
+                val actionName = intent.getStringExtra(EXTRA_CaptureAudio_NAME)
+                if (actionName != null && !actionName.isEmpty()) {
+                    if (actionName.equals(
+                            CaptureAudio_START,
+                            ignoreCase = true
+                        )
+                    ) {
+                        // 服务开启
+                        model.recorder = mediaService_binder.serviceRecorder()
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
+
+package com.yuyin.demo.models
+
+import android.media.AudioRecord
+import android.util.Log
+import android.widget.TextView
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.mobvoi.wenet.MediaCaptureService
+import com.mobvoi.wenet.Recognize
+import com.yuyin.demo.SpeechText
+import com.yuyin.demo.SpeechTextAdapter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import kotlin.random.Random
+
+class RunningCaptureViewModel : ViewModel() {
+    private val LOGTAG = "RunningCaptureViewModel"
+
+    // record
+    lateinit var record: AudioRecord
+    var recordState = false
+    var miniBufferSize = MediaCaptureService.miniBufferSize
+
+    var asrState = false
+    var change_senor = false
+
+    // 滚动视图
+    var speechList: ArrayList<SpeechText> = arrayListOf(SpeechText(""))
+
+    //    private lateinit var recyclerView: RecyclerView
+    var adapter: SpeechTextAdapter = SpeechTextAdapter(speechList)
+
+    lateinit var linearLayoutManager: LinearLayoutManager
+
+    val results = MutableStateFlow("Hi")
+
+
+    // debug
+    var random = Random(11)
+
+    fun produceAudio() {
+        viewModelScope.launch(Dispatchers.Default) {
+            flow {
+                while (recordState) {
+                    val buffer = ShortArray(miniBufferSize / 2)
+                    val read = record.read(buffer, 0, buffer.size)
+                    if (AudioRecord.ERROR_INVALID_OPERATION != read) {
+                        emit(buffer)
+                    }
+                }
+            }.catch {
+                Log.e(LOGTAG, it.message ?: "error in audioflow")
+            }.buffer(MediaCaptureService.MAX_QUEUE_SIZE).collect {
+                Recognize.acceptWaveform(it)
+//                Log.i(LOGTAG, "${it.size} : size of audio")
+//                Log.i(LOGTAG, "$it")
+            }
+        }
+    }
+
+    fun getTextFlow() {
+        viewModelScope.launch(Dispatchers.Default) {
+            val i = random.nextInt()
+            flow {
+                while (asrState) {
+//                    var result = "....${random.nextInt()}"
+                    try {
+                        val result = Recognize.getResult()
+                        if (result != "")
+                            emit(result)
+//                        Log.d(LOGTAG,"decode $i")
+                    } catch (e: Exception) {
+                        Log.e(LOGTAG, "error in decode : ${e.message}")
+                    }
+                }
+            }.collect {
+                results.value = it
+//                Log.i(LOGTAG, "collect in decode $it $i")
+            }
+        }
+    }
+
+    // 或许考虑不使用热流 避免过于频繁更新界面
+    fun updateFlow(flowText: TextView, recyclerView: RecyclerView) {
+        viewModelScope.launch(Dispatchers.Main) {
+            results.collect {
+                flowText.text = it
+                val position = speechList.size - 1
+                if (it.endsWith(" ")) {
+                    speechList[position].text = it
+                    adapter.notifyItemChanged(position)
+                    speechList.add(SpeechText(" ")) // add new para
+                    adapter.notifyItemInserted(position+1)
+                    recyclerView.scrollToPosition(position+1)
+                } else {
+                    speechList[position].text = it // update latest para
+                    adapter.notifyItemChanged(position)
+                }
+            }
+        }
+    }
+
+}package com.yuyin.demo.models
+
+import android.media.AudioRecord
+import android.util.Log
+import android.widget.TextView
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.mobvoi.wenet.Recognize
+import com.yuyin.demo.SpeechText
+import com.yuyin.demo.SpeechTextAdapter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import java.lang.Exception
+import kotlin.random.Random
+
+class RunningRecordViewModel : ViewModel() {
+    private val LOGTAG = "RunningRecordViewModel"
+
+    // record
+    lateinit var record: AudioRecord
+    var recordState = false
+    var miniBufferSize = 0
+    private val MAX_QUEUE_SIZE = 2500
+    // 100 seconds audio, 1 / 0.04 * 100
+    val SAMPLE_RATE = 16000 // The sampling rate
+
+    var asrState = false
+    var change_senor = false
+
+    // 滚动视图
+    val speechList: ArrayList<SpeechText> = arrayListOf(SpeechText(""))
+
+    //    private lateinit var recyclerView: RecyclerView
+    var adapter: SpeechTextAdapter = SpeechTextAdapter(speechList)
+
+    lateinit var linearLayoutManager: LinearLayoutManager
+
+    val results = MutableStateFlow("Hi")
+
+
+    // debug
+    var random = Random(11)
+
+    fun produceAudio() {
+        viewModelScope.launch(Dispatchers.Default) {
+            flow {
+                while (recordState) {
+                    val buffer = ShortArray(miniBufferSize / 2)
+                    val read = record.read(buffer, 0, buffer.size)
+                    if (AudioRecord.ERROR_INVALID_OPERATION != read) {
+                        emit(buffer)
+                    }
+                }
+            }.catch {
+                Log.e(LOGTAG, it.message ?: "error in audioflow")
+            }.buffer(MAX_QUEUE_SIZE).collect {
+                Recognize.acceptWaveform(it)
+//                Log.i(LOGTAG, "${it.size} : size of audio")
+//                Log.i(LOGTAG, "$it")
+            }
+        }
+    }
+
+    fun getTextFlow() {
+        viewModelScope.launch(Dispatchers.Default) {
+            val i = random.nextInt()
+            flow {
+                while (asrState) {
+//                    emit(",,,, ")
+                    try {
+                        val result = Recognize.getResult()
+                        if (result!="")
+                            emit(result)
+//                        Log.d(LOGTAG,"decode $i")
+                    } catch (e: Exception) {
+                        Log.e(LOGTAG,"error in decode : ${e.message}")
+                    }
+                }
+            }.collect {
+                results.value = it
+//                Log.i(LOGTAG, "collect in decode $it $i $i")
+            }
+        }
+    }
+
+    fun updateFlow(flowText: TextView, recyclerView: RecyclerView) {
+        viewModelScope.launch(Dispatchers.Main) {
+            results.collect {
+                flowText.text = it
+                val position = speechList.size - 1
+                if (it.endsWith(" ")) {
+                    speechList[position].text = it
+                    adapter.notifyItemChanged(position)
+                    speechList.add(SpeechText(" ")) // add new para
+                    adapter.notifyItemInserted(position+1)
+                    recyclerView.scrollToPosition(position+1)
+                } else {
+                    speechList[position].text = it // update latest para
+                    adapter.notifyItemChanged(position)
+                }
+            }
+        }
+    }
+
+}package com.yuyin.demo.models
+
+import android.media.AudioRecord
+import androidx.lifecycle.ViewModel
+
+class YuyinViewModel : ViewModel() {
+
+
+    var dic_path = ""
+    var model_path = ""
+
+    var startRecord = false
+    var startAsr = false
+    var change_senor = false
+
+    var recorder: AudioRecord? = null
+
+}package com.yuyin.demo
+
+import android.content.res.Configuration
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.viewModelScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.lzf.easyfloat.EasyFloat
+import com.mobvoi.wenet.Recognize
+import com.yuyin.demo.YuYinUtil.save_file
+import com.yuyin.demo.YuYinUtil.YuYinLog as Log
+import com.yuyin.demo.databinding.FragmentRuningCaptureBinding
+import com.yuyin.demo.models.RunningCaptureViewModel
+import com.yuyin.demo.models.YuyinViewModel
+import kotlinx.coroutines.*
+
+class RuningCapture : Fragment() {
+    private val LOG_TAG = "YUYIN_RECORD"
+    private var _binding: FragmentRuningCaptureBinding? = null
+    private val binding get() = _binding!!
+
+    // 滚动视图
+    private lateinit var recyclerView: RecyclerView
+
+    private val flowView = EasyFloat.getFloatView("Capture")!!
+        .findViewById<TextView>(R.id.flow_text)
+
+    // ViewModel
+    private val model: RunningCaptureViewModel by viewModels()
+
+    private val yuYinModel: YuyinViewModel by activityViewModels()
+
+    private var initModel = false
+
+    private var startModel = false
+
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        // Inflate the layout for this fragment
+        _binding = FragmentRuningCaptureBinding.inflate(inflater, container, false)
+        return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        initRunner()
+
+        model.viewModelScope.launch(Dispatchers.IO) {
+            if (!initModel) {
+                Log.e(LOG_TAG,"${Recognize.getInit()} init model")
+                YuYinUtil.prepareModel(requireActivity() as MainActivityView)
+                Recognize.init(yuYinModel.model_path, yuYinModel.dic_path)  // 初始化模型
+                Recognize.reset()
+                withContext(Dispatchers.Main){
+                    // 订阅结果
+                    model.updateFlow(flowView, recyclerView)
+                }
+            }
+        }
+
+
+
+        binding.stopBtRunCap.setOnClickListener {
+            if (model.recordState) {
+                model.viewModelScope.launch(Dispatchers.Main) {
+                    if (!initModel && Recognize.getInit()) {
+                         //延迟10毫秒
+                        withContext(Dispatchers.Main) {
+                            binding.stopBtRunCap.isEnabled = true
+                            model.recordState = false
+                            model.asrState = false
+                            flowView.text = ""
+                        }
+                        model.record.stop()
+//                        if (!Recognize.getFinished())
+                            // 调用的条件是 必须为false 因为就是为了设置为false
+//                            Recognize.setInputFinished()
+                        withContext(Dispatchers.Main) {
+                            binding.stopBtRunCap.text = "start"
+                            binding.saveBtRunCap.visibility = View.VISIBLE
+                            binding.saveBtRunCap.isEnabled = true
+                        }
+                    } else {
+                        YuYinUtil.prepareModel(requireActivity() as MainActivityView)
+                        Recognize.init(yuYinModel.model_path, yuYinModel.dic_path)
+                    }
+                }
+            } else {
+                model.viewModelScope.launch(Dispatchers.Main) {
+                    // 确保上一轮次确实已经结束
+                    //TODO 可以考虑不终止转录 只终止record
+                    if (!initModel && Recognize.getInit()) {
+//                        Recognize.reset()
+                        startRecord()
+                        withContext(Dispatchers.Main) {
+                            model.recordState = true
+                            model.asrState = true
+                            binding.saveBtRunCap.visibility = View.INVISIBLE
+                            binding.saveBtRunCap.isEnabled = false
+                        }
+                        if (startModel==false) {
+                            Recognize.startDecode()
+                            startModel=true
+                        }
+//                        Recognize.startDecode()
+                        model.getTextFlow()
+                    } else {
+                        YuYinUtil.prepareModel(requireActivity() as MainActivityView)
+                        Recognize.init(yuYinModel.model_path, yuYinModel.dic_path)
+                    }
+                }
+            }
+        }
+        binding.saveBtRunCap.setOnClickListener { // get all Resukt
+            // saveToFile
+            save_file(requireContext(), model.speechList)
+        }
+    }
+
+    private fun startRecord() {
+        model.record.startRecording()
+        binding.stopBtRunCap.text = "stop"
+        model.produceAudio()
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        model.change_senor = false //TODO 旋转后适配屏幕
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+
+        model.recordState = false
+        model.asrState = false
+        model.record.stop()
+        _binding = null
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+    }
+
+
+    private fun initRunner() {
+        // 滚动视图
+        model.linearLayoutManager = LinearLayoutManager(context)
+        recyclerView = binding.recyclerRunCap
+        recyclerView.layoutManager = model.linearLayoutManager
+        recyclerView.adapter = model.adapter
+        // false false
+        // true true
+        if (!model.change_senor) {
+            // 正常启动绘制
+            initRecorder()
+            binding.stopBtRunCap.text = "start"
+            binding.saveBtRunCap.visibility = View.VISIBLE
+            binding.saveBtRunCap.isEnabled = true
+        }
+
+    }
+
+
+
+    private fun initRecorder() {
+        model.record = yuYinModel.recorder!!
+    }
+
+}package com.yuyin.demo
+
+import android.Manifest
+import android.content.pm.PackageManager
+import android.content.res.Configuration
+import android.media.AudioFormat
+import android.media.AudioRecord
+import android.media.MediaRecorder
+import android.os.Bundle
+import com.yuyin.demo.YuYinUtil.YuYinLog as Log
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
+import androidx.core.app.ActivityCompat
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.viewModelScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.lzf.easyfloat.EasyFloat
+import com.mobvoi.wenet.Recognize
+import com.yuyin.demo.YuYinUtil.save_file
+import com.yuyin.demo.databinding.FragmentRuningRecordBinding
+import com.yuyin.demo.models.RunningRecordViewModel
+import com.yuyin.demo.models.YuyinViewModel
+import kotlinx.coroutines.*
+import java.lang.Exception
+
+
+class RunningRecord : Fragment() {
+    private val LOG_TAG = "YUYIN_RECORD"
+    private var _binding: FragmentRuningRecordBinding? = null
+    private val binding get() = _binding!!
+
+    // 滚动视图
+    private lateinit var recyclerView: RecyclerView
+
+    private val flowView = EasyFloat.getFloatView("Capture")!!
+        .findViewById<TextView>(R.id.flow_text)
+
+    // ViewModel
+    private val model: RunningRecordViewModel by viewModels()
+
+    private val yuYinModel: YuyinViewModel by activityViewModels()
+
+    private var initModel = false
+
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        // Inflate the layout for this fragment
+        _binding = FragmentRuningRecordBinding.inflate(inflater, container, false)
+        return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        initRunner()
+        // init model
+        model.viewModelScope.launch(Dispatchers.IO) {
+            YuYinUtil.prepareModel(requireActivity() as MainActivityView)
+            Recognize.init(yuYinModel.model_path, yuYinModel.dic_path)  // 初始化模型
+            Recognize.reset()
+            initModel = true
+            withContext(Dispatchers.Main){
+                // 订阅结果
+                model.updateFlow(flowView, recyclerView)
+            }
+        }
+        binding.stopBtRunRecord.setOnClickListener {
+            if (model.recordState) {
+                model.viewModelScope.launch(Dispatchers.IO) {
+                    while (!initModel) {
+
+                    }
+                    withContext(Dispatchers.Main) {
+                        binding.stopBtRunRecord.isEnabled = true
+                        model.recordState = false
+                        model.asrState = false
+                        flowView.text = ""
+                    }
+                    model.record.stop()
+                    if (!Recognize.getFinished())
+                        Recognize.setInputFinished()
+                    withContext(Dispatchers.Main) {
+                        binding.stopBtRunRecord.text = "start"
+                        binding.saveBtRunRecord.visibility = View.VISIBLE
+                        binding.saveBtRunRecord.isEnabled = true
+                    }
+                }
+            } else {
+                model.viewModelScope.launch(Dispatchers.IO) {
+                    while (!initModel) {
+
+                    }
+                    Recognize.reset()
+                    startRecord()
+                    withContext(Dispatchers.Main) {
+                        model.recordState = true
+                        model.asrState = true
+                        binding.saveBtRunRecord.visibility = View.INVISIBLE
+                        binding.saveBtRunRecord.isEnabled = false
+                    }
+                    Recognize.startDecode()
+                    model.getTextFlow()
+                }
+            }
+        }
+        binding.saveBtRunRecord.setOnClickListener { // get all Result
+            // saveToFile
+            save_file(requireContext(), model.speechList)
+        }
+
+
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        model.change_senor = false // 标记屏幕旋转
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+        model.asrState = false
+        model.recordState = false
+        model.record.release()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+    }
+
+    private fun initRunner() {
+        // 滚动视图
+        model.linearLayoutManager = LinearLayoutManager(context)
+        recyclerView = binding.recyclerRunRecord
+        recyclerView.layoutManager = model.linearLayoutManager
+        recyclerView.adapter = model.adapter
+        // false false
+        // true true
+        if (!model.change_senor) {
+            // 正常启动绘制
+            initRecorder()
+            binding.stopBtRunRecord.text = "start"
+            binding.saveBtRunRecord.visibility = View.VISIBLE
+            binding.saveBtRunRecord.isEnabled = true
+        }
+    }
+
+    private fun initRecorder() {
+        // buffer size in bytes 1280
+        model.miniBufferSize = AudioRecord.getMinBufferSize(
+            model.SAMPLE_RATE,
+            AudioFormat.CHANNEL_IN_MONO,
+            AudioFormat.ENCODING_PCM_16BIT
+        )
+        if (model.miniBufferSize == AudioRecord.ERROR || model.miniBufferSize == AudioRecord.ERROR_BAD_VALUE) {
+            Log.e(LOG_TAG, "Audio buffer can't initialize!")
+            return
+        }
+        if (ActivityCompat.checkSelfPermission(
+                this.requireContext(),
+                Manifest.permission.RECORD_AUDIO
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        model.record = AudioRecord(
+            MediaRecorder.AudioSource.DEFAULT,
+            model.SAMPLE_RATE,
+            AudioFormat.CHANNEL_IN_MONO,
+            AudioFormat.ENCODING_PCM_16BIT,
+            model.miniBufferSize
+        )
+        Log.i(LOG_TAG, "Record init okay")
+        if (model.record.state != AudioRecord.STATE_INITIALIZED) {
+            Log.e(LOG_TAG, "Audio Record can't initialize!")
+        }
+    }
+
+    private fun startRecord() {
+//      VoiceRectView voiceView = findViewById(R.id.voiceRectView);
+        model.record.startRecording()
+        binding.stopBtRunRecord.text = "stop"
+        model.produceAudio()
+    }
+
+
+}package com.yuyin.demo
+
+import android.content.res.Configuration
+import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
+import androidx.preference.PreferenceFragmentCompat
+
+class SettingsActivity : AppCompatActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.settings_activity)
+        if (savedInstanceState == null) {
+            supportFragmentManager
+                .beginTransaction()
+                .replace(R.id.setting_contain, SettingsFragment())
+                .commit()
+        }
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+    }
+
+    class SettingsFragment : PreferenceFragmentCompat() {
+        override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
+            setPreferencesFromResource(R.xml.root_preferences, rootKey)
+        }
+
+        override fun onConfigurationChanged(newConfig: Configuration) {
+            super.onConfigurationChanged(newConfig)
+            //TODO stop ASR and then init, restart
+        }
+    }
+
+}package com.yuyin.demo
+
+class SpeechText(text: String?) {
+    var text: String? = ""
+
+    init {
+        this.text = text
+    }
+}package com.yuyin.demo
+
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
+import androidx.recyclerview.widget.RecyclerView
+
+class SpeechTextAdapter(private val dataList: List<SpeechText>) :
+    RecyclerView.Adapter<SpeechTextAdapter.ViewHolder>() {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.text_item, parent, false)
+        return ViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        val speechText = dataList[position]
+        holder.speechView.text = speechText.text
+    }
+
+    override fun getItemCount(): Int {
+        return dataList.size
+    }
+
+    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val speechView = view.findViewById<View>(R.id.speechText) as TextView
+
+    }
+}package com.yuyin.demo
+
+import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Environment
+import android.util.Log
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.preference.PreferenceManager
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.nio.charset.StandardCharsets
+import java.text.SimpleDateFormat
+import java.util.*
+
+object YuYinUtil {
+
+
+    const val CaptureAudio_ALL = "CaptureAudioService"
+    const val CaptureAudio_START = "CaptureAudioServiceSTART"
+    const val CaptureAudio_START_ASR = "CaptureAudio_START_ASR"
+    const val CaptureAudio_STOP = "CaptureAudio_STOP"
+    const val EXTRA_RESULT_CODE = "EXTRA_RESULT_CODE"
+    const val EXTRA_CaptureAudio_NAME = "CaptureAudio_NAME"
+    const val m_CREATE_SCREEN_CAPTURE = 1001
+    const val EXTRA_ACTION_NAME = "ACTION_NAME"
+    const val ACTION_ALL = "ALL"
+    const val ACTION_START = "ACTION_START"
+    const val ACTION_STOP = "ACTION_STOP"
+    const val ACTION_START_RECORDING = "CaptureAudio_START_RECORDING"
+    const val ACTION_STOP_RECORDING = "CaptureAudio_STOP_RECORDING"
+    const val ACTION_STOP_RECORDING_From_Notification =
+        "ACTION_STOP_RECORDING_From_Notification"
+    const val ACTION_STOP_RECORDING_To_Main = "CaptureAudio_STOP_RECORDING_To_Main"
+    const val ACTION_START_RECORDING_From_Notification =
+        "CaptureAudio_START_RECORDING_From_Notification"
+
+    // view
+    private const val LOG_TAG = "YUYIN_RECORD"
+
+
+    // 所需请求的权限
+    val appPermissions = arrayOf(
+        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+        Manifest.permission.RECORD_AUDIO,
+        Manifest.permission.FOREGROUND_SERVICE
+    )
+    const val m_ALL_PERMISSIONS_PERMISSION_CODE = 1000
+
+    @JvmStatic
+    fun save_file(context: Context, speechList: List<SpeechText>) {
+        val timeStamp = System.currentTimeMillis()
+        val sdf = SimpleDateFormat("yyyyMMddHHmmss", Locale.CHINA)
+        val filename = sdf.format(Date(timeStamp.toString().toLong())) + ".txt"
+        val dir_path = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+        val file =
+            File(dir_path!!.absoluteFile.toString() + File.separator + "YuYin" + File.separator + filename)
+        val total_result = StringBuilder()
+        for (i in speechList) {
+            total_result.append(i.text)
+            total_result.append("\n")
+        }
+        try {
+            if (file.createNewFile()) {
+                FileOutputStream(file.absolutePath).use { op ->
+                    op.write(
+                        total_result.toString().toByteArray(
+                            StandardCharsets.UTF_8
+                        )
+                    )
+                }
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+    }
+
+    @JvmStatic
+    fun checkRequestPermissions(activity: Activity?, context: Context?): Boolean {
+        val listPermissionsNeeded: MutableList<String> = ArrayList()
+        for (permission in appPermissions) {
+            if (ContextCompat.checkSelfPermission(
+                    context!!,
+                    permission
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                listPermissionsNeeded.add(permission)
+            }
+        }
+        if (!listPermissionsNeeded.isEmpty()) {
+            ActivityCompat.requestPermissions(
+                activity!!,
+                listPermissionsNeeded.toTypedArray(),
+                m_ALL_PERMISSIONS_PERMISSION_CODE
+            )
+            return false
+        }
+        return true
+    }
+
+    @JvmStatic
+    fun prepareModel(activity: MainActivityView) {
+        var model_name = "final"
+        var dic_name = "words"
+        val sharedPreference =
+            PreferenceManager.getDefaultSharedPreferences(activity)
+        val mod = sharedPreference.getString("languageOfModule", "zh")
+        model_name = "$`model_name`_$mod.zip"
+        dic_name = "$`dic_name`_$mod.txt"
+        activity.model.model_path = File(activity.assetFilePath(activity, model_name)).absolutePath
+        activity.model.dic_path = File(activity.assetFilePath(activity, dic_name)).absolutePath
+    }
+
+
+    object YuYinLog {
+        private const val level = Log.ERROR
+        fun v(tag: String?, msg: String?) {
+            if (level <= Log.VERBOSE) {
+                Log.v(tag, msg!!)
+            }
+        }
+
+        fun d(tag: String?, msg: String?) {
+            if (level <= Log.DEBUG) {
+                Log.v(tag, msg!!)
+            }
+        }
+
+        fun i(tag: String?, msg: String?) {
+            if (level <= Log.INFO) {
+                Log.v(tag, msg!!)
+            }
+        }
+
+        fun w(tag: String?, msg: String?) {
+            if (level <= Log.WARN) {
+                Log.v(tag, msg!!)
+            }
+        }
+
+        fun e(tag: String?, msg: String?) {
+            if (level <= Log.ERROR) {
+                Log.v(tag, msg!!)
+            }
+        }
+    }
+}
+
+package test.kt
+
+import android.content.Context
+import android.graphics.*
+import android.util.AttributeSet
+import android.view.MotionEvent
+import androidx.core.content.res.ResourcesCompat
+import androidx.core.graphics.drawable.toBitmap
+import com.lzf.easyfloat.R as easyR
+import com.lzf.easyfloat.interfaces.OnTouchRangeListener
+import com.lzf.easyfloat.utils.DisplayUtils
+import com.lzf.easyfloat.widget.BaseSwitchView
+import com.yuyin.demo.R
+
+class TestView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0) : BaseSwitchView(context, attrs, defStyleAttr) {
+
+    private var normalColor = Color.parseColor("#99000000")
+    private var inRangeColor = Color.parseColor("#99FF0000")
+    private var shapeType = 2
+
+    private lateinit var paint: Paint
+    private var width = 0f
+    private var height = 0f
+    private var region = Region()
+    private var inRange = false
+    private var zoomSize = DisplayUtils.dp2px(context, 4f).toFloat()
+    private var listener: OnTouchRangeListener? = null
+    private var myIcon: Bitmap? = ResourcesCompat.getDrawable(context.resources,R.drawable.ic_main,null)?.toBitmap()
+
+    init {
+        attrs?.apply { initAttrs(this) }
+        initPaint()
+        setWillNotDraw(false)
+    }
+
+    private fun initAttrs(attrs: AttributeSet) =
+        context.theme.obtainStyledAttributes(attrs, easyR.styleable.DefaultCloseView, 0, 0).apply {
+            normalColor = getColor(easyR.styleable.DefaultCloseView_normalColor, normalColor)
+            inRangeColor = getColor(easyR.styleable.DefaultCloseView_inRangeColor, inRangeColor)
+            shapeType = getInt(easyR.styleable.DefaultCloseView_shapeType, shapeType)
+            zoomSize = getDimension(easyR.styleable.DefaultCloseView_zoomSize, zoomSize)
+        }.recycle()
+
+
+    private fun initPaint() {
+        paint = Paint().apply {
+            color = normalColor
+            strokeWidth = 10f
+            style = Paint.Style.FILL
+            isAntiAlias = true
+        }
+
+
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        width = w.toFloat()
+        height = h.toFloat()
+    }
+
+    override fun onDraw(canvas: Canvas?) {
+        super.onDraw(canvas)
+//        canvas?.apply {
+//            // w: 36dp
+//            val radius = height/2f
+//            drawCircle(radius,radius,radius,paint)
+//
+//            // 24dp
+//            myIcon?.let {
+//                drawBitmap(it,radius-it.width/2f,radius-it.height/2f,null)
+//            }
+//        }
+    }
+
+    override fun setTouchRangeListener(event: MotionEvent, listener: OnTouchRangeListener?) {
+        this.listener = listener
+        initTouchRange(event)
+    }
+
+    private fun initTouchRange(event: MotionEvent): Boolean {
+        val location = IntArray(2)
+        // 获取在整个屏幕内的绝对坐标
+        getLocationOnScreen(location)
+        val currentInRange = region.contains(
+            event.rawX.toInt() - location[0], event.rawY.toInt() - location[1]
+        )
+        if (currentInRange != inRange) {
+            inRange = currentInRange
+            invalidate()
+        }
+        listener?.touchInRange(currentInRange, this)
+        if (event.action == MotionEvent.ACTION_UP && currentInRange) {
+            listener?.touchUpInRange()
+        }
+        return currentInRange
+    }
+}
+// Generated by view binder compiler. Do not edit!
+package com.yuyin.demo.databinding;
+
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.LinearLayout;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.FragmentContainerView;
+import androidx.viewbinding.ViewBinding;
+import androidx.viewbinding.ViewBindings;
+import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.yuyin.demo.R;
+import java.lang.NullPointerException;
+import java.lang.Override;
+import java.lang.String;
+
+public final class ActivityMainViewBinding implements ViewBinding {
+  @NonNull
+  private final LinearLayout rootView;
+
+  @NonNull
+  public final MaterialToolbar actionBar;
+
+  @NonNull
+  public final BottomNavigationView mainBottomNavigation;
+
+  @NonNull
+  public final FragmentContainerView yuyinNavHostContainerFragment;
+
+  private ActivityMainViewBinding(@NonNull LinearLayout rootView,
+      @NonNull MaterialToolbar actionBar, @NonNull BottomNavigationView mainBottomNavigation,
+      @NonNull FragmentContainerView yuyinNavHostContainerFragment) {
+    this.rootView = rootView;
+    this.actionBar = actionBar;
+    this.mainBottomNavigation = mainBottomNavigation;
+    this.yuyinNavHostContainerFragment = yuyinNavHostContainerFragment;
+  }
+
+  @Override
+  @NonNull
+  public LinearLayout getRoot() {
+    return rootView;
+  }
+
+  @NonNull
+  public static ActivityMainViewBinding inflate(@NonNull LayoutInflater inflater) {
+    return inflate(inflater, null, false);
+  }
+
+  @NonNull
+  public static ActivityMainViewBinding inflate(@NonNull LayoutInflater inflater,
+      @Nullable ViewGroup parent, boolean attachToParent) {
+    View root = inflater.inflate(R.layout.activity_main_view, parent, false);
+    if (attachToParent) {
+      parent.addView(root);
+    }
+    return bind(root);
+  }
+
+  @NonNull
+  public static ActivityMainViewBinding bind(@NonNull View rootView) {
+    // The body of this method is generated in a way you would not otherwise write.
+    // This is done to optimize the compiled bytecode for size and performance.
+    int id;
+    missingId: {
+      id = R.id.action_bar;
+      MaterialToolbar actionBar = ViewBindings.findChildViewById(rootView, id);
+      if (actionBar == null) {
+        break missingId;
+      }
+
+      id = R.id.main_bottom_navigation;
+      BottomNavigationView mainBottomNavigation = ViewBindings.findChildViewById(rootView, id);
+      if (mainBottomNavigation == null) {
+        break missingId;
+      }
+
+      id = R.id.yuyin_nav_host_container_fragment;
+      FragmentContainerView yuyinNavHostContainerFragment = ViewBindings.findChildViewById(rootView, id);
+      if (yuyinNavHostContainerFragment == null) {
+        break missingId;
+      }
+
+      return new ActivityMainViewBinding((LinearLayout) rootView, actionBar, mainBottomNavigation,
+          yuyinNavHostContainerFragment);
+    }
+    String missingId = rootView.getResources().getResourceName(id);
+    throw new NullPointerException("Missing required view with ID: ".concat(missingId));
+  }
+}
+// Generated by view binder compiler. Do not edit!
+package com.yuyin.demo.databinding;
+
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.LinearLayout;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.widget.AppCompatImageView;
+import androidx.viewbinding.ViewBinding;
+import androidx.viewbinding.ViewBindings;
+import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.textview.MaterialTextView;
+import com.yuyin.demo.R;
+import java.lang.NullPointerException;
+import java.lang.Override;
+import java.lang.String;
+
+public final class FileItemBinding implements ViewBinding {
+  @NonNull
+  private final LinearLayout rootView;
+
+  @NonNull
+  public final MaterialCardView fileCard;
+
+  @NonNull
+  public final AppCompatImageView fileCardBt;
+
+  @NonNull
+  public final AppCompatImageView fileCardIm;
+
+  @NonNull
+  public final MaterialTextView fileCardText;
+
+  private FileItemBinding(@NonNull LinearLayout rootView, @NonNull MaterialCardView fileCard,
+      @NonNull AppCompatImageView fileCardBt, @NonNull AppCompatImageView fileCardIm,
+      @NonNull MaterialTextView fileCardText) {
+    this.rootView = rootView;
+    this.fileCard = fileCard;
+    this.fileCardBt = fileCardBt;
+    this.fileCardIm = fileCardIm;
+    this.fileCardText = fileCardText;
+  }
+
+  @Override
+  @NonNull
+  public LinearLayout getRoot() {
+    return rootView;
+  }
+
+  @NonNull
+  public static FileItemBinding inflate(@NonNull LayoutInflater inflater) {
+    return inflate(inflater, null, false);
+  }
+
+  @NonNull
+  public static FileItemBinding inflate(@NonNull LayoutInflater inflater,
+      @Nullable ViewGroup parent, boolean attachToParent) {
+    View root = inflater.inflate(R.layout.file_item, parent, false);
+    if (attachToParent) {
+      parent.addView(root);
+    }
+    return bind(root);
+  }
+
+  @NonNull
+  public static FileItemBinding bind(@NonNull View rootView) {
+    // The body of this method is generated in a way you would not otherwise write.
+    // This is done to optimize the compiled bytecode for size and performance.
+    int id;
+    missingId: {
+      id = R.id.file_card;
+      MaterialCardView fileCard = ViewBindings.findChildViewById(rootView, id);
+      if (fileCard == null) {
+        break missingId;
+      }
+
+      id = R.id.file_card_bt;
+      AppCompatImageView fileCardBt = ViewBindings.findChildViewById(rootView, id);
+      if (fileCardBt == null) {
+        break missingId;
+      }
+
+      id = R.id.file_card_im;
+      AppCompatImageView fileCardIm = ViewBindings.findChildViewById(rootView, id);
+      if (fileCardIm == null) {
+        break missingId;
+      }
+
+      id = R.id.file_card_text;
+      MaterialTextView fileCardText = ViewBindings.findChildViewById(rootView, id);
+      if (fileCardText == null) {
+        break missingId;
+      }
+
+      return new FileItemBinding((LinearLayout) rootView, fileCard, fileCardBt, fileCardIm,
+          fileCardText);
+    }
+    String missingId = rootView.getResources().getResourceName(id);
+    throw new NullPointerException("Missing required view with ID: ".concat(missingId));
+  }
+}
+// Generated by view binder compiler. Do not edit!
+package com.yuyin.demo.databinding;
+
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.viewbinding.ViewBinding;
+import androidx.viewbinding.ViewBindings;
+import com.google.android.material.circularreveal.cardview.CircularRevealCardView;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.textview.MaterialTextView;
+import com.yuyin.demo.R;
+import java.lang.NullPointerException;
+import java.lang.Override;
+import java.lang.String;
+import test.kt.TestView;
+
+public final class FloatviewtestBinding implements ViewBinding {
+  @NonNull
+  private final TestView rootView;
+
+  @NonNull
+  public final FloatingActionButton floatingBt;
+
+  @NonNull
+  public final CircularRevealCardView floatingCard;
+
+  @NonNull
+  public final MaterialTextView flowText;
+
+  private FloatviewtestBinding(@NonNull TestView rootView, @NonNull FloatingActionButton floatingBt,
+      @NonNull CircularRevealCardView floatingCard, @NonNull MaterialTextView flowText) {
+    this.rootView = rootView;
+    this.floatingBt = floatingBt;
+    this.floatingCard = floatingCard;
+    this.flowText = flowText;
+  }
+
+  @Override
+  @NonNull
+  public TestView getRoot() {
+    return rootView;
+  }
+
+  @NonNull
+  public static FloatviewtestBinding inflate(@NonNull LayoutInflater inflater) {
+    return inflate(inflater, null, false);
+  }
+
+  @NonNull
+  public static FloatviewtestBinding inflate(@NonNull LayoutInflater inflater,
+      @Nullable ViewGroup parent, boolean attachToParent) {
+    View root = inflater.inflate(R.layout.floatviewtest, parent, false);
+    if (attachToParent) {
+      parent.addView(root);
+    }
+    return bind(root);
+  }
+
+  @NonNull
+  public static FloatviewtestBinding bind(@NonNull View rootView) {
+    // The body of this method is generated in a way you would not otherwise write.
+    // This is done to optimize the compiled bytecode for size and performance.
+    int id;
+    missingId: {
+      id = R.id.floating_bt;
+      FloatingActionButton floatingBt = ViewBindings.findChildViewById(rootView, id);
+      if (floatingBt == null) {
+        break missingId;
+      }
+
+      id = R.id.floating_card;
+      CircularRevealCardView floatingCard = ViewBindings.findChildViewById(rootView, id);
+      if (floatingCard == null) {
+        break missingId;
+      }
+
+      id = R.id.flow_text;
+      MaterialTextView flowText = ViewBindings.findChildViewById(rootView, id);
+      if (flowText == null) {
+        break missingId;
+      }
+
+      return new FloatviewtestBinding((TestView) rootView, floatingBt, floatingCard, flowText);
+    }
+    String missingId = rootView.getResources().getResourceName(id);
+    throw new NullPointerException("Missing required view with ID: ".concat(missingId));
+  }
+}
+// Generated by view binder compiler. Do not edit!
+package com.yuyin.demo.databinding;
+
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewbinding.ViewBinding;
+import androidx.viewbinding.ViewBindings;
+import com.yuyin.demo.R;
+import java.lang.NullPointerException;
+import java.lang.Override;
+import java.lang.String;
+
+public final class FragmentFilesManagerBinding implements ViewBinding {
+  @NonNull
+  private final FrameLayout rootView;
+
+  @NonNull
+  public final RecyclerView recyclerFile;
+
+  private FragmentFilesManagerBinding(@NonNull FrameLayout rootView,
+      @NonNull RecyclerView recyclerFile) {
+    this.rootView = rootView;
+    this.recyclerFile = recyclerFile;
+  }
+
+  @Override
+  @NonNull
+  public FrameLayout getRoot() {
+    return rootView;
+  }
+
+  @NonNull
+  public static FragmentFilesManagerBinding inflate(@NonNull LayoutInflater inflater) {
+    return inflate(inflater, null, false);
+  }
+
+  @NonNull
+  public static FragmentFilesManagerBinding inflate(@NonNull LayoutInflater inflater,
+      @Nullable ViewGroup parent, boolean attachToParent) {
+    View root = inflater.inflate(R.layout.fragment_files_manager, parent, false);
+    if (attachToParent) {
+      parent.addView(root);
+    }
+    return bind(root);
+  }
+
+  @NonNull
+  public static FragmentFilesManagerBinding bind(@NonNull View rootView) {
+    // The body of this method is generated in a way you would not otherwise write.
+    // This is done to optimize the compiled bytecode for size and performance.
+    int id;
+    missingId: {
+      id = R.id.recycler_file;
+      RecyclerView recyclerFile = ViewBindings.findChildViewById(rootView, id);
+      if (recyclerFile == null) {
+        break missingId;
+      }
+
+      return new FragmentFilesManagerBinding((FrameLayout) rootView, recyclerFile);
+    }
+    String missingId = rootView.getResources().getResourceName(id);
+    throw new NullPointerException("Missing required view with ID: ".concat(missingId));
+  }
+}
+// Generated by view binder compiler. Do not edit!
+package com.yuyin.demo.databinding;
+
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.viewbinding.ViewBinding;
+import androidx.viewbinding.ViewBindings;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.textview.MaterialTextView;
+import com.yuyin.demo.R;
+import java.lang.NullPointerException;
+import java.lang.Override;
+import java.lang.String;
+
+public final class FragmentMainBinding implements ViewBinding {
+  @NonNull
+  private final FrameLayout rootView;
+
+  @NonNull
+  public final MaterialButton captureAsrBt;
+
+  @NonNull
+  public final MaterialButton recordAsrBt;
+
+  @NonNull
+  public final MaterialTextView textMain;
+
+  private FragmentMainBinding(@NonNull FrameLayout rootView, @NonNull MaterialButton captureAsrBt,
+      @NonNull MaterialButton recordAsrBt, @NonNull MaterialTextView textMain) {
+    this.rootView = rootView;
+    this.captureAsrBt = captureAsrBt;
+    this.recordAsrBt = recordAsrBt;
+    this.textMain = textMain;
+  }
+
+  @Override
+  @NonNull
+  public FrameLayout getRoot() {
+    return rootView;
+  }
+
+  @NonNull
+  public static FragmentMainBinding inflate(@NonNull LayoutInflater inflater) {
+    return inflate(inflater, null, false);
+  }
+
+  @NonNull
+  public static FragmentMainBinding inflate(@NonNull LayoutInflater inflater,
+      @Nullable ViewGroup parent, boolean attachToParent) {
+    View root = inflater.inflate(R.layout.fragment_main, parent, false);
+    if (attachToParent) {
+      parent.addView(root);
+    }
+    return bind(root);
+  }
+
+  @NonNull
+  public static FragmentMainBinding bind(@NonNull View rootView) {
+    // The body of this method is generated in a way you would not otherwise write.
+    // This is done to optimize the compiled bytecode for size and performance.
+    int id;
+    missingId: {
+      id = R.id.capture_asr_bt;
+      MaterialButton captureAsrBt = ViewBindings.findChildViewById(rootView, id);
+      if (captureAsrBt == null) {
+        break missingId;
+      }
+
+      id = R.id.record_asr_bt;
+      MaterialButton recordAsrBt = ViewBindings.findChildViewById(rootView, id);
+      if (recordAsrBt == null) {
+        break missingId;
+      }
+
+      id = R.id.text_main;
+      MaterialTextView textMain = ViewBindings.findChildViewById(rootView, id);
+      if (textMain == null) {
+        break missingId;
+      }
+
+      return new FragmentMainBinding((FrameLayout) rootView, captureAsrBt, recordAsrBt, textMain);
+    }
+    String missingId = rootView.getResources().getResourceName(id);
+    throw new NullPointerException("Missing required view with ID: ".concat(missingId));
+  }
+}
+// Generated by view binder compiler. Do not edit!
+package com.yuyin.demo.databinding;
+
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewbinding.ViewBinding;
+import androidx.viewbinding.ViewBindings;
+import com.google.android.material.button.MaterialButton;
+import com.yuyin.demo.R;
+import java.lang.NullPointerException;
+import java.lang.Override;
+import java.lang.String;
+
+public final class FragmentRuningCaptureBinding implements ViewBinding {
+  @NonNull
+  private final FrameLayout rootView;
+
+  @NonNull
+  public final RecyclerView recyclerRunCap;
+
+  @NonNull
+  public final MaterialButton saveBtRunCap;
+
+  @NonNull
+  public final MaterialButton stopBtRunCap;
+
+  private FragmentRuningCaptureBinding(@NonNull FrameLayout rootView,
+      @NonNull RecyclerView recyclerRunCap, @NonNull MaterialButton saveBtRunCap,
+      @NonNull MaterialButton stopBtRunCap) {
+    this.rootView = rootView;
+    this.recyclerRunCap = recyclerRunCap;
+    this.saveBtRunCap = saveBtRunCap;
+    this.stopBtRunCap = stopBtRunCap;
+  }
+
+  @Override
+  @NonNull
+  public FrameLayout getRoot() {
+    return rootView;
+  }
+
+  @NonNull
+  public static FragmentRuningCaptureBinding inflate(@NonNull LayoutInflater inflater) {
+    return inflate(inflater, null, false);
+  }
+
+  @NonNull
+  public static FragmentRuningCaptureBinding inflate(@NonNull LayoutInflater inflater,
+      @Nullable ViewGroup parent, boolean attachToParent) {
+    View root = inflater.inflate(R.layout.fragment_runing_capture, parent, false);
+    if (attachToParent) {
+      parent.addView(root);
+    }
+    return bind(root);
+  }
+
+  @NonNull
+  public static FragmentRuningCaptureBinding bind(@NonNull View rootView) {
+    // The body of this method is generated in a way you would not otherwise write.
+    // This is done to optimize the compiled bytecode for size and performance.
+    int id;
+    missingId: {
+      id = R.id.recycler_run_cap;
+      RecyclerView recyclerRunCap = ViewBindings.findChildViewById(rootView, id);
+      if (recyclerRunCap == null) {
+        break missingId;
+      }
+
+      id = R.id.save_bt_run_cap;
+      MaterialButton saveBtRunCap = ViewBindings.findChildViewById(rootView, id);
+      if (saveBtRunCap == null) {
+        break missingId;
+      }
+
+      id = R.id.stop_bt_run_cap;
+      MaterialButton stopBtRunCap = ViewBindings.findChildViewById(rootView, id);
+      if (stopBtRunCap == null) {
+        break missingId;
+      }
+
+      return new FragmentRuningCaptureBinding((FrameLayout) rootView, recyclerRunCap, saveBtRunCap,
+          stopBtRunCap);
+    }
+    String missingId = rootView.getResources().getResourceName(id);
+    throw new NullPointerException("Missing required view with ID: ".concat(missingId));
+  }
+}
+// Generated by view binder compiler. Do not edit!
+package com.yuyin.demo.databinding;
+
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewbinding.ViewBinding;
+import androidx.viewbinding.ViewBindings;
+import com.google.android.material.button.MaterialButton;
+import com.yuyin.demo.R;
+import java.lang.NullPointerException;
+import java.lang.Override;
+import java.lang.String;
+
+public final class FragmentRuningRecordBinding implements ViewBinding {
+  @NonNull
+  private final FrameLayout rootView;
+
+  @NonNull
+  public final RecyclerView recyclerRunRecord;
+
+  @NonNull
+  public final MaterialButton saveBtRunRecord;
+
+  @NonNull
+  public final MaterialButton stopBtRunRecord;
+
+  private FragmentRuningRecordBinding(@NonNull FrameLayout rootView,
+      @NonNull RecyclerView recyclerRunRecord, @NonNull MaterialButton saveBtRunRecord,
+      @NonNull MaterialButton stopBtRunRecord) {
+    this.rootView = rootView;
+    this.recyclerRunRecord = recyclerRunRecord;
+    this.saveBtRunRecord = saveBtRunRecord;
+    this.stopBtRunRecord = stopBtRunRecord;
+  }
+
+  @Override
+  @NonNull
+  public FrameLayout getRoot() {
+    return rootView;
+  }
+
+  @NonNull
+  public static FragmentRuningRecordBinding inflate(@NonNull LayoutInflater inflater) {
+    return inflate(inflater, null, false);
+  }
+
+  @NonNull
+  public static FragmentRuningRecordBinding inflate(@NonNull LayoutInflater inflater,
+      @Nullable ViewGroup parent, boolean attachToParent) {
+    View root = inflater.inflate(R.layout.fragment_runing_record, parent, false);
+    if (attachToParent) {
+      parent.addView(root);
+    }
+    return bind(root);
+  }
+
+  @NonNull
+  public static FragmentRuningRecordBinding bind(@NonNull View rootView) {
+    // The body of this method is generated in a way you would not otherwise write.
+    // This is done to optimize the compiled bytecode for size and performance.
+    int id;
+    missingId: {
+      id = R.id.recycler_run_record;
+      RecyclerView recyclerRunRecord = ViewBindings.findChildViewById(rootView, id);
+      if (recyclerRunRecord == null) {
+        break missingId;
+      }
+
+      id = R.id.save_bt_run_record;
+      MaterialButton saveBtRunRecord = ViewBindings.findChildViewById(rootView, id);
+      if (saveBtRunRecord == null) {
+        break missingId;
+      }
+
+      id = R.id.stop_bt_run_record;
+      MaterialButton stopBtRunRecord = ViewBindings.findChildViewById(rootView, id);
+      if (stopBtRunRecord == null) {
+        break missingId;
+      }
+
+      return new FragmentRuningRecordBinding((FrameLayout) rootView, recyclerRunRecord,
+          saveBtRunRecord, stopBtRunRecord);
+    }
+    String missingId = rootView.getResources().getResourceName(id);
+    throw new NullPointerException("Missing required view with ID: ".concat(missingId));
+  }
+}
+// Generated by view binder compiler. Do not edit!
+package com.yuyin.demo.databinding;
+
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.viewbinding.ViewBinding;
+import androidx.viewbinding.ViewBindings;
+import com.yuyin.demo.R;
+import java.lang.NullPointerException;
+import java.lang.Override;
+import java.lang.String;
+
+public final class SettingsActivityBinding implements ViewBinding {
+  @NonNull
+  private final LinearLayout rootView;
+
+  @NonNull
+  public final FrameLayout settingContain;
+
+  private SettingsActivityBinding(@NonNull LinearLayout rootView,
+      @NonNull FrameLayout settingContain) {
+    this.rootView = rootView;
+    this.settingContain = settingContain;
+  }
+
+  @Override
+  @NonNull
+  public LinearLayout getRoot() {
+    return rootView;
+  }
+
+  @NonNull
+  public static SettingsActivityBinding inflate(@NonNull LayoutInflater inflater) {
+    return inflate(inflater, null, false);
+  }
+
+  @NonNull
+  public static SettingsActivityBinding inflate(@NonNull LayoutInflater inflater,
+      @Nullable ViewGroup parent, boolean attachToParent) {
+    View root = inflater.inflate(R.layout.settings_activity, parent, false);
+    if (attachToParent) {
+      parent.addView(root);
+    }
+    return bind(root);
+  }
+
+  @NonNull
+  public static SettingsActivityBinding bind(@NonNull View rootView) {
+    // The body of this method is generated in a way you would not otherwise write.
+    // This is done to optimize the compiled bytecode for size and performance.
+    int id;
+    missingId: {
+      id = R.id.setting_contain;
+      FrameLayout settingContain = ViewBindings.findChildViewById(rootView, id);
+      if (settingContain == null) {
+        break missingId;
+      }
+
+      return new SettingsActivityBinding((LinearLayout) rootView, settingContain);
+    }
+    String missingId = rootView.getResources().getResourceName(id);
+    throw new NullPointerException("Missing required view with ID: ".concat(missingId));
+  }
+}
+// Generated by view binder compiler. Do not edit!
+package com.yuyin.demo.databinding;
+
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.LinearLayout;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.viewbinding.ViewBinding;
+import androidx.viewbinding.ViewBindings;
+import com.google.android.material.textview.MaterialTextView;
+import com.yuyin.demo.R;
+import java.lang.NullPointerException;
+import java.lang.Override;
+import java.lang.String;
+
+public final class TextItemBinding implements ViewBinding {
+  @NonNull
+  private final LinearLayout rootView;
+
+  @NonNull
+  public final MaterialTextView speechText;
+
+  private TextItemBinding(@NonNull LinearLayout rootView, @NonNull MaterialTextView speechText) {
+    this.rootView = rootView;
+    this.speechText = speechText;
+  }
+
+  @Override
+  @NonNull
+  public LinearLayout getRoot() {
+    return rootView;
+  }
+
+  @NonNull
+  public static TextItemBinding inflate(@NonNull LayoutInflater inflater) {
+    return inflate(inflater, null, false);
+  }
+
+  @NonNull
+  public static TextItemBinding inflate(@NonNull LayoutInflater inflater,
+      @Nullable ViewGroup parent, boolean attachToParent) {
+    View root = inflater.inflate(R.layout.text_item, parent, false);
+    if (attachToParent) {
+      parent.addView(root);
+    }
+    return bind(root);
+  }
+
+  @NonNull
+  public static TextItemBinding bind(@NonNull View rootView) {
+    // The body of this method is generated in a way you would not otherwise write.
+    // This is done to optimize the compiled bytecode for size and performance.
+    int id;
+    missingId: {
+      id = R.id.speechText;
+      MaterialTextView speechText = ViewBindings.findChildViewById(rootView, id);
+      if (speechText == null) {
+        break missingId;
+      }
+
+      return new TextItemBinding((LinearLayout) rootView, speechText);
+    }
+    String missingId = rootView.getResources().getResourceName(id);
+    throw new NullPointerException("Missing required view with ID: ".concat(missingId));
+  }
+}
+/**
+ * Automatically generated file. DO NOT MODIFY
+ */
+package com.yuyin.demo;
+
+public final class BuildConfig {
+  public static final boolean DEBUG = Boolean.parseBoolean("true");
+  public static final String APPLICATION_ID = "com.yuyin.demo";
+  public static final String BUILD_TYPE = "debug";
+  public static final int VERSION_CODE = 1;
+  public static final String VERSION_NAME = "1.0";
+}
+package com.mobvoi.wenet;
+
+import android.content.Context;
+
+import androidx.test.platform.app.InstrumentationRegistry;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
+
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import static org.junit.Assert.*;
+
+/**
+ * Instrumented test, which will execute on an Android device.
+ *
+ * @see <a href="http://d.android.com/tools/testing">Testing documentation</a>
+ */
+@RunWith(AndroidJUnit4.class)
+public class ExampleInstrumentedTest {
+    @Test
+    public void useAppContext() {
+        // Context of the app under test.
+        Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        assertEquals("com.demo.wenet", appContext.getPackageName());
+    }
+}package com.mobvoi.wenet;
+
+public class Recognize {
+
+    static {
+        System.loadLibrary("wenet");
+    }
+
+
+    // TODO 重写方法 都要带有返回值做错误处理
+    public static native void init(String modelPath, String dictPath);
+    public static native void reset();
+    public static native void acceptWaveform(short[] waveform);
+    public static native void setInputFinished();
+    public static native boolean getFinished();
+    public static native boolean getInit();
+    public static native void startDecode();
+    public static native String getResult();
+}package com.mobvoi.wenet;
+
+import org.junit.Test;
+
+import static org.junit.Assert.*;
+
+/**
+ * Example local unit test, which will execute on the development machine (host).
+ *
+ * @see <a href="http://d.android.com/tools/testing">Testing documentation</a>
+ */
+public class ExampleUnitTest {
+    @Test
+    public void addition_isCorrect() {
+        assertEquals(4, 2 + 2);
+    }
+}

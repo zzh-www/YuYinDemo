@@ -60,6 +60,7 @@ class RuningCapture : Fragment() {
                 Log.e(LOG_TAG,"${Recognize.getInit()} init model")
                 YuYinUtil.prepareModel(requireActivity() as MainActivityView)
                 Recognize.init(yuYinModel.model_path, yuYinModel.dic_path)  // 初始化模型
+                Recognize.reset()
                 withContext(Dispatchers.Main){
                     // 订阅结果
                     model.updateFlow(flowView, recyclerView)
@@ -95,7 +96,7 @@ class RuningCapture : Fragment() {
                     }
                 }
             } else {
-                model.viewModelScope.launch(Dispatchers.IO) {
+                model.viewModelScope.launch(Dispatchers.Main) {
                     // 确保上一轮次确实已经结束
                     //TODO 可以考虑不终止转录 只终止record
                     if (!initModel && Recognize.getInit()) {
