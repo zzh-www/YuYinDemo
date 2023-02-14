@@ -60,17 +60,18 @@ class TestView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     }
 
     override fun onDraw(canvas: Canvas?) {
+
         super.onDraw(canvas)
-//        canvas?.apply {
-//            // w: 36dp
-//            val radius = height/2f
-//            drawCircle(radius,radius,radius,paint)
-//
-//            // 24dp
-//            myIcon?.let {
-//                drawBitmap(it,radius-it.width/2f,radius-it.height/2f,null)
-//            }
-//        }
+        canvas?.apply {
+            // w: 36dp
+            val radius = height/2f
+            drawCircle(radius,radius,radius,paint)
+
+            // 24dp
+            myIcon?.let {
+                drawBitmap(it,radius-it.width/2f,radius-it.height/2f,null)
+            }
+        }
     }
 
     override fun setTouchRangeListener(event: MotionEvent, listener: OnTouchRangeListener?) {

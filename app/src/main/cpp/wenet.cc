@@ -16,7 +16,7 @@
 #include "torch/script.h"
 #include "torch/torch.h"
 
-#include "decoder/torch_asr_decoder.h"
+#include "decoder/asr_decoder.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
 #include "frontend/wav.h"
@@ -30,30 +30,36 @@ namespace wenet {
 std::shared_ptr<DecodeOptions> decode_config;
 std::shared_ptr<FeaturePipelineConfig> feature_config;
 std::shared_ptr<FeaturePipeline> feature_pipeline;
-std::shared_ptr<TorchAsrDecoder> decoder;
+std::shared_ptr<AsrDecoder> decoder;
 std::shared_ptr<DecodeResource> resource;
 DecodeState state = kEndBatch;
 std::string total_result;  // NOLINT
 std::queue<std::string> results;
-std::string current_string;
 
 void init(JNIEnv *env, jobject, jstring jModelPath, jstring jDictPath) {
   resource = std::make_shared<DecodeResource>();
   resource->model = std::make_shared<TorchAsrModel>();
   const char *pModelPath = (env)->GetStringUTFChars(jModelPath, nullptr);
   std::string modelPath = std::string(pModelPath);
-//  LOG(INFO) << "model path: " << modelPath;
-  resource->model->Read(modelPath);
-
   const char *pDictPath = (env)->GetStringUTFChars(jDictPath, nullptr);
   std::string dictPath = std::string(pDictPath);
-//  LOG(INFO) << "dict path: " << dictPath;
+
+  resource = std::make_shared<DecodeResource>();
+  resource->model = std::make_shared<TorchAsrModel>();
+
+  // init model
+  auto model = std::make_shared<TorchAsrModel>();
+  model->Read(modelPath);
+
+  // init dict
+  resource = std::make_shared<DecodeResource>();
+  resource->model = model;
   resource->symbol_table = std::shared_ptr<fst::SymbolTable>(
           fst::SymbolTable::ReadText(dictPath));
 
   PostProcessOptions post_process_opts;
   resource->post_processor =
-    std::make_shared<PostProcessor>(std::move(post_process_opts));
+    std::make_shared<PostProcessor>(post_process_opts);
 
   feature_config = std::make_shared<FeaturePipelineConfig>(80, 16000);
   feature_pipeline = std::make_shared<FeaturePipeline>(*feature_config);
@@ -61,12 +67,14 @@ void init(JNIEnv *env, jobject, jstring jModelPath, jstring jDictPath) {
   decode_config = std::make_shared<DecodeOptions>();
   decode_config->chunk_size = 16;
 
-  decoder = std::make_shared<TorchAsrDecoder>(feature_pipeline, resource,
+  decoder = std::make_shared<AsrDecoder>(feature_pipeline, resource,
                                               *decode_config);
+
+  state = kEndFeats;
 }
 
 void reset(JNIEnv *env, jobject) {
-//  LOG(INFO) << "wenet reset";
+  LOG(INFO) << "wenet reset";
   decoder->Reset();
   state = kEndBatch;
   total_result = "";
@@ -74,16 +82,13 @@ void reset(JNIEnv *env, jobject) {
 
 void accept_waveform(JNIEnv *env, jobject, jshortArray jWaveform) {
   jsize size = env->GetArrayLength(jWaveform);
-  std::vector<int16_t> waveform(size);
-  env->GetShortArrayRegion(jWaveform, 0, size, &waveform[0]);
-  std::vector<float> floatWaveform(waveform.begin(), waveform.end());
-  feature_pipeline->AcceptWaveform(floatWaveform);
+  int16_t* waveform = env->GetShortArrayElements(jWaveform, 0);
+  feature_pipeline->AcceptWaveform(waveform,size);
 //  LOG(INFO) << "com.demo.wenet accept waveform in ms: "
 //            << int(floatWaveform.size() / 16);
 }
 
 void set_input_finished() {
-  // 会检测模型有无finish 并会有死锁... 所以退出服务时不应该调用 而应该直接reset
 //  LOG(INFO) << "wenet input finished";
   feature_pipeline->set_input_finished();
 }
@@ -106,7 +111,7 @@ void decode_thread_func() {
       break;
     } else if (state == kEndpoint) {
 //      LOG(INFO) << "wenet endpoint final result: " << result;
-      if (result!="") {
+      if (!result.empty()) {
         results.push(result+" ");
       }
       total_result += result + ",";
@@ -132,17 +137,16 @@ jboolean get_finished(JNIEnv *env, jobject) {
   return JNI_FALSE;
 }
 
-
+// 返回模型是否初始化
+jboolean get_inited(JNIEnv *env, jobject) {
+  return decoder == nullptr ? JNI_FALSE : JNI_TRUE;
+}
 
 
 // 更改以获取段句
 jstring get_result(JNIEnv *env, jobject) {
-  std::string result = "";
-  if (results.empty()) {
-    if(decoder->DecodedSomething()) {
-        result = decoder->result()[0].sentence;
-    }
-  } else {
+  std::string result = decoder->DecodedSomething() ? decoder->result()[0].sentence : "";
+  if (!results.empty()) {
     result = results.front();
     results.pop();
   }
@@ -173,6 +177,8 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *) {
      reinterpret_cast<void *>(wenet::set_input_finished)},
     {"getFinished", "()Z",
      reinterpret_cast<void *>(wenet::get_finished)},
+     {"getInit", "()Z",
+      reinterpret_cast<void *>(wenet::get_inited)},
     {"startDecode", "()V",
      reinterpret_cast<void *>(wenet::start_decode)},
     {"getResult", "()Ljava/lang/String;",
@@ -188,8 +194,3 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *) {
   return JNI_VERSION_1_6;
 }
 
-extern "C"
-JNIEXPORT void JNICALL
-Java_com_yuyin_demo_MainActivityView_getME(JNIEnv *env, jobject thiz) {
-  // TODO: implement getME()
-}

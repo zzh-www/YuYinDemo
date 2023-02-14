@@ -7,7 +7,7 @@
 
     <fragment
         android:id="@+id/filesManager_dest"
-        android:name="com.yuyin.demo.FilesManager"
+        android:name="com.yuyin.demo.view.file.FilesManager"
         android:label="YuYin_files_manager"
         tools:layout="@layout/fragment_files_manager" />
     <fragment
@@ -17,7 +17,7 @@
         tools:layout="@layout/fragment_runing_capture" />
     <fragment
         android:id="@+id/runingRecord_dest"
-        android:name="com.yuyin.demo.RuningRecord"
+        android:name="com.yuyin.demo.RunningRecord"
         android:label="YuYin_runing_record"
         tools:layout="@layout/fragment_runing_record" />
     <fragment

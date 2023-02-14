@@ -1,67 +1,73 @@
 package com.yuyin.demo
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.*
 import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
+import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.os.IBinder
+import android.provider.Settings
 import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.widget.Button
 import android.widget.Toast
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.NavController
-import androidx.navigation.Navigation.findNavController
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
-import androidx.preference.PreferenceManager
 import com.lzf.easyfloat.EasyFloat
 import com.lzf.easyfloat.enums.ShowPattern
 import com.lzf.easyfloat.enums.SidePattern
 import com.lzf.easyfloat.utils.DisplayUtils
 import com.mobvoi.wenet.MediaCaptureService
-import com.mobvoi.wenet.MediaCaptureService.mcs_Binder
-import com.mobvoi.wenet.Recognize
-import com.yuyin.demo.RuningCapture.CaptureAudio_ALL
+import com.mobvoi.wenet.MediaCaptureService.Companion.m_NOTIFICATION_CHANNEL_ID
+import com.yuyin.demo.YuYinUtil.ACTION_ALL
+import com.yuyin.demo.YuYinUtil.CaptureAudio_ALL
+import com.yuyin.demo.YuYinUtil.CaptureAudio_START
+import com.yuyin.demo.YuYinUtil.EXTRA_CaptureAudio_NAME
+import com.yuyin.demo.YuYinUtil.EXTRA_RESULT_CODE
+import com.yuyin.demo.YuYinUtil.m_CREATE_SCREEN_CAPTURE
 import com.yuyin.demo.databinding.ActivityMainViewBinding
+import com.yuyin.demo.models.YuyinViewModel
+import com.yuyin.demo.view.speech.SettingsActivity
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.nio.file.Paths
-
+import com.yuyin.demo.YuYinUtil.YuYinLog as Log
 
 class MainActivityView : AppCompatActivity() {
-
-    val mainAction = "MainActivityAction"
 
     // 视图绑定
     private lateinit var binding: ActivityMainViewBinding
 
     private val m_ALL_PERMISSIONS_PERMISSION_CODE = 1000
 
-    private val LOG_TAG = "YUYIN"
+    private val YuYinLog_TAG = "YUYIN"
 
     // 层级配置
     private lateinit var appBarConfiguration: AppBarConfiguration
 
     val model: YuyinViewModel by viewModels()
 
-    // 中转fragment
-    private lateinit var host: NavHostFragment
+    // 服务
+    private lateinit var actionReceiver: CaptureAudioReceiver
+    private lateinit var mediaService_binder: MediaCaptureService.MediaServiceBinder
+    private var mBound = false
 
-    private lateinit var m_actionReceiver: CaptureAudioReceiver
-
-    private lateinit var frg: RuningCapture
+    // 通知
+    private lateinit var notificationManager: NotificationManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,11 +80,10 @@ class MainActivityView : AppCompatActivity() {
         setSupportActionBar(binding.actionBar)
 
         // 获取NavHostFragment
-        host =
+        val host: NavHostFragment =
             supportFragmentManager.findFragmentById(R.id.yuyin_nav_host_container_fragment) as NavHostFragment?
                 ?: return
         val navController: NavController = host.navController
-
 
         // 设定顶层
         appBarConfiguration = AppBarConfiguration(
@@ -91,79 +96,16 @@ class MainActivityView : AppCompatActivity() {
         // 应用底层导航菜单
         setupBottomNavMenu(navController)
 
-
-
-
-        val filter = IntentFilter()
-        filter.addAction(CaptureAudio_ALL)
-        filter.addAction(mainAction)
-        m_actionReceiver = CaptureAudioReceiver()
-        this.registerReceiver(m_actionReceiver, filter)
-
         // 控制底部导航条只出现在main_dest fileManager_dest
-        navController.addOnDestinationChangedListener { _, destination, _ ->
+        navController.addOnDestinationChangedListener { controller, destination, arguments ->
             if (destination.id == R.id.runingCapture_dest || destination.id == R.id.runingRecord_dest) {
-                runOnUiThread {
-                    binding.mainBottomNavigation.visibility = View.INVISIBLE
-                    binding.mainBottomNavigation.isEnabled = false
-                    actionBar?.show()
-                }
+                binding.mainBottomNavigation.visibility = View.INVISIBLE
+                binding.mainBottomNavigation.isEnabled = false
             } else {
-                runOnUiThread {
-                    binding.mainBottomNavigation.visibility = View.VISIBLE
-                    binding.mainBottomNavigation.isEnabled = true
-                    // 回到顶层清除数据
-                    model.results.value?.clear()
-                    model.bufferQueue.clear()
-                    model.startAsr = false
-                    model.startRecord = false
-                    if (model.mBound) {
-                        model.mcs_binder?.clearQueue()
-                    }
-                    actionBar?.hide()
-                }
-
+                binding.mainBottomNavigation.visibility = View.VISIBLE
+                binding.mainBottomNavigation.isEnabled = true
             }
-
         }
-
-        initAudioCapture()
-
-
-    }
-
-
-    override fun onStart() {
-        super.onStart()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        // 模型
-        var model_name = "final"
-        var dic_name = "words"
-        val sharedPreference =
-            PreferenceManager.getDefaultSharedPreferences(this@MainActivityView)
-        val mod = sharedPreference.getString("languageOfModule", "zh")
-        model_name = "$`model_name`_$mod.zip"
-        dic_name = "$`dic_name`_$mod.txt"
-        try {
-            init_model(model_name, dic_name)
-        } catch (exception: Exception) {
-            YuYinLog.e(LOG_TAG, "can not init model")
-        }
-
-        // 权限
-        YuYinUtil.checkRequestPermissions(this, this)
-
-
-//        getExternalFilesDir()
-        val docDirPath = getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
-        val yuYinDir = Paths.get(docDirPath?.absolutePath, "YuYin").toFile()
-        if (!yuYinDir.exists()) {
-            yuYinDir.mkdir()
-        }
-
         // 开启浮窗
         EasyFloat.with(this@MainActivityView)
             .setLayout(R.layout.floatviewtest)
@@ -188,42 +130,36 @@ class MainActivityView : AppCompatActivity() {
                 }
             }
             .show()
+
+        initNotification()
+
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // 权限
+        YuYinUtil.checkRequestPermissions(this, this)
+
+//        getExternalFilesDir()
+        val docDirPath = getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+        val yuYinDir = Paths.get(docDirPath?.absolutePath, "YuYin").toFile()
+        if (!yuYinDir.exists()) {
+            yuYinDir.mkdir()
+        }
+
     }
 
 
-    override fun onPause() { // 另一个activity来到前台调用
-        super.onPause()
-    }
-
-    override fun onStop() {
-        super.onStop() // activity不再可见
-    }
-
-
-    override fun onRestart() {
-        super.onRestart()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-
-        RuningCapture.stopRecordingToActivity(this)
-    }
-
-
-
-
-
-
-    fun init_model(model: String, dic: String) {
-        val model_path = File(assetFilePath(this, model)).absolutePath
-        val dic_path = File(assetFilePath(this, dic)).absolutePath
-        Recognize.init(model_path, dic_path)
-    }
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         // 在actionbar应用自定义菜单
         menuInflater.inflate(R.menu.bar_menu, menu)
         return true
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        model.recorder?.release()
+        model.recorder = null
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -296,57 +232,87 @@ class MainActivityView : AppCompatActivity() {
                 return file.absolutePath
             }
         } catch (e: IOException) {
-            YuYinLog.e(
-                LOG_TAG,
+            Log.e(
+                YuYinLog_TAG,
                 "Error process asset $assetName to file path"
             )
         }
         return null
     }
+
     private val connection: ServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
-            model.mcs_binder = service as mcs_Binder
-            model.mBound = true
+            mediaService_binder = service as MediaCaptureService.MediaServiceBinder
+            mBound = true
         }
 
         override fun onServiceDisconnected(name: ComponentName) {
-            model.mBound = false
+            mBound = false
         }
     }
 
-    // TODO Activity启动服务....
+    private fun initNotification() {
+        // 未启动服务
+        val channel = NotificationChannel(
+            m_NOTIFICATION_CHANNEL_ID,
+            MediaCaptureService.m_NOTIFICATION_CHANNEL_NAME,
+            NotificationManager.IMPORTANCE_HIGH
+        )
+        channel.description = MediaCaptureService.m_NOTIFICATION_CHANNEL_DESC
+        notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannel(channel)
+        notificationManager.notificationChannels
+
+        if (!notificationManager.areNotificationsEnabled()) {
+            val intent = Intent().apply {
+                this.action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+                this.data = Uri.fromParts("package", packageName, null)
+            }
+            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+                if (it.resultCode == RESULT_OK) {
+                    initAudioCapture()
+                }
+            }.launch(intent)
+        } else {
+            initAudioCapture()
+        }
+    }
+
     private fun initAudioCapture() {
 
-        // 未启动服务
+        val filter = IntentFilter()
+        filter.addAction(CaptureAudio_ALL)
+        actionReceiver = CaptureAudioReceiver()
+        this.registerReceiver(actionReceiver, filter)
+        // 注册广播
+
+
         // Service
         val m_mediaProjectionManager =
-            this.getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+            this.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         val intent = m_mediaProjectionManager.createScreenCaptureIntent()
         // 获取录制屏幕权限 并启动服务
         registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
         ) { result: ActivityResult ->
             if (result.resultCode == RESULT_OK) {
-                Thread {
-                    val i = Intent(this, MediaCaptureService::class.java)
-                    this.bindService(
-                        i,
-                        connection,
-                        BIND_AUTO_CREATE
-                    )
-                }.start()
-                // 启动服务
-                val i = Intent(this, MediaCaptureService::class.java)
-                i.action = RuningCapture.ACTION_ALL
+
+                var i = Intent(this, MediaCaptureService::class.java)
+                this.bindService(
+                    i,
+                    connection,
+                    BIND_AUTO_CREATE
+                )
+                // 启动前台服务
+                i = Intent(this, MediaCaptureService::class.java)
+                i.action = ACTION_ALL
                 i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                i.putExtra(RuningCapture.EXTRA_RESULT_CODE, RuningCapture.m_CREATE_SCREEN_CAPTURE)
+                i.putExtra(EXTRA_RESULT_CODE, m_CREATE_SCREEN_CAPTURE)
                 i.putExtras(result.data!!)
-                this.startService(i)
+                this.startForegroundService(i)
             } else {
-                findNavController(
-                    this,
-                    R.id.yuyin_nav_host_container_fragment
-                ).popBackStack()
+                // 退出应用
+                finish()
             }
         }.launch(intent)
     }
@@ -361,59 +327,20 @@ class MainActivityView : AppCompatActivity() {
             // 获取frg
             // 每次都会重新创建一个新的实例,所以要强制更新,之前frag会被销毁,不更新或者调用之前fra会导致null错误
             if (action.equals(CaptureAudio_ALL, ignoreCase = true)) {
-                this@MainActivityView.frg = this@MainActivityView.host.childFragmentManager.fragments[0] as RuningCapture
-                val actionName = intent.getStringExtra(RuningCapture.EXTRA_CaptureAudio_NAME)
+                val actionName = intent.getStringExtra(EXTRA_CaptureAudio_NAME)
                 if (actionName != null && !actionName.isEmpty()) {
                     if (actionName.equals(
-                            RuningCapture.CaptureAudio_START_ASR,
+                            CaptureAudio_START,
                             ignoreCase = true
                         )
                     ) {
-                        // 服务开启录音后回调
-                        model.startRecord = true
-                        model.startAsr = true
-                        frg.startAsrThread()
-                        frg.updateUiToStop()
-                    } else if (actionName.equals(
-                            RuningCapture.CaptureAudio_STOP,
-                            ignoreCase = true
-                        )
-                    ) {
-                        // 服务停止录音后回调
-                        model.startRecord = false
-                        model.startAsr = false
-                        frg.waitForFinished()
-                    } else if (actionName.equals(
-                            RuningCapture.ACTION_STOP_RECORDING_From_Notification,
-                            ignoreCase = true
-                        )
-                    ) {
-                        this@MainActivityView.findViewById<Button>(R.id.stop_bt_run_cap).isEnabled = false
-                        RuningCapture.stopRecording(this@MainActivityView)
-                    } else if (actionName.equals(
-                            RuningCapture.ACTION_START_RECORDING_From_Notification,
-                            ignoreCase = true
-                        )
-                    ) {
-                        this@MainActivityView.findViewById<Button>(R.id.stop_bt_run_cap).isEnabled = false
-                        RuningCapture.startRecording(this@MainActivityView)
+                        // 服务开启
+                        model.recorder = mediaService_binder.serviceRecorder()
                     }
-                }
-            } else if(action.equals(mainAction,ignoreCase = true)) {
-                val actionName = intent.getStringExtra(RuningCapture.EXTRA_CaptureAudio_NAME)
-                if (actionName.equals(RuningCapture.CaptureAudio_START, ignoreCase = true)) {
-
-                    // 接收服务已启动的通知
-                    // 通知服务准备录制
-
-                    RuningCapture.startRecordingService(this@MainActivityView);
                 }
             }
         }
     }
-
-
-
 }
 
 

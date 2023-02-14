@@ -4,9 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".RuningCapture"
-    android:id="@+id/capture_fragment"
-    android:tag="cap">
+    tools:context=".RuningCapture">
 
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -34,7 +32,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
             android:layout_marginHorizontal="32dp"
-            android:text="start"
+            android:text="stop"
             app:layout_constraintBottom_toTopOf="@+id/save_bt_run_cap"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
