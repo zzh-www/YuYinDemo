@@ -1,20 +1,28 @@
 package com.yuyin.demo
 
 import android.os.Bundle
+import android.text.TextUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.Navigation.findNavController
 import com.yuyin.demo.YuYinUtil.checkRequestPermissions
 import com.yuyin.demo.databinding.FragmentMainBinding
 import com.yuyin.demo.models.YuyinViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlin.concurrent.thread
 
 class Main : Fragment() {
     private var binding: FragmentMainBinding? = null
 
     private val yuyinViewModel: YuyinViewModel by activityViewModels()
+
+    private val texttest = "哈喽一二三androidx.navigation.Navigation.findNavControllerandroidx.navigati"
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,

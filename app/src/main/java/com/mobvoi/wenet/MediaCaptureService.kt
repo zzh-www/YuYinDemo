@@ -147,7 +147,7 @@ class MediaCaptureService : Service() {
         pendingIntent =
             PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
         pre_notificationBUilder = NotificationCompat.Builder(this, m_NOTIFICATION_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.icon_launcher_foreground)
             .setColor(ContextCompat.getColor(this, R.color.primaryDarkColor))
             .setContentTitle("余音")
             .setContentText("ASR")

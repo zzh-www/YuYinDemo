@@ -1,3 +1,29 @@
 <resources>
-    <dimen name="fab_margin">16dp</dimen>
+
+    <dimen name="margin_small">2dp</dimen>
+    <dimen name="margin_normal">8dp</dimen>
+    <dimen name="margin_large">12dp</dimen>
+
+    <dimen name="tab_width_limit_small">80dip</dimen>
+    <dimen name="tab_width_limit_medium">100dip</dimen>
+    <dimen name="tab_width_limit_large">120dip</dimen>
+    <dimen name="bottom_sheet_peek_height">256dp</dimen>
+
+    <dimen name="text_small_size">16sp</dimen>
+    <dimen name="text_medium_size">20sp</dimen>
+
+    <dimen name="corner_radius_small">1dp</dimen>
+    <dimen name="corner_radius_medium">5dp</dimen>
+    <dimen name="corner_radius_large">10dp</dimen>
+
+    <dimen name="drawable_small_size">12dip</dimen>
+    <dimen name="drawable_medium_size">16dip</dimen>
+    <dimen name="drawable_large_size">20dip</dimen>
+
+    <dimen name="appbar_height">160dip</dimen>
+    <dimen name="fab_margin">32dip</dimen>
+
+    <dimen name="fab_mini_height">36dip</dimen>
+    <dimen name="fab_height">40dip</dimen>
+    <dimen name="fab_normal_height">56dip</dimen>
 </resources>

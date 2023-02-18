@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="TextAppearance.SmileyFontHeadline1" parent="TextAppearance.MaterialComponents.Headline1">
+        <item name="fontFamily">@font/smiley</item>
+        <item name="android:fontFamily">@font/smiley</item>
+        <item name="android:textSize">95sp</item>
+    </style>
+
+    <style name="TextAppearance.SmileyFontHeadline2" parent="TextAppearance.MaterialComponents.Headline2">
+        <item name="fontFamily">@font/smiley</item>
+        <item name="android:fontFamily">@font/smiley</item>
+        <item name="android:textSize">59sp</item>
+    </style>
+
+    <style name="TextAppearance.SmileyFontHeadline3" parent="TextAppearance.MaterialComponents.Headline3">
+        <item name="fontFamily">@font/smiley</item>
+        <item name="android:fontFamily">@font/smiley</item>
+        <item name="android:textSize">48sp</item>
+    </style>
+
+    <style name="TextAppearance.SmileyFontHeadline4" parent="TextAppearance.MaterialComponents.Headline4">
+        <item name="fontFamily">@font/smiley</item>
+        <item name="android:fontFamily">@font/smiley</item>
+        <item name="android:textSize">34sp</item>
+    </style>
+
+    <style name="TextAppearance.SmileyFontHeadline5" parent="TextAppearance.MaterialComponents.Headline5">
+        <item name="fontFamily">@font/smiley</item>
+        <item name="android:fontFamily">@font/smiley</item>
+        <item name="android:textSize">24sp</item>
+    </style>
+
+    <style name="TextAppearance.SmileyFontHeadline6" parent="TextAppearance.MaterialComponents.Headline6">
+        <item name="fontFamily">@font/smiley</item>
+        <item name="android:fontFamily">@font/smiley</item>
+        <item name="android:textSize">20sp</item>
+    </style>
+
+    <style name="TextAppearance.SmileyFontSubtitle1" parent="TextAppearance.MaterialComponents.Subtitle1">
+        <item name="fontFamily">@font/smiley</item>
+        <item name="android:fontFamily">@font/smiley</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+
+    <style name="TextAppearance.SmileyFontSubtitle2" parent="TextAppearance.MaterialComponents.Subtitle2">
+        <item name="fontFamily">@font/smiley</item>
+        <item name="android:fontFamily">@font/smiley</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="TextAppearance.SmileyFontBody1" parent="TextAppearance.MaterialComponents.Body1">
+        <item name="fontFamily">@font/smiley</item>
+        <item name="android:fontFamily">@font/smiley</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+
+    <style name="TextAppearance.SmileyFontBody2" parent="TextAppearance.MaterialComponents.Body2">
+        <item name="fontFamily">@font/smiley</item>
+        <item name="android:fontFamily">@font/smiley</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="TextAppearance.SmileyFontButton" parent="TextAppearance.MaterialComponents.Button">
+        <item name="fontFamily">@font/smiley</item>
+        <item name="android:fontFamily">@font/smiley</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="TextAppearance.SmileyFontCaption" parent="TextAppearance.MaterialComponents.Caption">
+        <item name="fontFamily">@font/smiley</item>
+        <item name="android:fontFamily">@font/smiley</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <style name="TextAppearance.SmileyFontOverline" parent="TextAppearance.MaterialComponents.Overline">
+        <item name="fontFamily">@font/smiley</item>
+        <item name="android:fontFamily">@font/smiley</item>
+        <item name="android:textSize">10sp</item>
+    </style>
+</resources>

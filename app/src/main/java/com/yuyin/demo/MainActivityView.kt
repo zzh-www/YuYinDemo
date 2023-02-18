@@ -14,11 +14,13 @@ import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.NavHostFragment
@@ -41,10 +43,12 @@ import com.yuyin.demo.YuYinUtil.m_CREATE_SCREEN_CAPTURE
 import com.yuyin.demo.databinding.ActivityMainViewBinding
 import com.yuyin.demo.models.YuyinViewModel
 import com.yuyin.demo.view.speech.SettingsActivity
+import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.nio.file.Paths
+import kotlin.concurrent.thread
 import com.yuyin.demo.YuYinUtil.YuYinLog as Log
 
 class MainActivityView : AppCompatActivity() {
@@ -108,7 +112,7 @@ class MainActivityView : AppCompatActivity() {
         }
         // 开启浮窗
         EasyFloat.with(this@MainActivityView)
-            .setLayout(R.layout.floatviewtest)
+            .setLayout(R.layout.floatview)
             .setShowPattern(ShowPattern.BACKGROUND) // 应用后台时显示
             .setSidePattern(SidePattern.RESULT_HORIZONTAL) // 吸附 根据移动后的位置贴附到边缘
             .setTag("Capture") // 设置TAG管理
@@ -130,7 +134,6 @@ class MainActivityView : AppCompatActivity() {
                 }
             }
             .show()
-
         initNotification()
 
     }

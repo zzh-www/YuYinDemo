@@ -1,4 +1,4 @@
-package test.kt
+package com.yuyin.demo.view
 
 import android.content.Context
 import android.graphics.*
@@ -12,7 +12,7 @@ import com.lzf.easyfloat.utils.DisplayUtils
 import com.lzf.easyfloat.widget.BaseSwitchView
 import com.yuyin.demo.R
 
-class TestView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0) : BaseSwitchView(context, attrs, defStyleAttr) {
+class FloatView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0) : BaseSwitchView(context, attrs, defStyleAttr) {
 
     private var normalColor = Color.parseColor("#99000000")
     private var inRangeColor = Color.parseColor("#99FF0000")
@@ -62,16 +62,7 @@ class TestView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     override fun onDraw(canvas: Canvas?) {
 
         super.onDraw(canvas)
-        canvas?.apply {
-            // w: 36dp
-            val radius = height/2f
-            drawCircle(radius,radius,radius,paint)
 
-            // 24dp
-            myIcon?.let {
-                drawBitmap(it,radius-it.width/2f,radius-it.height/2f,null)
-            }
-        }
     }
 
     override fun setTouchRangeListener(event: MotionEvent, listener: OnTouchRangeListener?) {
