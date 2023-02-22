@@ -82,7 +82,7 @@ class RunningRecord : Fragment() {
                         flowView.text = ""
                     }
                     model.record.stop()
-                    if (!Recognize.getFinished())
+                    if (!Recognize.getInit())
                         Recognize.setInputFinished()
                     withContext(Dispatchers.Main) {
                         binding.stopBtRunRecord.text = "start"

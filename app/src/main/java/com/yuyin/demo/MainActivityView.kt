@@ -14,13 +14,11 @@ import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.NavHostFragment
@@ -34,6 +32,7 @@ import com.lzf.easyfloat.enums.SidePattern
 import com.lzf.easyfloat.utils.DisplayUtils
 import com.mobvoi.wenet.MediaCaptureService
 import com.mobvoi.wenet.MediaCaptureService.Companion.m_NOTIFICATION_CHANNEL_ID
+import com.vmadalin.easypermissions.EasyPermissions
 import com.yuyin.demo.YuYinUtil.ACTION_ALL
 import com.yuyin.demo.YuYinUtil.CaptureAudio_ALL
 import com.yuyin.demo.YuYinUtil.CaptureAudio_START
@@ -43,15 +42,14 @@ import com.yuyin.demo.YuYinUtil.m_CREATE_SCREEN_CAPTURE
 import com.yuyin.demo.databinding.ActivityMainViewBinding
 import com.yuyin.demo.models.YuyinViewModel
 import com.yuyin.demo.view.speech.SettingsActivity
-import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.nio.file.Paths
-import kotlin.concurrent.thread
+import kotlin.system.exitProcess
 import com.yuyin.demo.YuYinUtil.YuYinLog as Log
 
-class MainActivityView : AppCompatActivity() {
+class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallbacks {
 
     // 视图绑定
     private lateinit var binding: ActivityMainViewBinding
@@ -142,8 +140,6 @@ class MainActivityView : AppCompatActivity() {
         super.onResume()
         // 权限
         YuYinUtil.checkRequestPermissions(this, this)
-
-//        getExternalFilesDir()
         val docDirPath = getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
         val yuYinDir = Paths.get(docDirPath?.absolutePath, "YuYin").toFile()
         if (!yuYinDir.exists()) {
@@ -193,6 +189,14 @@ class MainActivityView : AppCompatActivity() {
         setupActionBarWithNavController(navController, appBarConfig)
     }
 
+    override fun onPermissionsDenied(requestCode: Int, perms: List<String>) {
+        TODO("Not yet implemented")
+    }
+
+    override fun onPermissionsGranted(requestCode: Int, perms: List<String>) {
+        TODO("Not yet implemented")
+    }
+
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -212,6 +216,7 @@ class MainActivityView : AppCompatActivity() {
             }
             if (deniedCount != 0) {
                 Toast.makeText(this, "must allow", Toast.LENGTH_SHORT).show()
+                this.finish()
             }
 
         }
@@ -315,7 +320,8 @@ class MainActivityView : AppCompatActivity() {
                 this.startForegroundService(i)
             } else {
                 // 退出应用
-                finish()
+                finishAffinity()
+                exitProcess(0)
             }
         }.launch(intent)
     }

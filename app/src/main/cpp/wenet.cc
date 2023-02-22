@@ -88,7 +88,7 @@ void accept_waveform(JNIEnv *env, jobject, jshortArray jWaveform) {
 //            << int(floatWaveform.size() / 16);
 }
 
-void set_input_finished() {
+void set_input_finished(JNIEnv *env, jobject thiz) {
 //  LOG(INFO) << "wenet input finished";
   feature_pipeline->set_input_finished();
 }
@@ -124,7 +124,7 @@ void decode_thread_func() {
   }
 }
 
-void start_decode() {
+void start_decode(JNIEnv *env, jobject thiz) {
   std::thread decode_thread(decode_thread_func);
   decode_thread.detach();
 }
@@ -144,15 +144,27 @@ jboolean get_inited(JNIEnv *env, jobject) {
 
 
 // 更改以获取段句
-jstring get_result(JNIEnv *env, jobject) {
+jbyteArray get_result(JNIEnv *env, jobject) {
   std::string result = decoder->DecodedSomething() ? decoder->result()[0].sentence : "";
   if (!results.empty()) {
     result = results.front();
     results.pop();
   }
-
-  return env->NewStringUTF(result.c_str());
+  jbyteArray arrayByte = (*env).NewByteArray(result.length());
+  auto *singleByte = (jbyte *)result.c_str();
+  env->SetByteArrayRegion(arrayByte, 0, result.length(), singleByte);
+  return arrayByte;
 }
+
+// for test
+jbyteArray javaStringToJniArray(JNIEnv *env, jobject thiz, jstring str) {
+    std::string s = std::string(env->GetStringUTFChars(str, JNI_FALSE));
+    jbyteArray arrayByte = (*env).NewByteArray(s.length());
+    auto *singleByte = (jbyte *)s.c_str();
+    env->SetByteArrayRegion(arrayByte, 0, s.length(), singleByte);
+    return arrayByte;
+}
+
 }  // namespace wenet
 
 JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *) {
@@ -181,8 +193,9 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *) {
       reinterpret_cast<void *>(wenet::get_inited)},
     {"startDecode", "()V",
      reinterpret_cast<void *>(wenet::start_decode)},
-    {"getResult", "()Ljava/lang/String;",
+    {"getByteResult", "()[B",
      reinterpret_cast<void *>(wenet::get_result)},
+    {"javaStringToJniArray","(Ljava/lang/String;)[B",reinterpret_cast<void *>(wenet::javaStringToJniArray)},
   };
   int rc = env->RegisterNatives(c, methods,
                                 sizeof(methods) / sizeof(JNINativeMethod));
@@ -193,4 +206,3 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *) {
 
   return JNI_VERSION_1_6;
 }
-

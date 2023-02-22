@@ -78,4 +78,14 @@
         <item name="android:fontFamily">@font/smiley</item>
         <item name="android:textSize">10sp</item>
     </style>
+
+    <style name="TextAppearance.SmileyBarTitle" parent="TextAppearance.Material3.ActionBar.Title">
+        <item name="fontFamily">@font/smiley</item>
+        <item name="android:fontFamily">@font/smiley</item>
+    </style>
+
+    <style name="TextAppearance.SmileyBarSubTitle" parent="TextAppearance.Material3.ActionBar.Subtitle">
+        <item name="fontFamily">@font/smiley</item>
+        <item name="android:fontFamily">@font/smiley</item>
+    </style>
 </resources>

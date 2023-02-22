@@ -32,7 +32,8 @@ class FileAdapter(private val data_list: List<FileItem>) :
                 MIME 媒体类型，如 image/jpeg 或 audio/mpeg4-generic。子类型可以是星号通配符 (*)，以指示任何子类型都匹配。
                 Intent 过滤器经常会声明仅包含 android:mimeType 属性的 <data>。
                 intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, file_path);
-            */parent.context.startActivity(intent)
+            */
+            parent.context.startActivity(intent)
         }
         viewHolder.file_bt.setOnClickListener { v: View? ->
             val text_path = data_list[viewHolder.bindingAdapterPosition].file_path
@@ -45,6 +46,10 @@ class FileAdapter(private val data_list: List<FileItem>) :
             intent.putExtra(Intent.EXTRA_STREAM, uri)
             intent.type = "text/plain"
             parent.context.startActivity(intent)
+        }
+        viewHolder.delete_bt.setOnClickListener { v:View? ->
+            val text_path = data_list[viewHolder.bindingAdapterPosition].file_path
+            text_path.delete()
         }
         return viewHolder
     }
@@ -61,10 +66,12 @@ class FileAdapter(private val data_list: List<FileItem>) :
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val file_text: TextView
         val file_bt: AppCompatImageView
+        val delete_bt: AppCompatImageView
 
         init {
             file_text = view.findViewById<View>(R.id.file_card_text) as TextView
             file_bt = view.findViewById(R.id.file_card_bt)
+            delete_bt = view.findViewById(R.id.file_delete_bt)
         }
     }
 }

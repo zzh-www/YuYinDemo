@@ -2,42 +2,48 @@
 <com.yuyin.demo.view.FloatView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
+    android:layout_height="@dimen/fab_mini_height"
+    android:background="@android:color/transparent"
     android:clipChildren="true">
 
-    <com.google.android.material.circularreveal.cardview.CircularRevealCardView
-        android:id="@+id/floating_card"
-        android:layout_width="wrap_content"
-        android:layout_height="@dimen/fab_mini_height"
-        app:cardBackgroundColor="@android:color/transparent">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent">
-
-            <com.google.android.material.imageview.ShapeableImageView
-                android:id="@+id/floating_bt"
-                android:layout_width="@dimen/fab_mini_height"
-                android:layout_height="match_parent"
-                android:src="@drawable/cyuyin"
-                android:background="@android:color/white"
-                app:shapeAppearance="@style/RoundedStyle"
-                app:strokeColor="@color/black"
-                app:strokeWidth="@dimen/cardview_default_radius"/>
-
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/flow_text"
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/floating_card"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/fab_mini_height"
+            app:cardBackgroundColor="@android:color/transparent"
+            app:cardCornerRadius="@dimen/corner_radius_small"
+            app:cardElevation="0dp"
+            app:cardMaxElevation="0dp"
+            app:strokeWidth="0dp">
+            
+            <LinearLayout
                 android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:gravity="center_vertical|end"
-                android:layout_marginStart="@dimen/margin_small"
-                android:ellipsize="none"
-                android:singleLine="true"
-                android:textAppearance="@style/TextAppearance.SmileyFontSubtitle1"
-                android:textColor="@color/black" />
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/floating_bt"
+                    android:layout_width="@dimen/fab_mini_height"
+                    android:layout_height="match_parent"
+                    android:src="@drawable/cyuyin"
+                    app:shapeAppearance="@style/CutStyle"
+                    app:strokeColor="?attr/colorPrimary"
+                    android:background="@color/md_theme_light_primaryContainer"
+                    app:strokeWidth="@dimen/margin_small" />
 
-        </LinearLayout>
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/flow_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:ellipsize="none"
+                    android:gravity="center_vertical|end"
+                    android:singleLine="true"
+                    android:textAppearance="@style/TextAppearance.SmileyFontSubtitle1"
+                    android:textColor="?attr/colorOnBackground"
+                    android:text="aaa"/>
 
-    </com.google.android.material.circularreveal.cardview.CircularRevealCardView>
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
 
 </com.yuyin.demo.view.FloatView>

@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.content.res.Resources.Theme
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioPlaybackCaptureConfiguration
@@ -21,6 +22,7 @@ import android.os.IBinder
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import com.google.android.material.color.MaterialColors
 import com.yuyin.demo.MainActivityView
 import com.yuyin.demo.R
 import com.yuyin.demo.YuYinUtil.ACTION_ALL
@@ -147,8 +149,8 @@ class MediaCaptureService : Service() {
         pendingIntent =
             PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
         pre_notificationBUilder = NotificationCompat.Builder(this, m_NOTIFICATION_CHANNEL_ID)
-            .setSmallIcon(R.drawable.icon_launcher_foreground)
-            .setColor(ContextCompat.getColor(this, R.color.primaryDarkColor))
+            .setSmallIcon(R.drawable.cyuyin)
+            .setColor(theme.obtainStyledAttributes(intArrayOf(R.attr.colorPrimary)).getColor(0,ContextCompat.getColor(this,R.color.md_theme_light_primary)))
             .setContentTitle("余音")
             .setContentText("ASR")
         m_mediaProjectionManager =
@@ -307,6 +309,7 @@ class MediaCaptureService : Service() {
         }
         Log.i("ZZH", String.format("Recording finished. File saved to '%s'", filePath))
     }
+
 
     companion object {
         const val m_RECORDER_SAMPLERATE = 16000

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">YuYinDemo</string>
+    <string name="app_name">YuYin</string>
     <string name="title_activity_capture">CaptureActivity</string>
     <!-- Strings used for fragments for navigation -->
     <string name="first_fragment_label">First Fragment</string>
@@ -29,4 +29,7 @@
     </string>
     <string name="attachment_summary_off">Only download attachments when manually requested</string>
     <string name="title_activity_settings">SettingsActivity</string>
+    <string name="welcome_sentence">welcome use!</string>
+    <string name="author">zzh</string>
+    <string name="email">zzh-www@qq.com</string>
 </resources>

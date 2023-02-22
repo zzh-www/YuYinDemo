@@ -71,7 +71,7 @@ class RunningRecordViewModel : ViewModel() {
                 while (asrState) {
 //                    emit(",,,, ")
                     try {
-                        val result = Recognize.getResult()
+                        val result = Recognize.result
                         if (result!="")
                             emit(result)
 //                        Log.d(LOGTAG,"decode $i")

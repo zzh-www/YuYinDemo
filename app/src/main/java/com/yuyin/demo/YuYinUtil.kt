@@ -45,7 +45,6 @@ object YuYinUtil {
 
     // 所需请求的权限
     val appPermissions = arrayOf(
-        Manifest.permission.WRITE_EXTERNAL_STORAGE,
         Manifest.permission.RECORD_AUDIO,
         Manifest.permission.FOREGROUND_SERVICE
     )

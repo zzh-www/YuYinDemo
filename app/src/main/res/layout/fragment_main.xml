@@ -4,25 +4,15 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    tools:context=".Main">
+    tools:context=".Main"
+    android:theme="@style/YuyinTheme">
 
     <RelativeLayout
-        android:orientation="vertical"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:theme="@style/YuyinTheme">
 
-
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/text_main"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_centerInParent="true"
-
-            android:gravity="center"
-            android:singleLine="true"
-            android:text="welcome use!"
-            android:textAllCaps="true"
-            android:textAppearance="@style/TextAppearance.SmileyFontHeadline2" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/capture_asr_bt"
@@ -30,33 +20,65 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
 
-            android:layout_centerHorizontal="true"
             android:layout_alignParentBottom="true"
+            android:layout_centerHorizontal="true"
             android:layout_marginBottom="10dp"
 
-            app:icon="@drawable/ic_cap_asr"
             android:text="capture_asr"
+            app:cornerRadius="30dp"
+            app:icon="@drawable/ic_cap_asr"
             app:iconGravity="textEnd"
-            app:iconSize="24sp"
-            app:cornerRadius="30dp"/>
+            app:iconSize="24sp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/record_asr_bt"
-
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-
             android:layout_above="@+id/capture_asr_bt"
-
-
             android:layout_centerHorizontal="true"
-
-
-            android:text="record_asr"
+            android:text=" record_asr"
+            app:cornerRadius="30dp"
             app:icon="@drawable/ic_record_asr"
             app:iconGravity="textEnd"
-            app:iconSize="24sp"
-            app:cornerRadius="30dp"/>
+            app:iconSize="24sp" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:padding="@dimen/margin_large"
+            app:strokeColor="?attr/colorPrimaryContainer"
+            app:strokeWidth="@dimen/margin_normal">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_margin="@dimen/margin_large"
+                android:orientation="vertical"
+                android:theme="@style/YuyinTheme">
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/text_welcome"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="@string/welcome_sentence"
+                    android:textAllCaps="true"
+                    android:textAppearance="@style/TextAppearance.SmileyFontHeadline2"
+                    android:textColor="?attr/colorOnBackground" />
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/text_appInfo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:gravity="center"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                    android:textColor="?attr/colorOnBackground" />
+            </LinearLayout>
+
+
+        </com.google.android.material.card.MaterialCardView>
 
 
     </RelativeLayout>
