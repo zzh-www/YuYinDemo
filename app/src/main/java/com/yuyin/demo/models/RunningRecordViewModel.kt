@@ -24,6 +24,7 @@ class RunningRecordViewModel : ViewModel() {
     var recordState = false
     var miniBufferSize = 0
     private val MAX_QUEUE_SIZE = 2500
+
     // 100 seconds audio, 1 / 0.04 * 100
     val SAMPLE_RATE = 16000 // The sampling rate
 
@@ -72,11 +73,11 @@ class RunningRecordViewModel : ViewModel() {
 //                    emit(",,,, ")
                     try {
                         val result = Recognize.result
-                        if (result!="")
+                        if (result != "")
                             emit(result)
 //                        Log.d(LOGTAG,"decode $i")
                     } catch (e: Exception) {
-                        Log.e(LOGTAG,"error in decode : ${e.message}")
+                        Log.e(LOGTAG, "error in decode : ${e.message}")
                     }
                 }
             }.collect {
@@ -95,8 +96,8 @@ class RunningRecordViewModel : ViewModel() {
                     speechList[position].text = it
                     adapter.notifyItemChanged(position)
                     speechList.add(SpeechText(" ")) // add new para
-                    adapter.notifyItemInserted(position+1)
-                    recyclerView.scrollToPosition(position+1)
+                    adapter.notifyItemInserted(position + 1)
+                    recyclerView.scrollToPosition(position + 1)
                 } else {
                     speechList[position].text = it // update latest para
                     adapter.notifyItemChanged(position)

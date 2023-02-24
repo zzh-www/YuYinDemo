@@ -1,17 +1,24 @@
 package com.yuyin.demo
 
+import android.content.Intent
+import android.media.AudioRecord
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
+import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.Navigation.findNavController
 import com.yuyin.demo.YuYinUtil.checkRequestPermissions
 import com.yuyin.demo.databinding.FragmentMainBinding
 import com.yuyin.demo.models.YuyinViewModel
+import com.yuyin.demo.view.speech.SettingsActivity
 
 class Main : Fragment() {
+
+    companion object {
+        const val tag = "Main"
+    }
+
     private var binding: FragmentMainBinding? = null
 
     private val yuyinViewModel: YuyinViewModel by activityViewModels()
@@ -23,13 +30,34 @@ class Main : Fragment() {
         // Inflate the layout for this fragment
         binding =
             FragmentMainBinding.inflate(inflater, container, false)
+        // 改为 MenuHost 控制toolbar菜单
+        // Add menu items without overriding methods in the Activity
+        requireActivity().addMenuProvider(object : MenuProvider {
+            override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+                // Add menu items here
+                menu.clear()
+                menuInflater.inflate(R.menu.bar_menu, menu)
+            }
+
+            override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+                // Handle the menu selection
+                when (menuItem.itemId) {
+                    // 跳转至设定界面
+                    R.id.setting_option -> {
+                        val intent = Intent(requireActivity(), SettingsActivity::class.java)
+                        startActivity(intent)
+                    }
+                }
+                return false
+            }
+        })
         return binding!!.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding!!.recordAsrBt.setOnClickListener { v: View? ->
-            if (checkRequestPermissions(requireActivity(), requireContext())) {
+            if (check()) {
                 findNavController(
                     requireActivity(),
                     R.id.yuyin_nav_host_container_fragment
@@ -37,7 +65,7 @@ class Main : Fragment() {
             }
         }
         binding!!.captureAsrBt.setOnClickListener { v: View? ->
-            if (checkRequestPermissions(requireActivity(), requireContext()) && yuyinViewModel.recorder != null) {
+            if (check()) {
                 findNavController(
                     requireActivity(),
                     R.id.yuyin_nav_host_container_fragment
@@ -45,6 +73,12 @@ class Main : Fragment() {
             }
         }
     }
+
+    private fun check() = checkRequestPermissions(requireActivity(), requireContext())
+            && yuyinViewModel.recorder != null
+            && yuyinViewModel.recorder!!.state == AudioRecord.STATE_INITIALIZED
+            && (requireActivity() as MainActivityView).checkFloatView()
+
 
     override fun onDestroyView() {
         super.onDestroyView()

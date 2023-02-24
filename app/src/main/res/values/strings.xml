@@ -32,4 +32,7 @@
     <string name="welcome_sentence">welcome use!</string>
     <string name="author">zzh</string>
     <string name="email">zzh-www@qq.com</string>
+    <string name="save">save</string>
+    <string name="stop">stop</string>
+    <string name="start">start</string>
 </resources>

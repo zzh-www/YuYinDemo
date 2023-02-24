@@ -3,7 +3,7 @@
 
     <item
         android:id="@+id/main_dest"
-        android:icon="@drawable/ic_main"
+        android:icon="@drawable/cyuyin36"
         android:title="@string/main"
         android:checkable="true"
         android:checked="true"/>

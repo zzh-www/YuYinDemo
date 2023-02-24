@@ -25,7 +25,6 @@ class FloatView @JvmOverloads constructor(context: Context, attrs: AttributeSet?
     private var inRange = false
     private var zoomSize = DisplayUtils.dp2px(context, 4f).toFloat()
     private var listener: OnTouchRangeListener? = null
-    private var myIcon: Bitmap? = ResourcesCompat.getDrawable(context.resources,R.drawable.ic_main,null)?.toBitmap()
 
     init {
         attrs?.apply { initAttrs(this) }

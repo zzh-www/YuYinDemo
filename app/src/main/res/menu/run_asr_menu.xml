@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
-    <item android:id="@+id/setting_option"
-        android:icon="@drawable/settings_icon36"
-        android:title="@string/app_setting"
+    <item android:id="@+id/save_option"
+        android:icon="@drawable/save_icon36"
+        android:title="@string/save"
         app:showAsAction="ifRoom"/>
 </menu>

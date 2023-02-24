@@ -11,15 +11,12 @@ import android.os.Environment
 import android.os.IBinder
 import android.provider.Settings
 import android.view.Gravity
-import android.view.Menu
-import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.navigation.NavController
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
@@ -41,7 +38,6 @@ import com.yuyin.demo.YuYinUtil.EXTRA_RESULT_CODE
 import com.yuyin.demo.YuYinUtil.m_CREATE_SCREEN_CAPTURE
 import com.yuyin.demo.databinding.ActivityMainViewBinding
 import com.yuyin.demo.models.YuyinViewModel
-import com.yuyin.demo.view.speech.SettingsActivity
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -51,12 +47,16 @@ import com.yuyin.demo.YuYinUtil.YuYinLog as Log
 
 class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallbacks {
 
+    companion object {
+        const val tag = "YUYIN_ACTIVITY"
+
+        const val floatTag = "float view"
+    }
+
     // 视图绑定
     private lateinit var binding: ActivityMainViewBinding
 
     private val m_ALL_PERMISSIONS_PERMISSION_CODE = 1000
-
-    private val YuYinLog_TAG = "YUYIN"
 
     // 层级配置
     private lateinit var appBarConfiguration: AppBarConfiguration
@@ -81,11 +81,12 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
         // 应用自定义toolbar
         setSupportActionBar(binding.actionBar)
 
+
         // 获取NavHostFragment
-        val host: NavHostFragment =
+        val navHost =
             supportFragmentManager.findFragmentById(R.id.yuyin_nav_host_container_fragment) as NavHostFragment?
                 ?: return
-        val navController: NavController = host.navController
+        val navController = navHost.navController
 
         // 设定顶层
         appBarConfiguration = AppBarConfiguration(
@@ -93,47 +94,34 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
         )
 
         // 使得 actionbar 适应导航图 在非顶层可以返回
-        setupActionBar(navController, appBarConfiguration)
+        setupActionBarWithNavController(navController, appBarConfiguration)
 
         // 应用底层导航菜单
-        setupBottomNavMenu(navController)
+        val bottomNav = binding.mainBottomNavigation
+        bottomNav.setupWithNavController(navController)
+
 
         // 控制底部导航条只出现在main_dest fileManager_dest
-        navController.addOnDestinationChangedListener { controller, destination, arguments ->
-            if (destination.id == R.id.runingCapture_dest || destination.id == R.id.runingRecord_dest) {
-                binding.mainBottomNavigation.visibility = View.INVISIBLE
-                binding.mainBottomNavigation.isEnabled = false
-            } else {
-                binding.mainBottomNavigation.visibility = View.VISIBLE
-                binding.mainBottomNavigation.isEnabled = true
-            }
-        }
-        // 开启浮窗
-        EasyFloat.with(this@MainActivityView)
-            .setLayout(R.layout.floatview)
-            .setShowPattern(ShowPattern.BACKGROUND) // 应用后台时显示
-            .setSidePattern(SidePattern.RESULT_HORIZONTAL) // 吸附 根据移动后的位置贴附到边缘
-            .setTag("Capture") // 设置TAG管理
-            .setDragEnable(true) // 可拖拽
-            .hasEditText(false) // 无编辑框，无需适配键盘
-            .setLocation(100, 0)
-            .setGravity(Gravity.END or Gravity.CENTER_VERTICAL, 0, 0)
-            .setLayoutChangedGravity(Gravity.END)
-            //  .setBorder()
-            .setMatchParent(false, false)
-            .setAnimator(com.lzf.easyfloat.anim.DefaultAnimator())
-            .setFilter(SettingsActivity::class.java) // 过滤ACTIVITY
-            .setFilter(MainActivityView::class.java)
-            .setDisplayHeight { context -> DisplayUtils.rejectedNavHeight(context) }
-            .registerCallback {
-                dragEnd {
-                    //TODO 获取当前重新绘制
-                    //it.draw()
+        navController.addOnDestinationChangedListener() { controller, destination, arguments ->
+            runOnUiThread {
+                if (destination.id == R.id.runingCapture_dest || destination.id == R.id.runingRecord_dest) {
+                    binding.mainBottomNavigation.let {
+                        it.visibility = View.GONE
+                        it.isEnabled = false
+                    }
+                    showFloatView()
+                } else if (destination.id == R.id.main_dest) {
+                    binding.mainBottomNavigation.let {
+                        it.visibility = View.VISIBLE
+                        it.isEnabled = false
+                    }
+                    destroyFloatView()
                 }
             }
-            .show()
+        }
         initNotification()
-
+        showFloatView()
+        destroyFloatView()
     }
 
     override fun onResume() {
@@ -149,44 +137,16 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
     }
 
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        // 在actionbar应用自定义菜单
-        menuInflater.inflate(R.menu.bar_menu, menu)
-        return true
-    }
-
     override fun onDestroy() {
         super.onDestroy()
         model.recorder?.release()
         model.recorder = null
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            // 跳转至设定界面
-            R.id.setting_option -> {
-                val intent = Intent(this, SettingsActivity::class.java)
-                startActivity(intent)
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
-
     override fun onSupportNavigateUp(): Boolean {
-        //
         return findNavController(R.id.yuyin_nav_host_container_fragment).navigateUp(
             appBarConfiguration
         )
-    }
-
-    private fun setupBottomNavMenu(navController: NavController) {
-        val bottomNav = binding.mainBottomNavigation
-        bottomNav.setupWithNavController(navController)
-    }
-
-    private fun setupActionBar(navController: NavController, appBarConfig: AppBarConfiguration) {
-        setupActionBarWithNavController(navController, appBarConfig)
     }
 
     override fun onPermissionsDenied(requestCode: Int, perms: List<String>) {
@@ -241,7 +201,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
             }
         } catch (e: IOException) {
             Log.e(
-                YuYinLog_TAG,
+                tag,
                 "Error process asset $assetName to file path"
             )
         }
@@ -320,21 +280,52 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
                 this.startForegroundService(i)
             } else {
                 // 退出应用
-                finishAffinity()
-                exitProcess(0)
+                exitApp()
             }
         }.launch(intent)
+    }
+
+    private fun exitApp() {
+        finishAffinity()
+        exitProcess(1)
+    }
+
+    private fun showFloatView() {
+        EasyFloat.with(this@MainActivityView)
+            .setLayout(R.layout.floatview)
+            .setShowPattern(ShowPattern.BACKGROUND) // 应用后台时显示
+            .setSidePattern(SidePattern.RESULT_HORIZONTAL) // 吸附 根据移动后的位置贴附到边缘
+            .setTag(floatTag) // 设置TAG管理
+            .setDragEnable(true) // 可拖拽
+            .hasEditText(false) // 无编辑框，无需适配键盘
+            .setLocation(100, 0)
+            .setGravity(Gravity.START or Gravity.CENTER_VERTICAL, 0, 0)
+            .setLayoutChangedGravity(Gravity.START)
+            //  .setBorder()
+            .setMatchParent(false, false)
+            .setAnimator(com.lzf.easyfloat.anim.DefaultAnimator())
+            .setDisplayHeight { context -> DisplayUtils.rejectedNavHeight(context) }
+            .registerCallback {
+                dragEnd {
+                    //TODO 获取当前重新绘制
+                    //it.draw()
+                }
+            }
+            .show()
+    }
+
+    fun checkFloatView(): Boolean = EasyFloat.getFloatView(floatTag) != null
+
+    private fun destroyFloatView() {
+        EasyFloat.hide(floatTag)
     }
 
     // 广播服务
     // 不可以耗时操作  在主线程中
     // 避免使用 binding 可能是全局创建的唯一实例...
-    // 不要直接启动线程
     inner class CaptureAudioReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val action = intent.action
-            // 获取frg
-            // 每次都会重新创建一个新的实例,所以要强制更新,之前frag会被销毁,不更新或者调用之前fra会导致null错误
             if (action.equals(CaptureAudio_ALL, ignoreCase = true)) {
                 val actionName = intent.getStringExtra(EXTRA_CaptureAudio_NAME)
                 if (actionName != null && !actionName.isEmpty()) {

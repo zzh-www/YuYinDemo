@@ -6,15 +6,11 @@
     android:layout_height="match_parent"
     tools:context=".RunningRecord">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
-
-
-        <!--        <com.mobvoi.wenet.VoiceRectView-->
-        <!--            android:id="@id/rect_run_cap"-->
-        <!--            android:layout_width="match_parent"-->
-        <!--            android:layout_height="wrap_content"/>-->
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="bottom">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recycler_run_record"
@@ -22,34 +18,23 @@
             android:layout_height="0dp"
             android:layout_marginTop="16dp"
             android:layout_marginBottom="8dp"
-            app:layout_constraintBottom_toTopOf="@+id/stop_bt_run_record"
-            app:layout_constraintTop_toTopOf="parent"
             tools:layout_editor_absoluteX="0dp" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/stop_bt_run_record"
+        <com.google.android.material.textview.MaterialTextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:layout_marginHorizontal="32dp"
-            android:text="stop"
-            app:layout_constraintBottom_toTopOf="@+id/save_bt_run_record"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
+            android:textAlignment="center"
+            android:text="Hi"/>
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/save_bt_run_record"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
+            android:id="@+id/run_record_bt"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/fab_height"
+            android:layout_gravity="center"
             android:layout_marginHorizontal="32dp"
-            android:text="save"
-            android:visibility="invisible"
-            android:enabled="false"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
+            android:layout_marginBottom="8dp"
+            android:text="@string/stop" />
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
 
 </FrameLayout>

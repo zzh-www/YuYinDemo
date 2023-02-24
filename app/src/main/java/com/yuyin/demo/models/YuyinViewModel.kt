@@ -2,6 +2,7 @@ package com.yuyin.demo.models
 
 import android.media.AudioRecord
 import androidx.lifecycle.ViewModel
+import com.yuyin.demo.Main.Companion.tag
 
 class YuyinViewModel : ViewModel() {
 
@@ -14,5 +15,9 @@ class YuyinViewModel : ViewModel() {
     var change_senor = false
 
     var recorder: AudioRecord? = null
+
+    var CurrentView = tag
+
+    var bottomHeight: Int = 0
 
 }
