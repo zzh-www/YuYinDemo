@@ -5,19 +5,22 @@ import android.media.AudioRecord
 import android.os.Bundle
 import android.view.*
 import android.widget.TextView
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.lzf.easyfloat.EasyFloat
 import com.mobvoi.wenet.Recognize
 import com.yuyin.demo.YuYinUtil.save_file
-import com.yuyin.demo.databinding.FragmentRuningCaptureBinding
+import com.yuyin.demo.databinding.FragmentRunningAsrBinding
 import com.yuyin.demo.models.RunningCaptureViewModel
 import com.yuyin.demo.models.YuyinViewModel
+import com.yuyin.demo.view.speech.SpeechText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -29,7 +32,7 @@ class RuningCapture : Fragment() {
         const val tag = "YUYIN_RECORD"
     }
 
-    private var _binding: FragmentRuningCaptureBinding? = null
+    private var _binding: FragmentRunningAsrBinding? = null
     private val binding get() = _binding!!
 
     // 滚动视图
@@ -40,8 +43,6 @@ class RuningCapture : Fragment() {
 
     private val yuYinModel: YuyinViewModel by activityViewModels()
 
-    private var initModel = false
-
     private var startModel = false
 
     override fun onCreateView(
@@ -49,7 +50,7 @@ class RuningCapture : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         // Inflate the layout for this fragment
-        _binding = FragmentRuningCaptureBinding.inflate(inflater, container, false)
+        _binding = FragmentRunningAsrBinding.inflate(inflater, container, false)
         requireActivity().addMenuProvider(object : MenuProvider {
             override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
                 menu.clear()
@@ -59,82 +60,97 @@ class RuningCapture : Fragment() {
             override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
                 return when (menuItem.itemId) {
                     R.id.save_option -> {
-                        save_file(requireContext(), model.speechList)
+                        model.viewModelScope.launch(Dispatchers.IO) {
+                            val result = StringBuilder()
+                            for (i in model.speechList) {
+                                result.append(i.text)
+                                result.append("\n")
+                            }
+                            if (!binding.runRecordHotView.text.isNullOrBlank()) {
+                                result.append(binding.runRecordHotView.text.toString())
+                            }
+                            save_file(
+                                requireContext(),
+                                result.toString(),
+                                binding.titleText.toString()
+                            )
+                        }
                         true
                     }
                     else -> false
                 }
             }
 
-        })
+        }, viewLifecycleOwner, Lifecycle.State.RESUMED)
+
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val floatView = EasyFloat.getFloatView(MainActivityView.floatTag)!!.findViewById<TextView>(R.id.flow_text)
-
+        val floatView = EasyFloat.getFloatView(MainActivityView.floatTag)!!
+            .findViewById<TextView>(R.id.flow_text)
         initRunner()
-
+        binding.runRecordBt.isEnabled = false
         model.viewModelScope.launch(Dispatchers.IO) {
-            if (!initModel) {
-                Log.e(tag, "${Recognize.getInit()} init model")
-                YuYinUtil.prepareModel(requireActivity() as MainActivityView)
-                Recognize.init(yuYinModel.model_path, yuYinModel.dic_path)  // 初始化模型
-                initModel = true
-                withContext(Dispatchers.Main) {
-                    // 订阅结果
-                    model.updateFlow(floatView, recyclerView)
-                }
+            Log.e(tag, "${Recognize.getInit()} init model")
+            YuYinUtil.prepareModel(requireActivity() as MainActivityView)
+            Recognize.init(yuYinModel.model_path, yuYinModel.dic_path)  // 初始化模型
+            withContext(Dispatchers.Main) {
+                // 订阅结果
+                binding.runRecordBt.isEnabled = true
+                model.updateFlow(floatView, recyclerView, binding.runRecordHotView)
             }
         }
-
-
-
-        binding.stopBtRunCap.setOnClickListener {
+        binding.runRecordBt.setOnClickListener {
             if (model.recordState) {
-                model.viewModelScope.launch(Dispatchers.Main) {
-                    if (!initModel && Recognize.getInit()) {
-                        //延迟10毫秒
-                        withContext(Dispatchers.Main) {
-                            binding.stopBtRunCap.isEnabled = true
-                            model.recordState = false
-                            model.asrState = false
-                            floatView.text = ""
+                binding.runRecordBt.isEnabled = false
+                model.viewModelScope.launch(Dispatchers.IO) {
+                    withContext(Dispatchers.Main) {
+                        binding.runRecordBt.isEnabled = true
+                        model.recordState = false
+                        model.asrState = false
+                        floatView.text = ""
+                    }
+                    model.record.stop()
+                    if (!Recognize.getFinished())
+                        Recognize.setInputFinished()
+                    withContext(Dispatchers.Main) {
+                        binding.runRecordBt.text = requireContext().getString(R.string.start)
+                        binding.runRecordBt.icon =
+                            AppCompatResources.getDrawable(requireContext(), R.drawable.play_icon36)
+                        binding.runRecordBt.isEnabled = true
+                        if (!binding.runRecordHotView.text.isNullOrBlank()) {
+                            model.speechList.add(SpeechText(binding.runRecordHotView.text.toString()))
+                            model.adapter.notifyItemInserted(model.speechList.size)
+                            recyclerView.scrollToPosition(model.speechList.size)
                         }
-                        model.record.stop()
-//                        if (!Recognize.getFinished())
-                        // 调用的条件是 必须为false 因为就是为了设置为false
-//                            Recognize.setInputFinished()
-                        withContext(Dispatchers.Main) {
-                            binding.stopBtRunCap.text = "start"
-                            binding.saveBtRunCap.visibility = View.VISIBLE
-                            binding.saveBtRunCap.isEnabled = true
-                        }
-                    } else {
-                        YuYinUtil.prepareModel(requireActivity() as MainActivityView)
-                        Recognize.init(yuYinModel.model_path, yuYinModel.dic_path)
                     }
                 }
             } else {
                 model.viewModelScope.launch(Dispatchers.IO) {
                     // 确保上一轮次确实已经结束
                     //TODO 可以考虑不终止转录 只终止record
-                    if (!initModel && Recognize.getInit()) {
-//                        Recognize.reset()
+                    if (Recognize.getInit()) {
+                        withContext(Dispatchers.Main) {
+                            binding.runRecordBt.isEnabled = false
+                        }
+                        Recognize.reset()
                         startRecord()
                         withContext(Dispatchers.Main) {
                             model.recordState = true
                             model.asrState = true
-                            binding.saveBtRunCap.visibility = View.INVISIBLE
-                            binding.saveBtRunCap.isEnabled = false
                         }
-                        if (startModel == false) {
-                            Recognize.startDecode()
-                            startModel = true
-                        }
-//                        Recognize.startDecode()
+                        Recognize.startDecode()
                         model.getTextFlow()
+                        withContext(Dispatchers.Main) {
+                            binding.runRecordBt.text = requireContext().getString(R.string.stop)
+                            binding.runRecordBt.icon = AppCompatResources.getDrawable(
+                                requireContext(),
+                                R.drawable.stop_icon36
+                            )
+                            binding.runRecordBt.isEnabled = true
+                        }
                     } else {
                         YuYinUtil.prepareModel(requireActivity() as MainActivityView)
                         Recognize.init(yuYinModel.model_path, yuYinModel.dic_path)
@@ -142,15 +158,10 @@ class RuningCapture : Fragment() {
                 }
             }
         }
-        binding.saveBtRunCap.setOnClickListener { // get all Resukt
-            // saveToFile
-            save_file(requireContext(), model.speechList)
-        }
     }
 
     private fun startRecord() {
         model.record.startRecording()
-        binding.stopBtRunCap.text = "stop"
         model.produceAudio()
     }
 
@@ -177,19 +188,15 @@ class RuningCapture : Fragment() {
     private fun initRunner() {
         // 滚动视图
         model.linearLayoutManager = LinearLayoutManager(context)
-        recyclerView = binding.recyclerRunCap
+        recyclerView = binding.recyclerRunRecord
         recyclerView.layoutManager = model.linearLayoutManager
         recyclerView.adapter = model.adapter
         // false false
         // true true
-        if (!model.change_senor) {
-            // 正常启动绘制
-            initRecorder()
-            binding.stopBtRunCap.text = "start"
-            binding.saveBtRunCap.visibility = View.VISIBLE
-            binding.saveBtRunCap.isEnabled = true
-        }
-
+        initRecorder()
+        binding.runRecordBt.text = this.getString(R.string.start)
+        binding.runRecordBt.icon =
+            AppCompatResources.getDrawable(requireContext(), R.drawable.play_icon36)
     }
 
 

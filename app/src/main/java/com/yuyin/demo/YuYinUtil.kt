@@ -51,23 +51,28 @@ object YuYinUtil {
     const val m_ALL_PERMISSIONS_PERMISSION_CODE = 1000
 
     @JvmStatic
-    fun save_file(context: Context, speechList: List<SpeechText>) {
+    fun save_file(context: Context, text: String, title: String? = null) {
         val timeStamp = System.currentTimeMillis()
         val sdf = SimpleDateFormat("yyyyMMddHHmmss", Locale.CHINA)
-        val filename = sdf.format(Date(timeStamp.toString().toLong())) + ".txt"
-        val dir_path = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
-        val file =
-            File(dir_path!!.absoluteFile.toString() + File.separator + "YuYin" + File.separator + filename)
-        val total_result = StringBuilder()
-        for (i in speechList) {
-            total_result.append(i.text)
-            total_result.append("\n")
+        val dateStr = sdf.format(Date(timeStamp.toString().toLong()))
+        val type = ".txt"
+        val dir_path = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: return
+        var file: File? = null
+        if (title.isNullOrBlank()) {
+            file =
+                File(dir_path.absoluteFile.toString() + File.separator + "YuYin" + File.separator + dateStr + type)
+        } else {
+            file =
+                File(dir_path.absoluteFile.toString() + File.separator + "YuYin" + File.separator + title + type)
+            if (file.exists()) {
+                file = File(dir_path.absoluteFile.toString() + File.separator + "YuYin" + File.separator + title + "_" + dateStr + type)
+            }
         }
         try {
             if (file.createNewFile()) {
                 FileOutputStream(file.absolutePath).use { op ->
                     op.write(
-                        total_result.toString().toByteArray(
+                        text.toByteArray(
                             StandardCharsets.UTF_8
                         )
                     )
@@ -116,7 +121,7 @@ object YuYinUtil {
 
 
     object YuYinLog {
-        private const val level = Log.ERROR
+        private const val level = Log.INFO
         fun v(tag: String?, msg: String?) {
             if (level <= Log.VERBOSE) {
                 Log.v(tag, msg!!)

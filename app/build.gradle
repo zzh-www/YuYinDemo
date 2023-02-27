@@ -124,7 +124,7 @@ dependencies {
     implementation 'com.github.pengzhendong:wenet-openfst-android:1.0.2'
     extractForNativeBuild 'com.github.pengzhendong:wenet-openfst-android:1.0.2'
     implementation "androidx.core:core-ktx:1.9.0"
-    implementation 'com.github.princekin-f:EasyFloat:2.0.3'
+    implementation 'com.github.princekin-f:EasyFloat:2.0.4'
 }
 
 task extractAARForNativeBuild {

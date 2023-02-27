@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:shape="line">
+    <stroke
+        android:width="3px"
+        android:dashGap="@dimen/margin_small"
+        android:dashWidth="10dp"
+        android:color="?attr/colorPrimary" />
+    <size
+        android:height="@dimen/margin_normal"/>
+</shape>

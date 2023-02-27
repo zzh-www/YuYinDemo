@@ -9,6 +9,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.Navigation.findNavController
 import com.yuyin.demo.YuYinUtil.checkRequestPermissions
+import com.yuyin.demo.YuYinUtil.YuYinLog as Log
 import com.yuyin.demo.databinding.FragmentMainBinding
 import com.yuyin.demo.models.YuyinViewModel
 import com.yuyin.demo.view.speech.SettingsActivity
@@ -74,11 +75,25 @@ class Main : Fragment() {
         }
     }
 
-    private fun check() = checkRequestPermissions(requireActivity(), requireContext())
-            && yuyinViewModel.recorder != null
-            && yuyinViewModel.recorder!!.state == AudioRecord.STATE_INITIALIZED
-            && (requireActivity() as MainActivityView).checkFloatView()
-
+    private fun check(): Boolean {
+        if (!checkRequestPermissions(requireActivity(), requireContext())) {
+            Log.e(tag,"no permission for asr")
+            return false
+        }
+        if (yuyinViewModel.recorder == null) {
+            Log.e(tag,"recorder is null")
+            return false
+        }
+        if (yuyinViewModel.recorder?.state != AudioRecord.STATE_INITIALIZED) {
+            Log.e(tag,"recorder is not init")
+            return false
+        }
+        if (!(requireActivity() as MainActivityView).checkFloatView()) {
+            Log.e(tag,"checkFloatView false")
+            return false
+        }
+        return true
+    }
 
     override fun onDestroyView() {
         super.onDestroyView()

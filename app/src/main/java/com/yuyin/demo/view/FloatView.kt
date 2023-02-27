@@ -36,7 +36,7 @@ class FloatView @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         context.theme.obtainStyledAttributes(attrs, easyR.styleable.DefaultCloseView, 0, 0).apply {
             normalColor = getColor(easyR.styleable.DefaultCloseView_normalColor, normalColor)
             inRangeColor = getColor(easyR.styleable.DefaultCloseView_inRangeColor, inRangeColor)
-            shapeType = getInt(easyR.styleable.DefaultCloseView_shapeType, shapeType)
+            shapeType = getInt(easyR.styleable.DefaultCloseView_closeShapeType, shapeType)
             zoomSize = getDimension(easyR.styleable.DefaultCloseView_zoomSize, zoomSize)
         }.recycle()
 

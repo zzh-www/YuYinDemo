@@ -78,18 +78,18 @@ void reset(JNIEnv *env, jobject) {
   decoder->Reset();
   state = kEndBatch;
   total_result = "";
+  while (!results.empty()) {
+    results.pop();
+  }
 }
 
 void accept_waveform(JNIEnv *env, jobject, jshortArray jWaveform) {
   jsize size = env->GetArrayLength(jWaveform);
   int16_t* waveform = env->GetShortArrayElements(jWaveform, 0);
   feature_pipeline->AcceptWaveform(waveform,size);
-//  LOG(INFO) << "com.demo.wenet accept waveform in ms: "
-//            << int(floatWaveform.size() / 16);
 }
 
 void set_input_finished(JNIEnv *env, jobject thiz) {
-//  LOG(INFO) << "wenet input finished";
   feature_pipeline->set_input_finished();
 }
 
@@ -112,7 +112,7 @@ void decode_thread_func() {
     } else if (state == kEndpoint) {
 //      LOG(INFO) << "wenet endpoint final result: " << result;
       if (!result.empty()) {
-        results.push(result+" ");
+        results.push(result+"<end>");
       }
       total_result += result + ",";
       decoder->ResetContinuousDecoding();

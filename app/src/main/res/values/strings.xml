@@ -1,15 +1,17 @@
 <resources>
     <string name="app_name">YuYin</string>
     <string name="title_activity_capture">CaptureActivity</string>
+
     <!-- Strings used for fragments for navigation -->
-    <string name="first_fragment_label">First Fragment</string>
-    <string name="second_fragment_label">Second Fragment</string>
+    <string name="capture_label">capture</string>
+    <string name="record_label">record</string>
+    <string name="file_manage_label">files</string>
+    <string name="main_label">main</string>
     <string name="next">Next</string>
     <string name="previous">Previous</string>
 
     <string name="hello_first_fragment">Hello first fragment</string>
     <string name="hello_second_fragment">Hello second fragment. Arg: %1$s</string>
-    <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="file_manager">file_manager</string>
     <string name="app_setting">app_setting</string>

@@ -11,35 +11,35 @@
             android:layout_width="wrap_content"
             android:layout_height="@dimen/fab_mini_height"
             app:cardBackgroundColor="@android:color/transparent"
-            app:cardCornerRadius="@dimen/corner_radius_small"
+            app:cardCornerRadius="@dimen/corner_radius_large"
             app:cardElevation="0dp"
             app:cardMaxElevation="0dp"
             app:strokeWidth="0dp">
             
             <LinearLayout
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:orientation="horizontal">
                 <com.google.android.material.imageview.ShapeableImageView
                     android:id="@+id/floating_bt"
                     android:layout_width="@dimen/fab_mini_height"
                     android:layout_height="match_parent"
                     android:src="@drawable/cyuyin"
-                    app:shapeAppearance="@style/CutStyle"
+                    app:shapeAppearance="@style/RoundedStyle"
                     app:strokeColor="?attr/colorPrimary"
                     android:background="@color/md_theme_light_primaryContainer"
                     app:strokeWidth="@dimen/margin_small" />
 
-                <com.google.android.material.textview.MaterialTextView
-                    android:id="@+id/flow_text"
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:ellipsize="none"
-                    android:gravity="center_vertical|end"
-                    android:singleLine="true"
-                    android:textAppearance="@style/TextAppearance.SmileyFontSubtitle1"
-                    android:textColor="?attr/colorOnBackground"
-                    android:text="aaa"/>
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/flow_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:ellipsize="none"
+                        android:gravity="center_vertical|end"
+                        android:singleLine="true"
+                        android:textAppearance="@style/TextAppearance.SmileyFontSubtitle1"
+                        android:textColor="?attr/colorOnPrimaryContainer"
+                        android:text="assaa"/>
 
             </LinearLayout>
 

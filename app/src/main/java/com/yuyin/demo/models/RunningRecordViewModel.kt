@@ -17,10 +17,10 @@ import java.lang.Exception
 import kotlin.random.Random
 
 class RunningRecordViewModel : ViewModel() {
-    private val LOGTAG = "RunningRecordViewModel"
+    private val tag = "RunningRecordViewModel"
 
     // record
-    lateinit var record: AudioRecord
+    var record: AudioRecord? = null
     var recordState = false
     var miniBufferSize = 0
     private val MAX_QUEUE_SIZE = 2500
@@ -32,14 +32,14 @@ class RunningRecordViewModel : ViewModel() {
     var change_senor = false
 
     // 滚动视图
-    val speechList: ArrayList<SpeechText> = arrayListOf(SpeechText(""))
+    val speechList: ArrayList<SpeechText> = arrayListOf()
 
     //    private lateinit var recyclerView: RecyclerView
     var adapter: SpeechTextAdapter = SpeechTextAdapter(speechList)
 
     lateinit var linearLayoutManager: LinearLayoutManager
 
-    val results = MutableStateFlow("Hi")
+    val results = MutableStateFlow("")
 
 
     // debug
@@ -50,17 +50,15 @@ class RunningRecordViewModel : ViewModel() {
             flow {
                 while (recordState) {
                     val buffer = ShortArray(miniBufferSize / 2)
-                    val read = record.read(buffer, 0, buffer.size)
+                    val read = record?.read(buffer, 0, buffer.size)
                     if (AudioRecord.ERROR_INVALID_OPERATION != read) {
                         emit(buffer)
                     }
                 }
             }.catch {
-                Log.e(LOGTAG, it.message ?: "error in audioflow")
+                Log.e(tag, it.message ?: "error in audio flow")
             }.buffer(MAX_QUEUE_SIZE).collect {
                 Recognize.acceptWaveform(it)
-//                Log.i(LOGTAG, "${it.size} : size of audio")
-//                Log.i(LOGTAG, "$it")
             }
         }
     }
@@ -70,38 +68,38 @@ class RunningRecordViewModel : ViewModel() {
             val i = random.nextInt()
             flow {
                 while (asrState) {
-//                    emit(",,,, ")
                     try {
                         val result = Recognize.result
-                        if (result != "")
+                        if (result != "") {
                             emit(result)
-//                        Log.d(LOGTAG,"decode $i")
+                        }
                     } catch (e: Exception) {
-                        Log.e(LOGTAG, "error in decode : ${e.message}")
+                        Log.e(tag, "error in decode : ${e.message}")
                     }
                 }
             }.collect {
+                Log.i(tag, "result: $it")
                 results.value = it
-//                Log.i(LOGTAG, "collect in decode $it $i $i")
             }
         }
     }
 
-    fun updateFlow(flowText: TextView, recyclerView: RecyclerView) {
+    fun updateFlow(flowText: TextView, recyclerView: RecyclerView, hotText:TextView) {
         viewModelScope.launch(Dispatchers.Main) {
             results.collect {
-                flowText.text = it
                 val position = speechList.size - 1
-                if (it.endsWith(" ")) {
-                    speechList[position].text = it
-                    adapter.notifyItemChanged(position)
-                    speechList.add(SpeechText(" ")) // add new para
+                if (it.endsWith("<end>")) {
+                    speechList.add(SpeechText(it.removeSuffix("<end>"))) // add new para
                     adapter.notifyItemInserted(position + 1)
                     recyclerView.scrollToPosition(position + 1)
                 } else {
-                    speechList[position].text = it // update latest para
-                    adapter.notifyItemChanged(position)
+                    hotText.text = it
+                    val offset = hotText.lineCount * hotText.lineHeight
+                    if (offset > hotText.height) {
+                        hotText.scrollTo(0, offset - hotText.height)
+                    }
                 }
+                flowText.text = it.removeSuffix("<end>")
             }
         }
     }

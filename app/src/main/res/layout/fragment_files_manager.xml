@@ -4,14 +4,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".view.file.FilesManager">
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recycler_file"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"/>
-    </LinearLayout>
-
-
+            android:layout_height="match_parent" />
 </FrameLayout>
