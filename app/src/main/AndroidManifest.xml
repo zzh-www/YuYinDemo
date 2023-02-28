@@ -26,11 +26,11 @@
         </provider>
 
         <activity
-            android:name=".view.speech.SettingsActivity"
+            android:name=".view.SettingsActivity"
             android:exported="false"
             android:label="@string/title_activity_settings" />
         <activity
-            android:name=".MainActivityView"
+            android:name=".view.MainActivityView"
             android:exported="true"
             android:configChanges="orientation|screenSize|uiMode"
             android:launchMode="singleInstance">
@@ -43,7 +43,7 @@
 
 
         <service
-            android:name="com.mobvoi.wenet.MediaCaptureService"
+            android:name=".service.MediaCaptureService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="mediaProjection" />

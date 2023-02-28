@@ -4,7 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".RunningRecord">
+    tools:context=".view.RunningRecord">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -64,5 +64,15 @@
             android:textAppearance="@style/TextAppearance.SmileyBarTitle"/>
 
     </LinearLayout>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/go_down_bt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/go_down_icon24"
+        android:contentDescription="go down"
+        android:layout_gravity="end|bottom"
+        android:layout_margin="@dimen/margin_large"
+        android:visibility="gone"/>
 
 </FrameLayout>

@@ -1,16 +1,16 @@
 package com.yuyin.demo.view
 
 import android.content.Context
-import android.graphics.*
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Region
 import android.util.AttributeSet
 import android.view.MotionEvent
-import androidx.core.content.res.ResourcesCompat
-import androidx.core.graphics.drawable.toBitmap
-import com.lzf.easyfloat.R as easyR
 import com.lzf.easyfloat.interfaces.OnTouchRangeListener
 import com.lzf.easyfloat.utils.DisplayUtils
 import com.lzf.easyfloat.widget.BaseSwitchView
-import com.yuyin.demo.R
+import com.lzf.easyfloat.R as easyR
 
 class FloatView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0) : BaseSwitchView(context, attrs, defStyleAttr) {
 

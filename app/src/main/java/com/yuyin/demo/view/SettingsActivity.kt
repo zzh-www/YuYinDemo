@@ -1,4 +1,4 @@
-package com.yuyin.demo.view.speech
+package com.yuyin.demo.view
 
 import android.content.Context
 import android.content.res.Configuration
@@ -30,7 +30,7 @@ class SettingsActivity : AppCompatActivity() {
             super.onConfigurationChanged(newConfig)
             //TODO stop ASR and then init, restart
             val sharePref = activity?.getPreferences(Context.MODE_PRIVATE) ?: return
-            val languageOfModule = sharePref.getString("languageOfModule", "zh");
+            sharePref.getString("languageOfModule", "zh");
         }
     }
 

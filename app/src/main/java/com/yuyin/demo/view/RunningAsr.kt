@@ -1,16 +1,12 @@
-package com.yuyin.demo
+package com.yuyin.demo.view
 
-import android.Manifest
-import android.content.pm.PackageManager
+
 import android.content.res.Configuration
-import android.media.AudioFormat
 import android.media.AudioRecord
-import android.media.MediaRecorder
 import android.os.Bundle
 import android.view.*
 import android.widget.TextView
 import androidx.appcompat.content.res.AppCompatResources
-import androidx.core.app.ActivityCompat
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -19,34 +15,37 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.lzf.easyfloat.EasyFloat
 import com.mobvoi.wenet.Recognize
+import com.yuyin.demo.R
+import com.yuyin.demo.YuYinUtil
 import com.yuyin.demo.YuYinUtil.save_file
 import com.yuyin.demo.databinding.FragmentRunningAsrBinding
-import com.yuyin.demo.models.RunningRecordViewModel
-import com.yuyin.demo.models.YuyinViewModel
-import com.yuyin.demo.view.speech.SpeechText
+import com.yuyin.demo.viewmodel.RunningAsrViewModel
+import com.yuyin.demo.viewmodel.YuyinViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.yuyin.demo.YuYinUtil.YuYinLog as Log
 
 
-class RunningRecord : Fragment() {
+open class RunningAsr : Fragment() {
 
-    companion object {
-        const val tag = "YUYIN_RECORD"
-    }
+    open val mTAG = "YUYIN_ASR"
     private var _binding: FragmentRunningAsrBinding? = null
-    private val binding get() = _binding!!
+    val binding get() = _binding!!
+    lateinit var record: AudioRecord
 
     // 滚动视图
-    private lateinit var recyclerView: RecyclerView
+    lateinit var recyclerView: RecyclerView
 
     // ViewModel
-    private val model: RunningRecordViewModel by viewModels()
+    open val model: RunningAsrViewModel by viewModels()
 
-    private val yuYinModel: YuyinViewModel by activityViewModels()
+    val yuYinModel: YuyinViewModel by activityViewModels()
+
+    lateinit var floatView: TextView
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -54,7 +53,68 @@ class RunningRecord : Fragment() {
     ): View {
         // Inflate the layout for this fragment
         _binding = FragmentRunningAsrBinding.inflate(inflater, container, false)
+        initMenu()
+        return binding.root
+    }
 
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        initRunner()
+        // init model
+        floatView = EasyFloat.getFloatView(MainActivityView.floatTag)!!.findViewById(R.id.flow_text)
+        binding.runRecordBt.isEnabled = false
+        initAsrModel()
+        initPlayButton()
+        editModeForRecyclerView()
+        initFloatingBt()
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        Log.i(mTAG,"onConfigurationChanged")
+        super.onConfigurationChanged(newConfig)
+        model.change_senor = false // 标记屏幕旋转
+    }
+
+    override fun onDestroyView() {
+        Log.i(mTAG,"onDestroyView")
+        super.onDestroyView()
+        _binding = null
+        destroyRecord()
+    }
+
+    override fun onDestroy() {
+        Log.i(this.mTAG,"onDestroy")
+        super.onDestroy()
+    }
+
+    open fun initRunner() {
+        // 滚动视图
+        model.linearLayoutManager = LinearLayoutManager(context)
+        recyclerView = binding.recyclerRunRecord
+        recyclerView.layoutManager = model.linearLayoutManager
+        recyclerView.adapter = model.adapter
+        // false false
+        // true true
+        initRecorder()
+        binding.runRecordBt.text = this.getString(R.string.start)
+        binding.runRecordBt.icon =  AppCompatResources.getDrawable(requireContext(),
+            R.drawable.play_icon36
+        )
+    }
+
+    open fun initRecorder() {
+        Log.e(mTAG,"need override")
+    }
+
+    open fun startRecord() {
+        Log.e(mTAG,"need override")
+    }
+
+    open fun destroyRecord() {
+        Log.e(mTAG,"need override")
+    }
+
+    private fun initMenu() {
         // Add menu items without using the Fragment Menu APIs
         // Note how we can tie the MenuProvider to the viewLifecycleOwner
         // and an optional Lifecycle.State (here, RESUMED) to indicate when
@@ -81,7 +141,7 @@ class RunningRecord : Fragment() {
                             save_file(
                                 requireContext(),
                                 result.toString(),
-                                binding.titleText.toString()
+                                binding.titleText.text.toString()
                             )
                         }
                         true
@@ -91,25 +151,9 @@ class RunningRecord : Fragment() {
             }
 
         }, viewLifecycleOwner, Lifecycle.State.RESUMED)
-
-        return binding.root
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        initRunner()
-        // init model
-        val floatView = EasyFloat.getFloatView(MainActivityView.floatTag)!!.findViewById<TextView>(R.id.flow_text)
-        binding.runRecordBt.isEnabled = false
-        model.viewModelScope.launch(Dispatchers.IO) {
-            YuYinUtil.prepareModel(requireActivity() as MainActivityView)
-            Recognize.init(yuYinModel.model_path, yuYinModel.dic_path)  // 初始化模型
-            withContext(Dispatchers.Main) {
-                // 订阅结果
-                binding.runRecordBt.isEnabled = true
-                model.updateFlow(floatView, recyclerView, binding.runRecordHotView)
-            }
-        }
+    private fun initPlayButton() {
         binding.runRecordBt.setOnClickListener {
             if (model.recordState) {
                 model.viewModelScope.launch(Dispatchers.IO) {
@@ -119,17 +163,18 @@ class RunningRecord : Fragment() {
                         model.asrState = false
                         floatView.text = ""
                     }
-                    model.record?.stop()
+                    record?.stop()
                     if (!Recognize.getFinished())
                         Recognize.setInputFinished()
                     withContext(Dispatchers.Main) {
                         binding.runRecordBt.text = requireContext().getString(R.string.start)
-                        binding.runRecordBt.icon = AppCompatResources.getDrawable(requireContext(),R.drawable.play_icon36)
+                        binding.runRecordBt.icon = AppCompatResources.getDrawable(requireContext(),
+                            R.drawable.play_icon36
+                        )
                         binding.runRecordBt.isEnabled = true
                         if (!binding.runRecordHotView.text.isNullOrBlank()) {
-                            model.speechList.add(SpeechText(binding.runRecordHotView.text.toString()))
-                            model.adapter.notifyItemInserted(model.speechList.size)
-                            recyclerView.scrollToPosition(model.speechList.size)
+                            model.updateSpeechList(recyclerView,binding.runRecordHotView.text.toString())
+                            binding.runRecordHotView.text = ""
                         }
                     }
                 }
@@ -149,7 +194,9 @@ class RunningRecord : Fragment() {
                         model.getTextFlow()
                         withContext(Dispatchers.Main) {
                             binding.runRecordBt.text = requireContext().getString(R.string.stop)
-                            binding.runRecordBt.icon = AppCompatResources.getDrawable(requireContext(),R.drawable.stop_icon36)
+                            binding.runRecordBt.icon = AppCompatResources.getDrawable(requireContext(),
+                                R.drawable.stop_icon36
+                            )
                             binding.runRecordBt.isEnabled = true
                         }
                     } else {
@@ -161,73 +208,34 @@ class RunningRecord : Fragment() {
         }
     }
 
-    override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
-        model.change_senor = false // 标记屏幕旋转
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
-        model.asrState = false
-        model.recordState = false
-        model.record?.release() // 由当前fragment创建
-        model.record = null
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-    }
-
-    private fun initRunner() {
-        // 滚动视图
-        model.linearLayoutManager = LinearLayoutManager(context)
-        recyclerView = binding.recyclerRunRecord
-        recyclerView.layoutManager = model.linearLayoutManager
-        recyclerView.adapter = model.adapter
-        // false false
-        // true true
-        initRecorder()
-        binding.runRecordBt.text = this.getString(R.string.start)
-        binding.runRecordBt.icon =  AppCompatResources.getDrawable(requireContext(),R.drawable.play_icon36)
-    }
-
-    private fun initRecorder() {
-        // buffer size in bytes 1280
-        model.miniBufferSize = AudioRecord.getMinBufferSize(
-            model.SAMPLE_RATE,
-            AudioFormat.CHANNEL_IN_MONO,
-            AudioFormat.ENCODING_PCM_16BIT
-        )
-        if (model.miniBufferSize == AudioRecord.ERROR || model.miniBufferSize == AudioRecord.ERROR_BAD_VALUE) {
-            Log.e(tag, "Audio buffer can't initialize!")
-            return
-        }
-        if (ActivityCompat.checkSelfPermission(
-                this.requireContext(),
-                Manifest.permission.RECORD_AUDIO
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            Log.e(tag, "Audio Record can't initialize for no permission")
-            return
-        }
-        model.record = AudioRecord(
-            MediaRecorder.AudioSource.DEFAULT,
-            model.SAMPLE_RATE,
-            AudioFormat.CHANNEL_IN_MONO,
-            AudioFormat.ENCODING_PCM_16BIT,
-            model.miniBufferSize
-        )
-        Log.i(tag, "Record init okay")
-        if (model.record?.state != AudioRecord.STATE_INITIALIZED) {
-            Log.e(tag, "Audio Record can't initialize!")
+    private fun initAsrModel() {
+        model.viewModelScope.launch(Dispatchers.IO) {
+            YuYinUtil.prepareModel(requireActivity() as MainActivityView)
+            Recognize.init(yuYinModel.model_path, yuYinModel.dic_path)  // 初始化模型
+            withContext(Dispatchers.Main) {
+                // 订阅结果
+                binding.runRecordBt.isEnabled = true
+                model.updateFlow(floatView, recyclerView, binding.runRecordHotView)
+            }
         }
     }
 
-    private fun startRecord() {
-        model.record?.startRecording()
-        model.produceAudio()
+    private fun editModeForRecyclerView() {
+        model.viewModelScope.launch(Dispatchers.Main) {
+            model.canScroll.collect {
+                if (!it) {
+                    binding.goDownBt.show()
+                }
+            }
+        }
     }
 
-
+    private fun initFloatingBt() {
+        binding.goDownBt.hide()
+        binding.goDownBt.setOnClickListener {it as FloatingActionButton
+            val position = model.speechList.size
+            recyclerView.smoothScrollToPosition(position)
+            it.hide()
+        }
+    }
 }

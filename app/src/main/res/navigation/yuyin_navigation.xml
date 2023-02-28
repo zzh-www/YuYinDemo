@@ -12,17 +12,17 @@
         tools:layout="@layout/fragment_files_manager" />
     <fragment
         android:id="@+id/runningCapture_dest"
-        android:name="com.yuyin.demo.RuningCapture"
+        android:name="com.yuyin.demo.view.RuningCapture"
         android:label="capture"
         tools:layout="@layout/fragment_running_asr" />
     <fragment
         android:id="@+id/runningRecord_dest"
-        android:name="com.yuyin.demo.RunningRecord"
+        android:name="com.yuyin.demo.view.RunningRecord"
         android:label="record"
         tools:layout="@layout/fragment_running_asr" />
     <fragment
         android:id="@+id/main_dest"
-        android:name="com.yuyin.demo.Main"
+        android:name="com.yuyin.demo.view.Main"
         android:label="home"
         tools:layout="@layout/fragment_main" >
         <action

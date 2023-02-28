@@ -1,4 +1,4 @@
-package com.mobvoi.wenet
+package com.yuyin.demo.service
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -9,7 +9,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
-import android.content.res.Resources.Theme
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioPlaybackCaptureConfiguration
@@ -22,8 +21,7 @@ import android.os.IBinder
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import com.google.android.material.color.MaterialColors
-import com.yuyin.demo.MainActivityView
+import com.yuyin.demo.view.MainActivityView
 import com.yuyin.demo.R
 import com.yuyin.demo.YuYinUtil.ACTION_ALL
 import com.yuyin.demo.YuYinUtil.ACTION_START_RECORDING_From_Notification

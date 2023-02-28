@@ -1,4 +1,4 @@
-package com.yuyin.demo.models
+package com.yuyin.demo.viewmodel
 
 import android.media.AudioRecord
 import android.util.Log
@@ -11,19 +11,18 @@ import com.mobvoi.wenet.Recognize
 import com.yuyin.demo.view.speech.SpeechText
 import com.yuyin.demo.view.speech.SpeechTextAdapter
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.buffer
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
-import java.lang.Exception
-import kotlin.random.Random
 
-class RunningRecordViewModel : ViewModel() {
+open class RunningAsrViewModel : ViewModel() {
     private val tag = "RunningRecordViewModel"
 
-    // record
-    var record: AudioRecord? = null
     var recordState = false
     var miniBufferSize = 0
-    private val MAX_QUEUE_SIZE = 2500
+    val MAX_QUEUE_SIZE = 2500
 
     // 100 seconds audio, 1 / 0.04 * 100
     val SAMPLE_RATE = 16000 // The sampling rate
@@ -35,22 +34,29 @@ class RunningRecordViewModel : ViewModel() {
     val speechList: ArrayList<SpeechText> = arrayListOf()
 
     //    private lateinit var recyclerView: RecyclerView
-    var adapter: SpeechTextAdapter = SpeechTextAdapter(speechList)
+    var adapter: SpeechTextAdapter = SpeechTextAdapter(speechList,this)
 
     lateinit var linearLayoutManager: LinearLayoutManager
 
     val results = MutableStateFlow("")
 
+    val canScroll = MutableStateFlow(false)
 
-    // debug
-    var random = Random(11)
 
-    fun produceAudio() {
+    init {
+        viewModelScope.launch(Dispatchers.Default) {
+            adapter.isEdit.collect {
+                canScroll.emit(!it)
+            }
+        }
+    }
+
+    fun produceAudio(record: AudioRecord) {
         viewModelScope.launch(Dispatchers.Default) {
             flow {
                 while (recordState) {
                     val buffer = ShortArray(miniBufferSize / 2)
-                    val read = record?.read(buffer, 0, buffer.size)
+                    val read = record.read(buffer, 0, buffer.size)
                     if (AudioRecord.ERROR_INVALID_OPERATION != read) {
                         emit(buffer)
                     }
@@ -65,13 +71,14 @@ class RunningRecordViewModel : ViewModel() {
 
     fun getTextFlow() {
         viewModelScope.launch(Dispatchers.Default) {
-            val i = random.nextInt()
             flow {
+                var length = 0
                 while (asrState) {
                     try {
                         val result = Recognize.result
-                        if (result != "") {
+                        if (result.isNotEmpty() && result.length != length) {
                             emit(result)
+                            length = result.length
                         }
                     } catch (e: Exception) {
                         Log.e(tag, "error in decode : ${e.message}")
@@ -84,14 +91,13 @@ class RunningRecordViewModel : ViewModel() {
         }
     }
 
+    // 或许考虑不使用热流 避免过于频繁更新界面
     fun updateFlow(flowText: TextView, recyclerView: RecyclerView, hotText:TextView) {
         viewModelScope.launch(Dispatchers.Main) {
             results.collect {
-                val position = speechList.size - 1
+                flowText.text = it.removeSuffix("<end>")
                 if (it.endsWith("<end>")) {
-                    speechList.add(SpeechText(it.removeSuffix("<end>"))) // add new para
-                    adapter.notifyItemInserted(position + 1)
-                    recyclerView.scrollToPosition(position + 1)
+                    updateSpeechList(recyclerView,it.removeSuffix("<end>"))
                 } else {
                     hotText.text = it
                     val offset = hotText.lineCount * hotText.lineHeight
@@ -99,8 +105,16 @@ class RunningRecordViewModel : ViewModel() {
                         hotText.scrollTo(0, offset - hotText.height)
                     }
                 }
-                flowText.text = it.removeSuffix("<end>")
             }
+        }
+    }
+
+    fun updateSpeechList(recyclerView: RecyclerView, text:String) {
+        val position = speechList.size - 1
+        speechList.add(SpeechText(text)) // add new para
+        adapter.notifyItemInserted(position + 1)
+        if (canScroll.value) {
+            recyclerView.scrollToPosition(position + 1)
         }
     }
 

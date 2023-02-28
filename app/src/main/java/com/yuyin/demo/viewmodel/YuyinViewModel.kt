@@ -1,8 +1,7 @@
-package com.yuyin.demo.models
+package com.yuyin.demo.viewmodel
 
 import android.media.AudioRecord
 import androidx.lifecycle.ViewModel
-import com.yuyin.demo.Main.Companion.tag
 
 class YuyinViewModel : ViewModel() {
 

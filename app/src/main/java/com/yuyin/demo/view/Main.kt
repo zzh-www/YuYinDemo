@@ -1,4 +1,4 @@
-package com.yuyin.demo
+package com.yuyin.demo.view
 
 import android.content.Intent
 import android.media.AudioRecord
@@ -8,16 +8,16 @@ import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.Navigation.findNavController
+import com.yuyin.demo.R
 import com.yuyin.demo.YuYinUtil.checkRequestPermissions
 import com.yuyin.demo.YuYinUtil.YuYinLog as Log
 import com.yuyin.demo.databinding.FragmentMainBinding
-import com.yuyin.demo.models.YuyinViewModel
-import com.yuyin.demo.view.speech.SettingsActivity
+import com.yuyin.demo.viewmodel.YuyinViewModel
 
 class Main : Fragment() {
 
     companion object {
-        const val tag = "Main"
+        const val TAG = "Main"
     }
 
     private var binding: FragmentMainBinding? = null
@@ -77,19 +77,19 @@ class Main : Fragment() {
 
     private fun check(): Boolean {
         if (!checkRequestPermissions(requireActivity(), requireContext())) {
-            Log.e(tag,"no permission for asr")
+            Log.e(TAG,"no permission for asr")
             return false
         }
         if (yuyinViewModel.recorder == null) {
-            Log.e(tag,"recorder is null")
+            Log.e(TAG,"recorder is null")
             return false
         }
         if (yuyinViewModel.recorder?.state != AudioRecord.STATE_INITIALIZED) {
-            Log.e(tag,"recorder is not init")
+            Log.e(TAG,"recorder is not init")
             return false
         }
         if (!(requireActivity() as MainActivityView).checkFloatView()) {
-            Log.e(tag,"checkFloatView false")
+            Log.e(TAG,"checkFloatView false")
             return false
         }
         return true

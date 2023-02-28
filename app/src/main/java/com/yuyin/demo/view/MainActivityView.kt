@@ -1,4 +1,4 @@
-package com.yuyin.demo
+package com.yuyin.demo.view
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -29,9 +29,11 @@ import com.lzf.easyfloat.EasyFloat
 import com.lzf.easyfloat.enums.ShowPattern
 import com.lzf.easyfloat.enums.SidePattern
 import com.lzf.easyfloat.utils.DisplayUtils
-import com.mobvoi.wenet.MediaCaptureService
-import com.mobvoi.wenet.MediaCaptureService.Companion.m_NOTIFICATION_CHANNEL_ID
+import com.yuyin.demo.service.MediaCaptureService
+import com.yuyin.demo.service.MediaCaptureService.Companion.m_NOTIFICATION_CHANNEL_ID
 import com.vmadalin.easypermissions.EasyPermissions
+import com.yuyin.demo.R
+import com.yuyin.demo.YuYinUtil
 import com.yuyin.demo.YuYinUtil.ACTION_ALL
 import com.yuyin.demo.YuYinUtil.CaptureAudio_ALL
 import com.yuyin.demo.YuYinUtil.CaptureAudio_START
@@ -39,8 +41,7 @@ import com.yuyin.demo.YuYinUtil.EXTRA_CaptureAudio_NAME
 import com.yuyin.demo.YuYinUtil.EXTRA_RESULT_CODE
 import com.yuyin.demo.YuYinUtil.m_CREATE_SCREEN_CAPTURE
 import com.yuyin.demo.databinding.ActivityMainViewBinding
-import com.yuyin.demo.models.YuyinViewModel
-import com.yuyin.demo.view.speech.SettingsActivity
+import com.yuyin.demo.viewmodel.YuyinViewModel
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -51,7 +52,7 @@ import com.yuyin.demo.YuYinUtil.YuYinLog as Log
 class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallbacks {
 
     companion object {
-        const val tag = "YUYIN_ACTIVITY"
+        const val TAG = "YUYIN_ACTIVITY"
 
         const val floatTag = "float view"
     }
@@ -112,7 +113,9 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
         // 控制底部导航条只出现在main_dest fileManager_dest
         navController.addOnDestinationChangedListener() { controller, destination, arguments ->
             runOnUiThread {
-                if (destination.label == this.getString(R.string.capture_label) || destination.label == this.getString(R.string.record_label)) {
+                if (destination.label == this.getString(R.string.capture_label) || destination.label == this.getString(
+                        R.string.record_label
+                    )) {
                     binding.mainBottomNavigation.let {
                         it.visibility = View.GONE
                         it.isEnabled = false
@@ -130,19 +133,19 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
 
     override fun onStart() {
         super.onStart()
-        Log.i(tag, "onStart")
+        Log.i(TAG, "onStart")
     }
 
     override fun onRestart() {
         super.onRestart()
-        Log.i(tag, "onRestart")
+        Log.i(TAG, "onRestart")
         // what ever just hid
         destroyFloatView()
     }
 
     override fun onResume() {
         super.onResume()
-        Log.i(tag, "onResume")
+        Log.i(TAG, "onResume")
         // 权限
         YuYinUtil.checkRequestPermissions(this, this)
         val docDirPath = getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
@@ -154,10 +157,12 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
 
     override fun onPause() {
         super.onPause()
-        Log.i(tag, "onPause")
+        Log.i(TAG, "onPause")
         val current = navController.currentDestination
-        Log.i(tag, "id: ${current?.id} name: ${current?.displayName} label ${current?.label}")
-        if (current?.label == this.getString(R.string.capture_label) || current?.label == this.getString(R.string.record_label)) {
+        Log.i(TAG, "id: ${current?.id} name: ${current?.displayName} label ${current?.label}")
+        if (current?.label == this.getString(R.string.capture_label) || current?.label == this.getString(
+                R.string.record_label
+            )) {
             showFloatView()
         } else {
             destroyFloatView()
@@ -167,7 +172,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
     override fun onStop() {
         super.onStop()
         // 进入后台
-        Log.i(tag, "onStop")
+        Log.i(TAG, "onStop")
     }
 
 
@@ -179,7 +184,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
             }
         }
         model.recorder = null
-        Log.i(tag, "onDestroy")
+        Log.i(TAG, "onDestroy")
     }
 
     override fun onSupportNavigateUp(): Boolean {
@@ -240,7 +245,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
             }
         } catch (e: IOException) {
             Log.e(
-                tag,
+                TAG,
                 "Error process asset $assetName to file path"
             )
         }
@@ -348,13 +353,13 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
                 .setFilter(MainActivityView::class.java, SettingsActivity::class.java)
                 .registerCallback {
                     show {
-                        Log.i(tag, "show float view");
+                        Log.i(TAG, "show float view");
                     }
                     hide {
-                        Log.i(tag, "hide float view")
+                        Log.i(TAG, "hide float view")
                     }
                     dismiss {
-                        Log.i(tag, "dismiss float view")
+                        Log.i(TAG, "dismiss float view")
                     }
                     drag { view, motionEvent -> }
                     dragEnd {

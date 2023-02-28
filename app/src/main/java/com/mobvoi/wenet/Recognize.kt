@@ -15,8 +15,9 @@ object Recognize {
     external fun getFinished(): Boolean
     external fun getInit(): Boolean
     external fun startDecode()
-    external fun getByteResult(): ByteArray
-    val result: String get() = jniArrayToJavaString(getByteResult())
-    fun jniArrayToJavaString(array: ByteArray) = String(array, StandardCharsets.UTF_8)
+    private external fun getByteResult(): ByteArray
+    val result: String get() =
+        jniArrayToJavaString(getByteResult())
+    fun jniArrayToJavaString(array: ByteArray) = String(array, StandardCharsets.UTF_8)  // Android JNI UTF-8编码，JVM UTF-16编码
     external fun javaStringToJniArray(s: String): ByteArray
 }

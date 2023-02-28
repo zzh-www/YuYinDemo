@@ -146,6 +146,10 @@ jboolean get_inited(JNIEnv *env, jobject) {
 // 更改以获取段句
 jbyteArray get_result(JNIEnv *env, jobject) {
   std::string result = decoder->DecodedSomething() ? decoder->result()[0].sentence : "";
+  /* Todo(使用wenet字级时间戳功能，保存录音，记录时间信息)
+   * int start = decoder->result()[0].word_pieces[0].start; // 开始时间获取
+   * int end = decoder->result()[decoder->result()].word_pieces[0].end; // 结束时间获取
+   */
   if (!results.empty()) {
     result = results.front();
     results.pop();
