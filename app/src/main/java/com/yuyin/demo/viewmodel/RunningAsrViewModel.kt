@@ -31,7 +31,7 @@ open class RunningAsrViewModel : ViewModel() {
     var change_senor = false
 
     // 滚动视图
-    val speechList: ArrayList<SpeechText> = arrayListOf()
+    val speechList: ArrayList<SpeechText> = arrayListOf(SpeechText("展示效果".repeat(10)),SpeechText("展示效果".repeat(10)),SpeechText("展示效果".repeat(100)))
 
     //    private lateinit var recyclerView: RecyclerView
     var adapter: SpeechTextAdapter = SpeechTextAdapter(speechList,this)
@@ -40,13 +40,16 @@ open class RunningAsrViewModel : ViewModel() {
 
     val results = MutableStateFlow("")
 
-    val canScroll = MutableStateFlow(false)
+    val canScroll = MutableStateFlow(true)
 
 
     init {
-        viewModelScope.launch(Dispatchers.Default) {
-            adapter.isEdit.collect {
-                canScroll.emit(!it)
+        viewModelScope.launch(Dispatchers.Main) {
+            adapter.isFocus.collect {
+                if (it) {
+                    // 编辑态时不可滚动
+                    canScroll.emit(false)
+                }
             }
         }
     }
@@ -114,6 +117,7 @@ open class RunningAsrViewModel : ViewModel() {
         speechList.add(SpeechText(text)) // add new para
         adapter.notifyItemInserted(position + 1)
         if (canScroll.value) {
+            // 可滚动才可自动滚动
             recyclerView.scrollToPosition(position + 1)
         }
     }

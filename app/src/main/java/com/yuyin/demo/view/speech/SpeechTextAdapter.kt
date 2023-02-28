@@ -3,6 +3,8 @@ package com.yuyin.demo.view.speech
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.widget.doAfterTextChanged
+import androidx.core.widget.doBeforeTextChanged
 import androidx.lifecycle.viewModelScope
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.textfield.TextInputEditText
@@ -11,12 +13,13 @@ import com.yuyin.demo.viewmodel.RunningAsrViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import com.yuyin.demo.YuYinUtil.YuYinLog as Log
 
 class SpeechTextAdapter(private val dataList: List<SpeechText>, private val viewModel: RunningAsrViewModel) :
     RecyclerView.Adapter<SpeechTextAdapter.ViewHolder>() {
 
     var mRecyclerView: RecyclerView? = null
-    var isEdit = MutableStateFlow(false)
+    var isFocus = MutableStateFlow(false)
 
     override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
         super.onAttachedToRecyclerView(recyclerView)
@@ -36,9 +39,18 @@ class SpeechTextAdapter(private val dataList: List<SpeechText>, private val view
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val speechText = dataList[position]
         holder.speechView.setText(speechText.text)
-        holder.speechView.isInEditMode
-        viewModel.viewModelScope.launch(Dispatchers.Main) {
-            isEdit.emit(false)
+        holder.speechView.setOnFocusChangeListener { v, hasFocus ->
+            if (hasFocus) {
+                Log.i(tag, "on focus")
+                viewModel.viewModelScope.launch(Dispatchers.Main) {
+                    isFocus.emit(true)
+                }
+            } else {
+                Log.i(tag, "not on focus")
+                viewModel.viewModelScope.launch(Dispatchers.Main) {
+                    isFocus.emit(false)
+                }
+            }
         }
     }
 
@@ -48,6 +60,23 @@ class SpeechTextAdapter(private val dataList: List<SpeechText>, private val view
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val speechView = view.findViewById<View>(R.id.speechText) as TextInputEditText
+        init {
+            speechView.setOnClickListener {
+                Log.i(tag,"on click")
+            }
+            speechView.onFocusChangeListener = View.OnFocusChangeListener { v, hasFocus ->
+                Log.i(tag, "on focus")
+            }
+            speechView.doBeforeTextChanged { text, start, count, after ->
+                Log.i(tag, "doBeforeTextChanged")
+            }
+            speechView.doAfterTextChanged {
+                Log.i(tag, "doAfterTextChanged")
+            }
+        }
+    }
 
+    companion object {
+        val tag = "SpeechTextAdapter"
     }
 }

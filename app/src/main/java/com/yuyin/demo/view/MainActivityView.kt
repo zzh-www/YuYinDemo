@@ -12,7 +12,10 @@ import android.os.Environment
 import android.os.IBinder
 import android.provider.Settings
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
+import android.view.inputmethod.InputMethodManager
+import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -115,7 +118,8 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
             runOnUiThread {
                 if (destination.label == this.getString(R.string.capture_label) || destination.label == this.getString(
                         R.string.record_label
-                    )) {
+                    )
+                ) {
                     binding.mainBottomNavigation.let {
                         it.visibility = View.GONE
                         it.isEnabled = false
@@ -162,7 +166,8 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
         Log.i(TAG, "id: ${current?.id} name: ${current?.displayName} label ${current?.label}")
         if (current?.label == this.getString(R.string.capture_label) || current?.label == this.getString(
                 R.string.record_label
-            )) {
+            )
+        ) {
             showFloatView()
         } else {
             destroyFloatView()
@@ -224,6 +229,52 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
             }
 
         }
+    }
+
+    override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
+        // 如果是点击事件，获取点击的view，并判断是否要收起键盘
+        ev?.let { it ->
+            when (it.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    currentFocus?.let { v ->
+                        // 判断是否需要收起
+                        if (isShouldHideKeyboard(v,ev)) {
+                            val textInputText = v as EditText
+                            textInputText.clearFocus()
+                            if (textInputText.windowToken != null) {
+                                try {
+                                    val im: InputMethodManager? = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager?
+                                    im?.let {
+                                        im.hideSoftInputFromWindow(textInputText.windowToken, InputMethodManager.HIDE_NOT_ALWAYS)
+                                    }
+                                } catch (e:Exception) {
+                                    Log.e(TAG,e.message)
+                                }
+                            }
+                        }
+                    }
+                }
+                else -> {}
+            }
+        }
+        return super.dispatchTouchEvent(ev)
+    }
+
+    private fun isShouldHideKeyboard(v: View, event: MotionEvent): Boolean {
+        // 判断获取焦点view是否是editview
+        if (v is EditText) {
+            // 判断点击位置
+            val l = intArrayOf(0,0)
+            // 获取位置
+            v.getLocationInWindow(l)
+            val left = l[0]
+            val top = l[1]
+            val bottom = top + v.height
+            val right = left + v.width
+            // 当前view的点击事件忽略
+            return event.x <= left || event.x >= right || event.y <= top || event.y >= bottom
+        }
+        return false
     }
 
     fun assetFilePath(context: Context, assetName: String): String? {

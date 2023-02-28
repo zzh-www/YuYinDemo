@@ -28,7 +28,6 @@ class SettingsActivity : AppCompatActivity() {
 
         override fun onConfigurationChanged(newConfig: Configuration) {
             super.onConfigurationChanged(newConfig)
-            //TODO stop ASR and then init, restart
             val sharePref = activity?.getPreferences(Context.MODE_PRIVATE) ?: return
             sharePref.getString("languageOfModule", "zh");
         }

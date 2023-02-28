@@ -40,7 +40,7 @@ import com.yuyin.demo.YuYinUtil.YuYinLog as Log
 
 
 class MediaCaptureService : Service() {
-    private val LogTag = "MediaCaptureService"
+    private val mTag = "MediaCaptureService"
     private val binder: IBinder = MediaServiceBinder()
 
     private var isCreate = false
@@ -68,7 +68,7 @@ class MediaCaptureService : Service() {
     private fun startMediaProject(intent: Intent) {
         m_mediaProjection = m_mediaProjectionManager.getMediaProjection(-1, intent)
         preStartRecording(m_mediaProjection)
-        Log.e("ZZH", "start_recording")
+        Log.e(mTag, "start_recording")
     }
 
     /**
@@ -166,7 +166,7 @@ class MediaCaptureService : Service() {
 //        return super.onStartCommand(intent, flags, startId);
         // 启动前台服务
         if (intent==null) {
-            Log.e(LogTag,"null start service")
+            Log.e(mTag,"null start service")
         } else {
             if (m_callingIntent == null)
                 m_callingIntent = intent
@@ -228,7 +228,7 @@ class MediaCaptureService : Service() {
     private fun writeAudioDataToFile() {
         if (m_recorder == null) return
         // Write the output audio in byte
-        Log.i("ZZH", "Recording started. Computing output file name")
+        Log.i(mTag, "Recording started. Computing output file name")
         val sampleDir =
             File(getExternalFilesDir(Environment.DIRECTORY_MUSIC), "/TestRecordingDasa1")
         if (!sampleDir.exists()) {
@@ -247,7 +247,7 @@ class MediaCaptureService : Service() {
         while (m_isRecording) {
             // gets the voice output from microphone to byte format
             m_recorder?.read(sData, 0, BufferElements2Rec)
-            Log.i("ZZH", "Short wirting to file$sData")
+            Log.i(mTag, "Short wirting to file$sData")
             try {
                 // // writes the data to file from buffer
                 // // stores the voice buffer
@@ -255,7 +255,7 @@ class MediaCaptureService : Service() {
                 os!!.write(bData, 0, BufferElements2Rec * BytesPerElement)
             } catch (e: IOException) {
                 e.printStackTrace()
-                Log.i("ZZH", "record error:" + e.message)
+                Log.i(mTag, "record error:" + e.message)
             }
         }
         try {
@@ -263,14 +263,14 @@ class MediaCaptureService : Service() {
         } catch (e: IOException) {
             e.printStackTrace()
         }
-        Log.i("ZZH", String.format("Recording finished. File saved to '%s'", filePath))
+        Log.i(mTag, String.format("Recording finished. File saved to '%s'", filePath))
     }
 
     @SuppressLint("SimpleDateFormat")
     private fun writeAudioDataToFileMic() {
         if (m_recorderMic == null) return
         // Write the output audio in byte
-        Log.i("ZZH", "Recording started. Computing output file name")
+        Log.i(mTag, "Recording started. Computing output file name")
         val sampleDir =
             File(getExternalFilesDir(Environment.DIRECTORY_MUSIC), "/TestRecordingDasa1Mic")
         if (!sampleDir.exists()) {
@@ -289,7 +289,7 @@ class MediaCaptureService : Service() {
         while (m_isRecording) {
             // gets the voice output from microphone to byte format
             m_recorderMic!!.read(sData, 0, BufferElements2Rec)
-            Log.i("ZZH", "Short wirting to file$sData")
+            Log.i(mTag, "Short wirting to file$sData")
             try {
                 // // writes the data to file from buffer
                 // // stores the voice buffer
@@ -297,7 +297,7 @@ class MediaCaptureService : Service() {
                 os!!.write(bData, 0, BufferElements2Rec * BytesPerElement)
             } catch (e: IOException) {
                 e.printStackTrace()
-                Log.i("ZZH", "record error:" + e.message)
+                Log.i(mTag, "record error:" + e.message)
             }
         }
         try {
@@ -305,7 +305,7 @@ class MediaCaptureService : Service() {
         } catch (e: IOException) {
             e.printStackTrace()
         }
-        Log.i("ZZH", String.format("Recording finished. File saved to '%s'", filePath))
+        Log.i(mTag, String.format("Recording finished. File saved to '%s'", filePath))
     }
 
 

@@ -223,6 +223,7 @@ open class RunningAsr : Fragment() {
     private fun editModeForRecyclerView() {
         model.viewModelScope.launch(Dispatchers.Main) {
             model.canScroll.collect {
+                // 不可自动滚动时，展示按钮方便用户点击滚到底部，恢复自动滚动
                 if (!it) {
                     binding.goDownBt.show()
                 }
@@ -236,6 +237,10 @@ open class RunningAsr : Fragment() {
             val position = model.speechList.size
             recyclerView.smoothScrollToPosition(position)
             it.hide()
+            model.viewModelScope.launch(Dispatchers.Main) {
+                // 点击按钮后，启动自动滚动
+                model.canScroll.emit(true)
+            }
         }
     }
 }
