@@ -5,7 +5,6 @@ import android.content.res.Configuration
 import android.media.AudioRecord
 import android.os.Bundle
 import android.view.*
-import android.widget.TextView
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
@@ -45,7 +44,7 @@ open class RunningAsr : Fragment() {
 
     val yuYinModel: YuyinViewModel by activityViewModels()
 
-    lateinit var floatView: TextView
+    lateinit var floatView: StrokeView
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,

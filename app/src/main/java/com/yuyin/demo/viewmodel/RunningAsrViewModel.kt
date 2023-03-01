@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.mobvoi.wenet.Recognize
+import com.yuyin.demo.view.StrokeView
 import com.yuyin.demo.view.speech.SpeechText
 import com.yuyin.demo.view.speech.SpeechTextAdapter
 import kotlinx.coroutines.Dispatchers
@@ -95,7 +96,7 @@ open class RunningAsrViewModel : ViewModel() {
     }
 
     // 或许考虑不使用热流 避免过于频繁更新界面
-    fun updateFlow(flowText: TextView, recyclerView: RecyclerView, hotText:TextView) {
+    fun updateFlow(flowText: StrokeView, recyclerView: RecyclerView, hotText:TextView) {
         viewModelScope.launch(Dispatchers.Main) {
             results.collect {
                 flowText.text = it.removeSuffix("<end>")
