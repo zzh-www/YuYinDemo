@@ -8,10 +8,20 @@ import android.widget.TextView
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.core.content.FileProvider
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.yuyin.demo.R
+import com.yuyin.demo.YuYinUtil.YuYinLog as Log
 
-class FileAdapter(private val data_list: List<FileItem>) :
+class FileAdapter(private val data_list: ArrayList<FileItem>) :
     RecyclerView.Adapter<FileAdapter.ViewHolder>() {
+    val tag = "FileAdapter"
+    private lateinit var mRecyclerView: RecyclerView
+
+    override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
+        super.onAttachedToRecyclerView(recyclerView)
+        mRecyclerView = recyclerView
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.file_item, parent, false)
         val viewHolder = ViewHolder(view)
@@ -47,9 +57,29 @@ class FileAdapter(private val data_list: List<FileItem>) :
             intent.type = "text/plain"
             parent.context.startActivity(intent)
         }
-        viewHolder.delete_bt.setOnClickListener { v:View? ->
-            val text_path = data_list[viewHolder.bindingAdapterPosition].file_path
-            text_path.delete()
+        viewHolder.delete_bt.setOnClickListener { v: View? ->
+            val position = viewHolder.bindingAdapterPosition
+            if (position == RecyclerView.NO_POSITION) {
+                Log.e(tag, "NO_POSITION")
+                return@setOnClickListener
+            }
+            val text_path = data_list[position].file_path
+            val dialog =
+                MaterialAlertDialogBuilder(parent.context)
+                    .setIcon(R.drawable.delete__icon)
+                    .setTitle(R.string.delete_dialog_title)
+                    .setMessage(text_path.name)
+                    .setNegativeButton(R.string.cancel) { dialog, which ->
+                        dialog.dismiss()
+                    }
+                    .setPositiveButton(R.string.confirm) { dialog, which ->
+                        if (text_path.exists()) {
+                            text_path.delete()
+                        }
+                        data_list.removeAt(viewHolder.bindingAdapterPosition)
+                        this.notifyItemRemoved(position)
+                    }.create()
+            dialog.show()
         }
         return viewHolder
     }

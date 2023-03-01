@@ -3,12 +3,14 @@ package com.yuyin.demo
 import android.Manifest
 import android.app.Activity
 import android.content.Context
+import android.content.DialogInterface
 import android.content.pm.PackageManager
 import android.os.Environment
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceManager
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.yuyin.demo.view.MainActivityView
 import java.io.File
 import java.io.FileOutputStream
@@ -65,7 +67,8 @@ object YuYinUtil {
             file =
                 File(dir_path.absoluteFile.toString() + File.separator + "YuYin" + File.separator + title + type)
             if (file.exists()) {
-                file = File(dir_path.absoluteFile.toString() + File.separator + "YuYin" + File.separator + title + "_" + dateStr + type)
+                file =
+                    File(dir_path.absoluteFile.toString() + File.separator + "YuYin" + File.separator + title + "_" + dateStr + type)
             }
         }
         try {
@@ -152,5 +155,6 @@ object YuYinUtil {
             }
         }
     }
+
 }
 
