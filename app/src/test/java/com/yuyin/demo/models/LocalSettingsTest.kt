@@ -10,7 +10,7 @@ class LocalSettingsTest {
     @Test
     fun testEquals() {
         val moshi: Moshi = Moshi.Builder().build()
-        val localSettings = LocalSettings(0, mutableMapOf("zh" to listOf("abc","bcd")),"zh")
+        val localSettings = LocalSettings(0, mutableMapOf("zh" to mutableListOf("abc","bcd")),"zh")
         val jsonAdapter: JsonAdapter<LocalSettings> = moshi.adapter(LocalSettings::class.java)
         val json = jsonAdapter.toJson(localSettings)
         val fileSettings = jsonAdapter.fromJson(json)

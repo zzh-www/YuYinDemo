@@ -60,7 +60,7 @@ object YuYinUtil {
         val dateStr = sdf.format(Date(timeStamp.toString().toLong()))
         val type = ".txt"
         val dir_path = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: return
-        var file: File? = null
+        var file: File?
         if (title.isNullOrBlank()) {
             file =
                 File(dir_path.absoluteFile.toString() + File.separator + "YuYin" + File.separator + dateStr + type)

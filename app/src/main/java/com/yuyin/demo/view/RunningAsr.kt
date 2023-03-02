@@ -161,7 +161,7 @@ open class RunningAsr : Fragment() {
                         model.asrState = false
                         floatView.text = ""
                     }
-                    record?.stop()
+                    record.stop()
                     if (!Recognize.getFinished())
                         Recognize.setInputFinished()
                     withContext(Dispatchers.Main) {

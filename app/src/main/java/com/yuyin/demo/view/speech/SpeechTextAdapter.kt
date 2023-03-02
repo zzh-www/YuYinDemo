@@ -39,7 +39,7 @@ class SpeechTextAdapter(private val dataList: List<SpeechText>, private val view
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val speechText = dataList[position]
         holder.speechView.setText(speechText.text)
-        holder.speechView.setOnFocusChangeListener { v, hasFocus ->
+        holder.speechView.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
                 Log.i(tag, "on focus")
                 viewModel.viewModelScope.launch(Dispatchers.Main) {
@@ -64,10 +64,10 @@ class SpeechTextAdapter(private val dataList: List<SpeechText>, private val view
             speechView.setOnClickListener {
                 Log.i(tag,"on click")
             }
-            speechView.onFocusChangeListener = View.OnFocusChangeListener { v, hasFocus ->
+            speechView.onFocusChangeListener = View.OnFocusChangeListener { _, _ ->
                 Log.i(tag, "on focus")
             }
-            speechView.doBeforeTextChanged { text, start, count, after ->
+            speechView.doBeforeTextChanged { _, _, _, _ ->
                 Log.i(tag, "doBeforeTextChanged")
             }
             speechView.doAfterTextChanged {

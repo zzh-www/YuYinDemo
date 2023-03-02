@@ -25,7 +25,7 @@ class FileAdapter(private val data_list: ArrayList<FileItem>) :
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.file_item, parent, false)
         val viewHolder = ViewHolder(view)
-        viewHolder.file_text.setOnClickListener { v: View? ->
+        viewHolder.file_text.setOnClickListener {
             val txt_path = data_list[viewHolder.bindingAdapterPosition].file_path
             // 打开txt文件
             val intent = Intent(Intent.ACTION_VIEW)
@@ -45,7 +45,7 @@ class FileAdapter(private val data_list: ArrayList<FileItem>) :
             */
             parent.context.startActivity(intent)
         }
-        viewHolder.file_bt.setOnClickListener { v: View? ->
+        viewHolder.file_bt.setOnClickListener {
             val text_path = data_list[viewHolder.bindingAdapterPosition].file_path
             val intent = Intent(Intent.ACTION_SEND)
             val uri = FileProvider.getUriForFile(
@@ -57,7 +57,7 @@ class FileAdapter(private val data_list: ArrayList<FileItem>) :
             intent.type = "text/plain"
             parent.context.startActivity(intent)
         }
-        viewHolder.delete_bt.setOnClickListener { v: View? ->
+        viewHolder.delete_bt.setOnClickListener {
             val position = viewHolder.bindingAdapterPosition
             if (position == RecyclerView.NO_POSITION) {
                 Log.e(tag, "NO_POSITION")
@@ -69,10 +69,10 @@ class FileAdapter(private val data_list: ArrayList<FileItem>) :
                     .setIcon(R.drawable.delete__icon)
                     .setTitle(R.string.delete_dialog_title)
                     .setMessage(text_path.name)
-                    .setNegativeButton(R.string.cancel) { dialog, which ->
+                    .setNegativeButton(R.string.cancel) { dialog, _ ->
                         dialog.dismiss()
                     }
-                    .setPositiveButton(R.string.confirm) { dialog, which ->
+                    .setPositiveButton(R.string.confirm) { _, _ ->
                         if (text_path.exists()) {
                             text_path.delete()
                         }

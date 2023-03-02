@@ -64,7 +64,7 @@ class Main : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding!!.recordAsrBt.setOnClickListener { v: View? ->
+        binding!!.recordAsrBt.setOnClickListener {
             if (check()) {
                 findNavController(
                     requireActivity(),
@@ -72,7 +72,7 @@ class Main : Fragment() {
                 ).navigate(R.id.action_main_dest_to_runingRecord_dest)
             }
         }
-        binding!!.captureAsrBt.setOnClickListener { v: View? ->
+        binding!!.captureAsrBt.setOnClickListener {
             if (check()) {
                 findNavController(
                     requireActivity(),

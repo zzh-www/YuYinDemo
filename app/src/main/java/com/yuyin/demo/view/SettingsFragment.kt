@@ -140,7 +140,7 @@ class SettingsFragment : Fragment() {
     }
 
     private fun initSwitch() {
-        when (yuyinViewModel.settings?.saveMode) {
+        when (yuyinViewModel.settings.saveMode) {
             0 -> binding.saveTextSwitch.let {
                 it.isChecked = true
                 it.isClickable = false
@@ -155,7 +155,7 @@ class SettingsFragment : Fragment() {
             }
             else -> {
                 Log.e(mTag, "error settings ${yuyinViewModel.settings} ")
-                yuyinViewModel.settings?.saveMode = 0
+                yuyinViewModel.settings.saveMode = 0
                 binding.saveTextSwitch.let {
                     it.isChecked = true
                     it.isClickable = false
@@ -265,10 +265,10 @@ class SettingsFragment : Fragment() {
                         val dialog =
                             MaterialAlertDialogBuilder(requireContext())
                                 .setTitle(R.string.save_settings)
-                                .setNegativeButton(R.string.cancel) { dialog, which ->
+                                .setNegativeButton(R.string.cancel) { dialog, _ ->
                                     dialog.dismiss()
                                 }
-                                .setPositiveButton(R.string.confirm) { dialog, which ->
+                                .setPositiveButton(R.string.confirm) { _, _ ->
                                     // 更新配置
                                     if (yuyinViewModel.newSettings.modelMode == "自定义") {
                                         if (newDictUri == null) {
@@ -340,7 +340,9 @@ class SettingsFragment : Fragment() {
                         dialog.show()
                         true
                     }
-                    else -> false
+                    else -> {
+                        false
+                    }
                 }
             }
 
@@ -365,7 +367,7 @@ class SettingsFragment : Fragment() {
             enableSwitch(true)
             buttonView.isChecked = true
             buttonView.isClickable = false
-            yuyinViewModel.settings?.saveMode = 0
+            yuyinViewModel.settings.saveMode = 0
         }
     }
 

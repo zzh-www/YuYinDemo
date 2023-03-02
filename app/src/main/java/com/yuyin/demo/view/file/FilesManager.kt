@@ -40,7 +40,7 @@ class FilesManager : Fragment() {
         } catch (e: IOException) {
             e.printStackTrace()
         }
-        val files = file!!.listFiles { dir: File?, name: String -> name.endsWith(".txt") }
+        val files = file!!.listFiles { _: File?, name: String -> name.endsWith(".txt") }
         // 返回null
         if (files != null) {
             for (item in files) {

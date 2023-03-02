@@ -145,7 +145,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
 
 
         // 控制底部导航条只出现在main_dest fileManager_dest
-        navController.addOnDestinationChangedListener() { controller, destination, arguments ->
+        navController.addOnDestinationChangedListener() { _, destination, _ ->
             runOnUiThread {
                 if (destination.label == this.getString(R.string.capture_label) || destination.label == this.getString(
                         R.string.record_label
@@ -209,10 +209,10 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
                         MaterialAlertDialogBuilder(this)
                             .setTitle(R.string.save_settings)
                             .setMessage(R.string.not_found_settings)
-                            .setNegativeButton(R.string.cancel) { dialog, which ->
+                            .setNegativeButton(R.string.cancel) { dialog, _ ->
                                 dialog.dismiss()
                             }
-                            .setPositiveButton(R.string.confirm) { dialog, which ->
+                            .setPositiveButton(R.string.confirm) { _, _ ->
                                 it.toFile().writeText(jsonAdapter.toJson(localSettings))
                             }.create()
                     dialog.show()
@@ -247,7 +247,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
         super.onPause()
         Log.i(TAG, "onPause")
         val current = navController.currentDestination
-        Log.i(TAG, "id: ${current?.id} name: ${current?.displayName} label ${current?.label}")
+        Log.i(TAG, "id: ${current?.id} label ${current?.label}")
         if (current?.label == this.getString(R.string.capture_label) || current?.label == this.getString(
                 R.string.record_label
             )
@@ -465,7 +465,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
                 .setMatchParent(false, false)
                 .setAnimator(com.lzf.easyfloat.anim.DefaultAnimator())
                 .setDisplayHeight { context -> DisplayUtils.rejectedNavHeight(context) }
-                .setFilter(MainActivityView::class.java, SettingsActivity::class.java)
+                .setFilter(MainActivityView::class.java)
                 .registerCallback {
                     show {
                         Log.i(TAG, "show float view");
@@ -476,7 +476,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
                     dismiss {
                         Log.i(TAG, "dismiss float view")
                     }
-                    drag { view, motionEvent -> }
+                    drag { _, _ -> }
                     dragEnd {
                         //TODO 获取当前重新绘制
                         //it.draw()
