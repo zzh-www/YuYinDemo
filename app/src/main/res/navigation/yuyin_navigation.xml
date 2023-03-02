@@ -21,6 +21,11 @@
         android:label="record"
         tools:layout="@layout/fragment_running_asr" />
     <fragment
+        android:id="@+id/setting_option_dest"
+        android:name="com.yuyin.demo.view.SettingsFragment"
+        android:label="setting_option"
+        tools:layout="@layout/fragment_settings" />
+    <fragment
         android:id="@+id/main_dest"
         android:name="com.yuyin.demo.view.Main"
         android:label="home"
@@ -35,6 +40,13 @@
         <action
             android:id="@+id/action_main_dest_to_runingRecord_dest"
             app:destination="@id/runningRecord_dest"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right"/>
+        <action
+            android:id="@+id/action_setting_option_dest"
+            app:destination="@id/setting_option_dest"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/slide_out_left"
             app:popEnterAnim="@anim/slide_in_left"

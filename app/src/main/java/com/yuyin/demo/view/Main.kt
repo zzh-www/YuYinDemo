@@ -1,6 +1,5 @@
 package com.yuyin.demo.view
 
-import android.content.Intent
 import android.media.AudioRecord
 import android.os.Bundle
 import android.view.*
@@ -10,9 +9,10 @@ import androidx.fragment.app.activityViewModels
 import androidx.navigation.Navigation.findNavController
 import com.yuyin.demo.R
 import com.yuyin.demo.YuYinUtil.checkRequestPermissions
-import com.yuyin.demo.YuYinUtil.YuYinLog as Log
 import com.yuyin.demo.databinding.FragmentMainBinding
 import com.yuyin.demo.viewmodel.YuyinViewModel
+import kotlin.io.path.exists
+import com.yuyin.demo.YuYinUtil.YuYinLog as Log
 
 class Main : Fragment() {
 
@@ -45,8 +45,15 @@ class Main : Fragment() {
                 when (menuItem.itemId) {
                     // 跳转至设定界面
                     R.id.setting_option -> {
-                        val intent = Intent(requireActivity(), SettingsActivity::class.java)
-                        startActivity(intent)
+                        if (checkSettingFile()) {
+                            findNavController(
+                                requireActivity(),
+                                R.id.yuyin_nav_host_container_fragment
+                            ).navigate(R.id.setting_option_dest)
+                        } else {
+                            (requireActivity() as MainActivityView).initProfile()
+                        }
+                        return true
                     }
                 }
                 return false
@@ -93,6 +100,19 @@ class Main : Fragment() {
             return false
         }
         return true
+    }
+
+    fun checkSettingFile(): Boolean {
+        var result = true
+        if (!yuyinViewModel.settingProfilePath.exists()) {
+            Log.e(TAG,"settingProfilePath is not exit")
+            result = false
+        }
+        if (!yuyinViewModel.yuYinDirPath.exists()) {
+            Log.e(TAG,"yuYinDirPath is not exit")
+            result = false
+        }
+        return result
     }
 
     override fun onDestroyView() {

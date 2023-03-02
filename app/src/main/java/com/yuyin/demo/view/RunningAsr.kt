@@ -18,7 +18,6 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.lzf.easyfloat.EasyFloat
 import com.mobvoi.wenet.Recognize
 import com.yuyin.demo.R
-import com.yuyin.demo.YuYinUtil
 import com.yuyin.demo.YuYinUtil.save_file
 import com.yuyin.demo.databinding.FragmentRunningAsrBinding
 import com.yuyin.demo.viewmodel.RunningAsrViewModel
@@ -199,8 +198,7 @@ open class RunningAsr : Fragment() {
                             binding.runRecordBt.isEnabled = true
                         }
                     } else {
-                        YuYinUtil.prepareModel(requireActivity() as MainActivityView)
-                        Recognize.init(yuYinModel.model_path, yuYinModel.dic_path)
+                        Recognize.init(yuYinModel.modelPath, yuYinModel.dicPath)
                     }
                 }
             }
@@ -209,8 +207,7 @@ open class RunningAsr : Fragment() {
 
     private fun initAsrModel() {
         model.viewModelScope.launch(Dispatchers.IO) {
-            YuYinUtil.prepareModel(requireActivity() as MainActivityView)
-            Recognize.init(yuYinModel.model_path, yuYinModel.dic_path)  // 初始化模型
+            Recognize.init(yuYinModel.modelPath, yuYinModel.dicPath)  // 初始化模型
             withContext(Dispatchers.Main) {
                 // 订阅结果
                 binding.runRecordBt.isEnabled = true

@@ -22,18 +22,18 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.NavController
-import androidx.navigation.findNavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.lzf.easyfloat.EasyFloat
 import com.lzf.easyfloat.enums.ShowPattern
 import com.lzf.easyfloat.enums.SidePattern
 import com.lzf.easyfloat.utils.DisplayUtils
-import com.yuyin.demo.service.MediaCaptureService
-import com.yuyin.demo.service.MediaCaptureService.Companion.m_NOTIFICATION_CHANNEL_ID
+import com.squareup.moshi.JsonAdapter
+import com.squareup.moshi.Moshi
 import com.vmadalin.easypermissions.EasyPermissions
 import com.yuyin.demo.R
 import com.yuyin.demo.YuYinUtil
@@ -44,6 +44,9 @@ import com.yuyin.demo.YuYinUtil.EXTRA_CaptureAudio_NAME
 import com.yuyin.demo.YuYinUtil.EXTRA_RESULT_CODE
 import com.yuyin.demo.YuYinUtil.m_CREATE_SCREEN_CAPTURE
 import com.yuyin.demo.databinding.ActivityMainViewBinding
+import com.yuyin.demo.models.LocalSettings
+import com.yuyin.demo.service.MediaCaptureService
+import com.yuyin.demo.service.MediaCaptureService.Companion.m_NOTIFICATION_CHANNEL_ID
 import com.yuyin.demo.viewmodel.YuyinViewModel
 import java.io.File
 import java.io.FileOutputStream
@@ -58,6 +61,10 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
         const val TAG = "YUYIN_ACTIVITY"
 
         const val floatTag = "float view"
+
+        const val zipMineType = "application/zip"
+
+        const val textMineType = "text/plain"
     }
 
     // 视图绑定
@@ -76,6 +83,30 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
     private lateinit var actionReceiver: CaptureAudioReceiver
     private lateinit var mediaService_binder: MediaCaptureService.MediaServiceBinder
     private var mBound = false
+    private val requestPermissionForCapture =         // 获取录制屏幕权限 并启动服务
+        registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result: ActivityResult ->
+            if (result.resultCode == RESULT_OK) {
+
+                var i = Intent(this, MediaCaptureService::class.java)
+                this.bindService(
+                    i,
+                    connection,
+                    BIND_AUTO_CREATE
+                )
+                // 启动前台服务
+                i = Intent(this, MediaCaptureService::class.java)
+                i.action = ACTION_ALL
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                i.putExtra(EXTRA_RESULT_CODE, m_CREATE_SCREEN_CAPTURE)
+                i.putExtras(result.data!!)
+                this.startForegroundService(i)
+            } else {
+                // 退出应用
+                exitApp()
+            }
+        }
 
     // 通知
     lateinit var notificationManager: NotificationManager
@@ -133,6 +164,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
             }
         }
         initNotification()
+        initProfile()
     }
 
     override fun onStart() {
@@ -152,12 +184,64 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
         Log.i(TAG, "onResume")
         // 权限
         YuYinUtil.checkRequestPermissions(this, this)
+    }
+
+    fun initProfile() {
         val docDirPath = getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+        model.yuYinDirPath = Paths.get(docDirPath?.absolutePath, "YuYin")
         val yuYinDir = Paths.get(docDirPath?.absolutePath, "YuYin").toFile()
         if (!yuYinDir.exists()) {
             yuYinDir.mkdir()
         }
+        model.settingProfilePath = Paths.get(yuYinDir.absolutePath, "settings.json")
+        model.settingProfilePath.let {
+            val moshi: Moshi = Moshi.Builder().build()
+            val jsonAdapter: JsonAdapter<LocalSettings> = moshi.adapter(LocalSettings::class.java)
+            if (it.toFile().exists()) {
+                val json = it.toFile().readText()
+                model.settings = jsonAdapter.fromJson(json)!!
+                if (File(model.modelPath).exists() && File(model.dicPath).exists()) {
+                    Log.e(TAG, "load settings successful")
+                } else {
+                    val localSettings = defaultSettings()
+                    model.settings = localSettings
+                    val dialog =
+                        MaterialAlertDialogBuilder(this)
+                            .setTitle(R.string.save_settings)
+                            .setMessage(R.string.not_found_settings)
+                            .setNegativeButton(R.string.cancel) { dialog, which ->
+                                dialog.dismiss()
+                            }
+                            .setPositiveButton(R.string.confirm) { dialog, which ->
+                                it.toFile().writeText(jsonAdapter.toJson(localSettings))
+                            }.create()
+                    dialog.show()
+                }
+            } else {
+                val localSettings = defaultSettings()
+                model.settings = localSettings
+                val json = jsonAdapter.toJson(localSettings)
+                it.toFile().createNewFile()
+                it.toFile().writeText(json)
+            }
+        }
     }
+
+    private fun defaultModel(mod: String): MutableList<String> {
+        var modelPath = "final"
+        var dicPath = "words"
+        modelPath = "${modelPath}_$mod.zip"
+        dicPath = "${dicPath}_$mod.txt"
+        modelPath = assetFilePath(this, modelPath) ?: ""
+        dicPath = assetFilePath(this, dicPath) ?: ""
+        return mutableListOf(modelPath, dicPath)
+    }
+
+    private fun defaultSettings() = LocalSettings(
+        0,
+        mutableMapOf("zh" to defaultModel("zh"), "en" to defaultModel("en"),"自定义" to mutableListOf("","")),
+        "zh"
+    )
 
     override fun onPause() {
         super.onPause()
@@ -193,9 +277,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
     }
 
     override fun onSupportNavigateUp(): Boolean {
-        return findNavController(R.id.yuyin_nav_host_container_fragment).navigateUp(
-            appBarConfiguration
-        )
+        return navController.navigateUp(appBarConfiguration)
     }
 
     override fun onPermissionsDenied(requestCode: Int, perms: List<String>) {
@@ -238,17 +320,21 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
                 MotionEvent.ACTION_DOWN -> {
                     currentFocus?.let { v ->
                         // 判断是否需要收起
-                        if (isShouldHideKeyboard(v,ev)) {
+                        if (isShouldHideKeyboard(v, ev)) {
                             val textInputText = v as EditText
                             textInputText.clearFocus()
                             if (textInputText.windowToken != null) {
                                 try {
-                                    val im: InputMethodManager? = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager?
+                                    val im: InputMethodManager? =
+                                        getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager?
                                     im?.let {
-                                        im.hideSoftInputFromWindow(textInputText.windowToken, InputMethodManager.HIDE_NOT_ALWAYS)
+                                        im.hideSoftInputFromWindow(
+                                            textInputText.windowToken,
+                                            InputMethodManager.HIDE_NOT_ALWAYS
+                                        )
                                     }
-                                } catch (e:Exception) {
-                                    Log.e(TAG,e.message)
+                                } catch (e: Exception) {
+                                    Log.e(TAG, e.message)
                                 }
                             }
                         }
@@ -264,7 +350,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
         // 判断获取焦点view是否是editview
         if (v is EditText) {
             // 判断点击位置
-            val l = intArrayOf(0,0)
+            val l = intArrayOf(0, 0)
             // 获取位置
             v.getLocationInWindow(l)
             val left = l[0]
@@ -355,29 +441,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
             this.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         val intent = m_mediaProjectionManager.createScreenCaptureIntent()
         // 获取录制屏幕权限 并启动服务
-        registerForActivityResult(
-            ActivityResultContracts.StartActivityForResult()
-        ) { result: ActivityResult ->
-            if (result.resultCode == RESULT_OK) {
-
-                var i = Intent(this, MediaCaptureService::class.java)
-                this.bindService(
-                    i,
-                    connection,
-                    BIND_AUTO_CREATE
-                )
-                // 启动前台服务
-                i = Intent(this, MediaCaptureService::class.java)
-                i.action = ACTION_ALL
-                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                i.putExtra(EXTRA_RESULT_CODE, m_CREATE_SCREEN_CAPTURE)
-                i.putExtras(result.data!!)
-                this.startForegroundService(i)
-            } else {
-                // 退出应用
-                exitApp()
-            }
-        }.launch(intent)
+        requestPermissionForCapture.launch(intent)
     }
 
     private fun exitApp() {

@@ -18,6 +18,7 @@ import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.collections.ArrayList
 
 object YuYinUtil {
 
@@ -107,19 +108,6 @@ object YuYinUtil {
             return false
         }
         return true
-    }
-
-    @JvmStatic
-    fun prepareModel(activity: MainActivityView) {
-        var model_name = "final"
-        var dic_name = "words"
-        val sharedPreference =
-            PreferenceManager.getDefaultSharedPreferences(activity)
-        val mod = sharedPreference.getString("languageOfModule", "zh")
-        model_name = "$`model_name`_$mod.zip"
-        dic_name = "$`dic_name`_$mod.txt"
-        activity.model.model_path = File(activity.assetFilePath(activity, model_name)).absolutePath
-        activity.model.dic_path = File(activity.assetFilePath(activity, dic_name)).absolutePath
     }
 
 
