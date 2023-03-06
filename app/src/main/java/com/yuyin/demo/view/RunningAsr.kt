@@ -68,20 +68,26 @@ open class RunningAsr : Fragment() {
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
-        Log.i(mTAG,"onConfigurationChanged")
+        Log.i(mTAG, "onConfigurationChanged")
         super.onConfigurationChanged(newConfig)
         model.change_senor = false // 标记屏幕旋转
     }
 
     override fun onDestroyView() {
-        Log.i(mTAG,"onDestroyView")
+        Log.i(mTAG, "onDestroyView")
         super.onDestroyView()
         _binding = null
         destroyRecord()
+        if (Recognize.getInit() && !Recognize.getFinished() && binding.runRecordBt.text == requireContext().getString(
+                R.string.stop
+            )
+        ) {
+            Recognize.setInputFinished()
+        }
     }
 
     override fun onDestroy() {
-        Log.i(this.mTAG,"onDestroy")
+        Log.i(this.mTAG, "onDestroy")
         super.onDestroy()
     }
 
@@ -95,21 +101,22 @@ open class RunningAsr : Fragment() {
         // true true
         initRecorder()
         binding.runRecordBt.text = this.getString(R.string.start)
-        binding.runRecordBt.icon =  AppCompatResources.getDrawable(requireContext(),
+        binding.runRecordBt.icon = AppCompatResources.getDrawable(
+            requireContext(),
             R.drawable.play_icon36
         )
     }
 
     open fun initRecorder() {
-        Log.e(mTAG,"need override")
+        Log.e(mTAG, "need override")
     }
 
     open fun startRecord() {
-        Log.e(mTAG,"need override")
+        Log.e(mTAG, "need override")
     }
 
     open fun destroyRecord() {
-        Log.e(mTAG,"need override")
+        Log.e(mTAG, "need override")
     }
 
     private fun initMenu() {
@@ -154,7 +161,7 @@ open class RunningAsr : Fragment() {
     private fun initPlayButton() {
         binding.runRecordBt.setOnClickListener {
             if (model.recordState) {
-                model.viewModelScope.launch(Dispatchers.IO) {
+                model.viewModelScope.launch(Dispatchers.Default) {
                     withContext(Dispatchers.Main) {
                         binding.runRecordBt.isEnabled = false
                         model.recordState = false
@@ -166,39 +173,44 @@ open class RunningAsr : Fragment() {
                         Recognize.setInputFinished()
                     withContext(Dispatchers.Main) {
                         binding.runRecordBt.text = requireContext().getString(R.string.start)
-                        binding.runRecordBt.icon = AppCompatResources.getDrawable(requireContext(),
+                        binding.runRecordBt.icon = AppCompatResources.getDrawable(
+                            requireContext(),
                             R.drawable.play_icon36
                         )
                         binding.runRecordBt.isEnabled = true
                         if (!binding.runRecordHotView.text.isNullOrBlank()) {
-                            model.updateSpeechList(recyclerView,binding.runRecordHotView.text.toString())
+                            model.updateSpeechList(
+                                recyclerView,
+                                binding.runRecordHotView.text.toString()
+                            )
                             binding.runRecordHotView.text = ""
                         }
                     }
                 }
             } else {
-                model.viewModelScope.launch(Dispatchers.IO) {
-                    if (Recognize.getInit()) {
+                model.viewModelScope.launch(Dispatchers.Main) {
+                    if (Recognize.getInit() && Recognize.getFinished()) {
                         withContext(Dispatchers.Main) {
                             binding.runRecordBt.isEnabled = false
                         }
                         Recognize.reset()
                         startRecord()
-                        withContext(Dispatchers.Main) {
-                            model.recordState = true
-                            model.asrState = true
-                        }
+                        model.recordState = true
+                        model.asrState = true
                         Recognize.startDecode()
                         model.getTextFlow()
-                        withContext(Dispatchers.Main) {
-                            binding.runRecordBt.text = requireContext().getString(R.string.stop)
-                            binding.runRecordBt.icon = AppCompatResources.getDrawable(requireContext(),
-                                R.drawable.stop_icon36
-                            )
-                            binding.runRecordBt.isEnabled = true
+                        binding.runRecordBt.text = requireContext().getString(R.string.stop)
+                        binding.runRecordBt.icon = AppCompatResources.getDrawable(
+                            requireContext(),
+                            R.drawable.stop_icon36
+                        )
+                        binding.runRecordBt.isEnabled = true
+                    } else if (!Recognize.getInit()) {
+                        withContext(Dispatchers.IO) {
+                            Recognize.init(yuYinModel.modelPath, yuYinModel.dicPath)
                         }
                     } else {
-                        Recognize.init(yuYinModel.modelPath, yuYinModel.dicPath)
+                        Log.e(mTAG, "not finish model successfully")
                     }
                 }
             }
@@ -207,7 +219,7 @@ open class RunningAsr : Fragment() {
 
     private fun initAsrModel() {
         model.viewModelScope.launch(Dispatchers.IO) {
-            Recognize.init(yuYinModel.modelPath, yuYinModel.dicPath)  // 初始化模型
+                Recognize.init(yuYinModel.modelPath, yuYinModel.dicPath)  // 初始化模型
             withContext(Dispatchers.Main) {
                 // 订阅结果
                 binding.runRecordBt.isEnabled = true
@@ -229,7 +241,8 @@ open class RunningAsr : Fragment() {
 
     private fun initFloatingBt() {
         binding.goDownBt.hide()
-        binding.goDownBt.setOnClickListener {it as FloatingActionButton
+        binding.goDownBt.setOnClickListener {
+            it as FloatingActionButton
             val position = model.speechList.size
             recyclerView.smoothScrollToPosition(position)
             it.hide()
@@ -239,4 +252,5 @@ open class RunningAsr : Fragment() {
             }
         }
     }
+
 }

@@ -149,7 +149,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
             runOnUiThread {
                 if (destination.label == this.getString(R.string.capture_label) || destination.label == this.getString(
                         R.string.record_label
-                    )
+                    ) || destination.label == this.getString(R.string.setting_label)
                 ) {
                     binding.mainBottomNavigation.let {
                         it.visibility = View.GONE

@@ -270,6 +270,9 @@ class SettingsFragment : Fragment() {
                                 }
                                 .setPositiveButton(R.string.confirm) { _, _ ->
                                     // 更新配置
+                                    val moshi: Moshi = Moshi.Builder().build()
+                                    val jsonAdapter: JsonAdapter<LocalSettings> =
+                                        moshi.adapter(LocalSettings::class.java)
                                     if (yuyinViewModel.newSettings.modelMode == "自定义") {
                                         if (newDictUri == null) {
                                             Toast.makeText(
@@ -285,9 +288,6 @@ class SettingsFragment : Fragment() {
                                             ).show()
                                         } else {
                                             yuyinViewModel.viewModelScope.launch(Dispatchers.IO) {
-                                                val moshi: Moshi = Moshi.Builder().build()
-                                                val jsonAdapter: JsonAdapter<LocalSettings> =
-                                                    moshi.adapter(LocalSettings::class.java)
                                                 yuyinViewModel.newSettings.modelPath().let {
                                                     val tmp = File(it)
                                                     if (tmp.exists()) {
@@ -305,7 +305,9 @@ class SettingsFragment : Fragment() {
                                                     binding.dictPathText.text.toString()
                                                 ).toFile()
                                                 if (!fileDict.exists()) {
-                                                    requireActivity().contentResolver.openInputStream(newDictUri!!).use { inputStream ->
+                                                    requireActivity().contentResolver.openInputStream(
+                                                        newDictUri!!
+                                                    ).use { inputStream ->
                                                         fileDict.outputStream().use {
                                                             inputStream?.copyTo(it)
                                                         }
@@ -316,7 +318,9 @@ class SettingsFragment : Fragment() {
                                                     binding.modePathText.text.toString()
                                                 ).toFile()
                                                 if (!fileModel.exists()) {
-                                                    requireActivity().contentResolver.openInputStream(newModelUri!!).use { inputStream ->
+                                                    requireActivity().contentResolver.openInputStream(
+                                                        newModelUri!!
+                                                    ).use { inputStream ->
                                                         fileModel.outputStream().use {
                                                             inputStream?.copyTo(it)
                                                         }
@@ -331,10 +335,20 @@ class SettingsFragment : Fragment() {
                                                     jsonAdapter.toJson(yuyinViewModel.newSettings)
                                                 yuyinViewModel.settingProfilePath.toFile()
                                                     .writeText(json)
+                                                yuyinViewModel.settings.modelMode =
+                                                    yuyinViewModel.newSettings.modelMode
                                                 yuyinViewModel.settings =
                                                     yuyinViewModel.newSettings.copy()
                                             }
                                         }
+                                    } else {
+                                        // just copy
+                                        val json =
+                                            jsonAdapter.toJson(yuyinViewModel.newSettings)
+                                        yuyinViewModel.settingProfilePath.toFile()
+                                            .writeText(json)
+                                        yuyinViewModel.settings =
+                                            yuyinViewModel.newSettings.copy()
                                     }
                                 }.create()
                         dialog.show()

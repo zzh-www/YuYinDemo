@@ -13,17 +13,17 @@
     <fragment
         android:id="@+id/runningCapture_dest"
         android:name="com.yuyin.demo.view.RuningCapture"
-        android:label="capture"
+        android:label="@string/capture_label"
         tools:layout="@layout/fragment_running_asr" />
     <fragment
         android:id="@+id/runningRecord_dest"
         android:name="com.yuyin.demo.view.RunningRecord"
-        android:label="record"
+        android:label="@string/record_label"
         tools:layout="@layout/fragment_running_asr" />
     <fragment
         android:id="@+id/setting_option_dest"
         android:name="com.yuyin.demo.view.SettingsFragment"
-        android:label="setting_option"
+        android:label="@string/setting_label"
         tools:layout="@layout/fragment_settings" />
     <fragment
         android:id="@+id/main_dest"
