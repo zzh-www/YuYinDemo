@@ -5,12 +5,14 @@ import android.content.res.Configuration
 import android.media.AudioRecord
 import android.os.Bundle
 import android.view.*
+import android.widget.TextView
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewModelScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -23,6 +25,8 @@ import com.yuyin.demo.databinding.FragmentRunningAsrBinding
 import com.yuyin.demo.viewmodel.RunningAsrViewModel
 import com.yuyin.demo.viewmodel.YuyinViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.yuyin.demo.YuYinUtil.YuYinLog as Log
@@ -46,8 +50,7 @@ open class RunningAsr : Fragment() {
     lateinit var floatView: StrokeView
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
         // Inflate the layout for this fragment
         _binding = FragmentRunningAsrBinding.inflate(inflater, container, false)
@@ -65,6 +68,7 @@ open class RunningAsr : Fragment() {
         initPlayButton()
         editModeForRecyclerView()
         initFloatingBt()
+        observeFinish()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -78,10 +82,7 @@ open class RunningAsr : Fragment() {
         super.onDestroyView()
         _binding = null
         destroyRecord()
-        if (Recognize.getInit() && !Recognize.getFinished() && binding.runRecordBt.text == requireContext().getString(
-                R.string.stop
-            )
-        ) {
+        if (model.asrState && !model.recordState && !Recognize.getFinished()) {
             Recognize.setInputFinished()
         }
     }
@@ -102,8 +103,7 @@ open class RunningAsr : Fragment() {
         initRecorder()
         binding.runRecordBt.text = this.getString(R.string.start)
         binding.runRecordBt.icon = AppCompatResources.getDrawable(
-            requireContext(),
-            R.drawable.play_icon36
+            requireContext(), R.drawable.play_icon36
         )
     }
 
@@ -134,7 +134,7 @@ open class RunningAsr : Fragment() {
             override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
                 return when (menuItem.itemId) {
                     R.id.save_option -> {
-                        model.viewModelScope.launch(Dispatchers.IO) {
+                        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
                             val result = StringBuilder()
                             for (i in model.speechList) {
                                 result.append(i.text)
@@ -161,56 +161,44 @@ open class RunningAsr : Fragment() {
     private fun initPlayButton() {
         binding.runRecordBt.setOnClickListener {
             if (model.recordState) {
-                model.viewModelScope.launch(Dispatchers.Default) {
-                    withContext(Dispatchers.Main) {
-                        binding.runRecordBt.isEnabled = false
-                        model.recordState = false
-                        model.asrState = false
-                        floatView.text = ""
-                    }
+                viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                    binding.runRecordBt.isEnabled = false
+                    model.recordState = false
+                    model.asrState = false
+                    floatView.text = ""
                     record.stop()
                     if (!Recognize.getFinished())
                         Recognize.setInputFinished()
-                    withContext(Dispatchers.Main) {
-                        binding.runRecordBt.text = requireContext().getString(R.string.start)
-                        binding.runRecordBt.icon = AppCompatResources.getDrawable(
-                            requireContext(),
-                            R.drawable.play_icon36
-                        )
-                        binding.runRecordBt.isEnabled = true
-                        if (!binding.runRecordHotView.text.isNullOrBlank()) {
-                            model.updateSpeechList(
-                                recyclerView,
-                                binding.runRecordHotView.text.toString()
-                            )
-                            binding.runRecordHotView.text = ""
-                        }
+                    else
+                        model.isModelFinish.emit(true)
+                    binding.runRecordBt.text = requireContext().getString(R.string.start)
+                    binding.runRecordBt.icon = AppCompatResources.getDrawable(
+                        requireContext(), R.drawable.play_icon36
+                    )
+                    if (!binding.runRecordHotView.text.isNullOrBlank()) {
+                        binding.runRecordHotView.text = "****wait for last result****"
                     }
                 }
             } else {
-                model.viewModelScope.launch(Dispatchers.Main) {
-                    if (Recognize.getInit() && Recognize.getFinished()) {
-                        withContext(Dispatchers.Main) {
-                            binding.runRecordBt.isEnabled = false
-                        }
+                viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                    if (model.isModelInit.value && Recognize.getFinished()) {
+                        binding.runRecordBt.isEnabled = false
                         Recognize.reset()
                         startRecord()
                         model.recordState = true
                         model.asrState = true
                         Recognize.startDecode()
-                        model.getTextFlow()
-                        binding.runRecordBt.text = requireContext().getString(R.string.stop)
-                        binding.runRecordBt.icon = AppCompatResources.getDrawable(
-                            requireContext(),
-                            R.drawable.stop_icon36
-                        )
-                        binding.runRecordBt.isEnabled = true
-                    } else if (!Recognize.getInit()) {
+                        withContext(Dispatchers.Main) {
+                            binding.runRecordBt.text = requireContext().getString(R.string.stop)
+                            binding.runRecordBt.icon = AppCompatResources.getDrawable(
+                                requireContext(), R.drawable.stop_icon36
+                            )
+                            binding.runRecordBt.isEnabled = true
+                        }
+                    } else {
                         withContext(Dispatchers.IO) {
                             Recognize.init(yuYinModel.modelPath, yuYinModel.dicPath)
                         }
-                    } else {
-                        Log.e(mTAG, "not finish model successfully")
                     }
                 }
             }
@@ -218,18 +206,27 @@ open class RunningAsr : Fragment() {
     }
 
     private fun initAsrModel() {
-        model.viewModelScope.launch(Dispatchers.IO) {
-                Recognize.init(yuYinModel.modelPath, yuYinModel.dicPath)  // 初始化模型
-            withContext(Dispatchers.Main) {
-                // 订阅结果
-                binding.runRecordBt.isEnabled = true
-                model.updateFlow(floatView, recyclerView, binding.runRecordHotView)
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Default) {
+            Recognize.setOnNativeAsrModelCall(model.asrListener)
+            Recognize.init(yuYinModel.modelPath, yuYinModel.dicPath)  // 初始化模型
+            model.isModelInit.collect {
+                if (it) {
+                    withContext(Dispatchers.Main) {
+                        // 订阅结果
+                        binding.runRecordBt.isEnabled = true
+                        model.run {
+                            updateFlowText(floatView)
+                            updateHotTextView(binding.runRecordHotView)
+                            updateSpeechList(recyclerView)
+                        }
+                    }
+                }
             }
         }
     }
 
     private fun editModeForRecyclerView() {
-        model.viewModelScope.launch(Dispatchers.Main) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             model.canScroll.collect {
                 // 不可自动滚动时，展示按钮方便用户点击滚到底部，恢复自动滚动
                 if (!it) {
@@ -249,6 +246,68 @@ open class RunningAsr : Fragment() {
             model.viewModelScope.launch(Dispatchers.Main) {
                 // 点击按钮后，启动自动滚动
                 model.canScroll.emit(true)
+            }
+        }
+    }
+
+    private fun observeFinish() {
+        model.run {
+            // 与界面元素相关都应该使用 viewLifecycleOwner.lifecycleScope
+            viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Default) {
+                isModelFinish.collect {
+                    if (it) {
+                        // 停止转写后收到finish为true事件
+                        if (!asrState && !recordState) {
+                            withContext(Dispatchers.Main) {
+                                binding.runRecordBt.isEnabled = true
+                                binding.runRecordHotView.text = ""
+                            }
+                            updateOffsetTime()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fun updateSpeechList(recyclerView: RecyclerView) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+            model.results.filter {
+                it.text.isNotEmpty() && (it.state == 2 || it.state == 4)
+            }.collect {
+                val position = model.speechList.size - 1
+                model.speechList.add(it) // add new para
+                model.adapter.notifyItemInserted(position + 1)
+                if (model.canScroll.value) {
+                    // 可滚动才可自动滚动
+                    recyclerView.scrollToPosition(position + 1)
+                }
+                Log.i(tag, "updateSpeechList $it")
+            }
+        }
+    }
+
+    fun updateFlowText(flowText: StrokeView) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+            model.hotResult.collectLatest {
+                flowText.text = it
+                Log.i(tag, "update flowText $it")
+            }
+        }
+    }
+
+    fun updateHotTextView(hotText: TextView) {
+        // 当流代表部分操作结果或操作状态更新时，可能没有必要处理每个值，而是只处理最新的那个。
+        // 当收集器处理它们太慢的时候， conflate 操作符可以用于跳过中间值。
+        // 另一种方式是取消缓慢的收集器，并在每次发射新值的时候重新启动它。
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+            model.hotResult.collectLatest {
+                hotText.text = it
+                val offset = hotText.lineCount * hotText.lineHeight
+                if (offset > hotText.height) {
+                    hotText.scrollTo(0, offset - hotText.height)
+                }
+                Log.i(tag, "update hotText $it")
             }
         }
     }

@@ -9,13 +9,14 @@ import androidx.lifecycle.viewModelScope
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.textfield.TextInputEditText
 import com.yuyin.demo.R
+import com.yuyin.demo.models.SpeechResult
 import com.yuyin.demo.viewmodel.RunningAsrViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import com.yuyin.demo.YuYinUtil.YuYinLog as Log
 
-class SpeechTextAdapter(private val dataList: List<SpeechText>, private val viewModel: RunningAsrViewModel) :
+class SpeechTextAdapter(private val dataList: List<SpeechResult>, private val viewModel: RunningAsrViewModel) :
     RecyclerView.Adapter<SpeechTextAdapter.ViewHolder>() {
 
     var mRecyclerView: RecyclerView? = null
