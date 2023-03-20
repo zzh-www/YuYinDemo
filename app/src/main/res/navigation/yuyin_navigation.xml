@@ -4,15 +4,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/yuyin_navigation"
     app:startDestination="@id/main_dest">
-
-    <fragment
-        android:id="@+id/filesManager_dest"
-        android:name="com.yuyin.demo.view.file.FilesManager"
-        android:label="@string/file_manage_label"
-        tools:layout="@layout/fragment_files_manager" />
     <fragment
         android:id="@+id/runningCapture_dest"
-        android:name="com.yuyin.demo.view.RuningCapture"
+        android:name="com.yuyin.demo.view.RunningCapture"
         android:label="@string/capture_label"
         tools:layout="@layout/fragment_running_asr" />
     <fragment
@@ -47,6 +41,25 @@
         <action
             android:id="@+id/action_setting_option_dest"
             app:destination="@id/setting_option_dest"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right"/>
+    </fragment>
+    <fragment
+        android:id="@+id/edit_dest"
+        android:name="com.yuyin.demo.view.edit.EditFragment"
+        android:label="@string/edit_label"
+        tools:layout="@layout/fragment_edit" >
+    </fragment>
+    <fragment
+        android:id="@+id/filesManager_dest"
+        android:name="com.yuyin.demo.view.file.FilesManager"
+        android:label="@string/file_manage_label"
+        tools:layout="@layout/fragment_files_manager">
+        <action
+            android:id="@+id/action_filesManager_dest_to_edit_dest"
+            app:destination="@id/edit_dest"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/slide_out_left"
             app:popEnterAnim="@anim/slide_in_left"

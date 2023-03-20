@@ -33,16 +33,15 @@ import com.lzf.easyfloat.enums.ShowPattern
 import com.lzf.easyfloat.enums.SidePattern
 import com.lzf.easyfloat.utils.DisplayUtils
 import com.squareup.moshi.JsonAdapter
-import com.squareup.moshi.Moshi
 import com.vmadalin.easypermissions.EasyPermissions
 import com.yuyin.demo.R
-import com.yuyin.demo.YuYinUtil
-import com.yuyin.demo.YuYinUtil.ACTION_ALL
-import com.yuyin.demo.YuYinUtil.CaptureAudio_ALL
-import com.yuyin.demo.YuYinUtil.CaptureAudio_START
-import com.yuyin.demo.YuYinUtil.EXTRA_CaptureAudio_NAME
-import com.yuyin.demo.YuYinUtil.EXTRA_RESULT_CODE
-import com.yuyin.demo.YuYinUtil.m_CREATE_SCREEN_CAPTURE
+import com.yuyin.demo.utils.YuYinUtil
+import com.yuyin.demo.utils.YuYinUtil.ACTION_ALL
+import com.yuyin.demo.utils.YuYinUtil.CaptureAudio_ALL
+import com.yuyin.demo.utils.YuYinUtil.CaptureAudio_START
+import com.yuyin.demo.utils.YuYinUtil.EXTRA_CaptureAudio_NAME
+import com.yuyin.demo.utils.YuYinUtil.EXTRA_RESULT_CODE
+import com.yuyin.demo.utils.YuYinUtil.m_CREATE_SCREEN_CAPTURE
 import com.yuyin.demo.databinding.ActivityMainViewBinding
 import com.yuyin.demo.models.LocalSettings
 import com.yuyin.demo.service.MediaCaptureService
@@ -52,8 +51,9 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.nio.file.Paths
+import kotlin.io.path.absolutePathString
 import kotlin.system.exitProcess
-import com.yuyin.demo.YuYinUtil.YuYinLog as Log
+import com.yuyin.demo.utils.YuYinUtil.YuYinLog as Log
 
 class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallbacks {
 
@@ -149,7 +149,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
             runOnUiThread {
                 if (destination.label == this.getString(R.string.capture_label) || destination.label == this.getString(
                         R.string.record_label
-                    ) || destination.label == this.getString(R.string.setting_label)
+                    ) || destination.label == this.getString(R.string.setting_label) || destination.label == getString(R.string.edit_label)
                 ) {
                     binding.mainBottomNavigation.let {
                         it.visibility = View.GONE
@@ -158,7 +158,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
                 } else {
                     binding.mainBottomNavigation.let {
                         it.visibility = View.VISIBLE
-                        it.isEnabled = false
+                        it.isEnabled = true
                     }
                 }
             }
@@ -193,10 +193,14 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
         if (!yuYinDir.exists()) {
             yuYinDir.mkdir()
         }
+        val yuYinDataDir = Paths.get(yuYinDir.absolutePath,"data").toFile()
+        if (!yuYinDataDir.exists()) {
+            yuYinDataDir.mkdir()
+        }
+        model.yuYinDataDir = yuYinDataDir.toPath()
         model.settingProfilePath = Paths.get(yuYinDir.absolutePath, "settings.json")
         model.settingProfilePath.let {
-            val moshi: Moshi = Moshi.Builder().build()
-            val jsonAdapter: JsonAdapter<LocalSettings> = moshi.adapter(LocalSettings::class.java)
+            val jsonAdapter: JsonAdapter<LocalSettings> = model.moshi.adapter(LocalSettings::class.java)
             if (it.toFile().exists()) {
                 val json = it.toFile().readText()
                 model.settings = jsonAdapter.fromJson(json)!!
@@ -364,7 +368,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
     }
 
     fun assetFilePath(context: Context, assetName: String): String? {
-        val file = File(context.filesDir, assetName)
+        val file = File(model.yuYinDirPath.absolutePathString(), assetName)
         if (file.exists() && file.length() > 0) {
             return file.absolutePath
         }
@@ -458,7 +462,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
                 .setTag(floatTag) // 设置TAG管理
                 .setDragEnable(true) // 可拖拽
                 .hasEditText(false) // 无编辑框，无需适配键盘
-                .setLocation(100, 0)
+                .setLocation(0, 0)
                 .setGravity(Gravity.START or Gravity.CENTER_VERTICAL, 0, 0)
                 .setLayoutChangedGravity(Gravity.START)
                 //  .setBorder()

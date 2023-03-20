@@ -7,12 +7,18 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.core.content.FileProvider
+import androidx.lifecycle.viewModelScope
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.yuyin.demo.R
-import com.yuyin.demo.YuYinUtil.YuYinLog as Log
+import com.yuyin.demo.viewmodel.FilesManagerViewModel
+import kotlinx.coroutines.launch
+import com.yuyin.demo.utils.YuYinUtil.YuYinLog as Log
 
-class FileAdapter(private val data_list: ArrayList<FileItem>) :
+class FileAdapter(
+    private val data_list: ArrayList<FileItem>,
+    private val viewModel: FilesManagerViewModel
+) :
     RecyclerView.Adapter<FileAdapter.ViewHolder>() {
     val tag = "FileAdapter"
     private lateinit var mRecyclerView: RecyclerView
@@ -26,24 +32,12 @@ class FileAdapter(private val data_list: ArrayList<FileItem>) :
         val view = LayoutInflater.from(parent.context).inflate(R.layout.file_item, parent, false)
         val viewHolder = ViewHolder(view)
         viewHolder.file_text.setOnClickListener {
-            val txt_path = data_list[viewHolder.bindingAdapterPosition].file_path
-            // 打开txt文件
-            val intent = Intent(Intent.ACTION_VIEW)
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            val uri = FileProvider.getUriForFile(
-                parent.context,
-                "com.yuyin.demo.fileprovider",
-                txt_path
-            )
-            intent.flags = Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-            intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-            intent.setDataAndType(uri, "text/plain")
-            /*
-                MIME 媒体类型，如 image/jpeg 或 audio/mpeg4-generic。子类型可以是星号通配符 (*)，以指示任何子类型都匹配。
-                Intent 过滤器经常会声明仅包含 android:mimeType 属性的 <data>。
-                intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, file_path);
-            */
-            parent.context.startActivity(intent)
+            val txtPath = data_list[viewHolder.bindingAdapterPosition].file_path
+            with(viewModel) {
+                viewModelScope.launch {
+                    openFile.emit(txtPath)
+                }
+            }
         }
         viewHolder.file_bt.setOnClickListener {
             val text_path = data_list[viewHolder.bindingAdapterPosition].file_path

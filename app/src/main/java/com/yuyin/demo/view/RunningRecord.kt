@@ -12,55 +12,59 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.app.ActivityCompat
 import androidx.fragment.app.viewModels
-import com.yuyin.demo.viewmodel.RunningAsrViewModel
+import com.yuyin.demo.utils.YuYinUtil
+import com.yuyin.demo.utils.YuYinUtil.RecordHelper.RECORDER_AUDIO_ENCODING
+import com.yuyin.demo.utils.YuYinUtil.RecordHelper.RECORDER_CHANNELS
+import com.yuyin.demo.utils.YuYinUtil.RecordHelper.RECORDER_SAMPLERATE
+import com.yuyin.demo.utils.YuYinUtil.RecordHelper.miniBufferSize
 import com.yuyin.demo.viewmodel.RunningRecordViewModel
-import com.yuyin.demo.YuYinUtil.YuYinLog as Log
+import com.yuyin.demo.utils.YuYinUtil.YuYinLog as Log
 
 
 class RunningRecord : RunningAsr(){
 
-    override val mTAG = "YUYIN_RECORD"
+    override val TAG = "YUYIN_RECORD"
     override val model: RunningRecordViewModel by viewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        Log.i(mTAG, "onCreateView")
+        Log.i(TAG, "onCreateView")
         return super.onCreateView(inflater, container, savedInstanceState)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        Log.i(mTAG,"onViewCreated")
+        Log.i(TAG,"onViewCreated")
         super.onViewCreated(view, savedInstanceState)
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
-        Log.i(mTAG,"onConfigurationChanged")
+        Log.i(TAG,"onConfigurationChanged")
         super.onConfigurationChanged(newConfig)
         model.change_senor = false // 标记屏幕旋转
     }
 
     override fun onDestroyView() {
-        Log.i(mTAG,"onDestroyView")
+        Log.i(TAG,"onDestroyView")
         super.onDestroyView()
         destroyRecord()
     }
 
     override fun onDestroy() {
-        Log.i(mTAG,"onDestroy")
+        Log.i(TAG,"onDestroy")
         super.onDestroy()
     }
 
     override fun initRecorder() {
         // buffer size in bytes 1280
-        model.miniBufferSize = AudioRecord.getMinBufferSize(
-            model.SAMPLE_RATE,
-            AudioFormat.CHANNEL_IN_MONO,
-            AudioFormat.ENCODING_PCM_16BIT
+        miniBufferSize =  AudioRecord.getMinBufferSize(
+            RECORDER_SAMPLERATE,
+            RECORDER_CHANNELS,
+            RECORDER_AUDIO_ENCODING
         )
-        if (model.miniBufferSize == AudioRecord.ERROR || model.miniBufferSize == AudioRecord.ERROR_BAD_VALUE) {
-            Log.e(mTAG, "Audio buffer can't initialize!")
+        if (miniBufferSize == AudioRecord.ERROR || miniBufferSize == AudioRecord.ERROR_BAD_VALUE) {
+            Log.e(TAG, "Audio buffer can't initialize!")
             return
         }
         if (ActivityCompat.checkSelfPermission(
@@ -68,19 +72,19 @@ class RunningRecord : RunningAsr(){
                 Manifest.permission.RECORD_AUDIO
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            Log.e(mTAG, "Audio Record can't initialize for no permission")
+            Log.e(TAG, "Audio Record can't initialize for no permission")
             return
         }
         record = AudioRecord(
             MediaRecorder.AudioSource.DEFAULT,
-            model.SAMPLE_RATE,
-            AudioFormat.CHANNEL_IN_MONO,
-            AudioFormat.ENCODING_PCM_16BIT,
-            model.miniBufferSize
+            RECORDER_SAMPLERATE,
+            RECORDER_CHANNELS,
+            RECORDER_AUDIO_ENCODING,
+            miniBufferSize
         )
-        Log.i(mTAG, "Record init okay")
+        Log.i(TAG, "Record init okay")
         if (record.state != AudioRecord.STATE_INITIALIZED) {
-            Log.e(mTAG, "Audio Record can't initialize!")
+            Log.e(TAG, "Audio Record can't initialize!")
         }
     }
 

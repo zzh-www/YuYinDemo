@@ -1,24 +1,20 @@
-package com.yuyin.demo
+package com.yuyin.demo.utils
 
 import android.Manifest
 import android.app.Activity
 import android.content.Context
-import android.content.DialogInterface
 import android.content.pm.PackageManager
+import android.media.AudioFormat
 import android.os.Environment
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.preference.PreferenceManager
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.yuyin.demo.view.MainActivityView
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.text.SimpleDateFormat
 import java.util.*
-import kotlin.collections.ArrayList
 
 object YuYinUtil {
 
@@ -88,6 +84,37 @@ object YuYinUtil {
     }
 
     @JvmStatic
+    fun getFileName(dir: String, title: String? = null):Pair<File,File> {
+        val timeStamp = System.currentTimeMillis()
+        val sdf = SimpleDateFormat("yyyyMMddHHmmss", Locale.CHINA)
+        val dateStr = sdf.format(Date(timeStamp.toString().toLong()))
+        val type = ".json"
+        val audioType = ".wav"
+        val dir_path = dir
+        var file: File?
+        var audioFile:File?
+        if (title.isNullOrBlank()) {
+            file =
+                File(dir_path ,dateStr + type)
+            audioFile =
+                File(dir_path,dateStr + audioType)
+        } else {
+            file =
+                File(dir_path, title + type)
+            audioFile =
+                File(dir_path, title + audioType)
+            if (file.exists()) {
+                file =
+                    File(dir_path, title + "_" + dateStr + type)
+                audioFile =
+                    File(dir_path, title + "_" + dateStr + audioType)
+            }
+        }
+
+        return file to audioFile
+    }
+
+    @JvmStatic
     fun checkRequestPermissions(activity: Activity?, context: Context?): Boolean {
         val listPermissionsNeeded: MutableList<String> = ArrayList()
         for (permission in appPermissions) {
@@ -142,6 +169,15 @@ object YuYinUtil {
                 Log.v(tag, msg!!)
             }
         }
+    }
+
+    object RecordHelper {
+        const val RECORDER_SAMPLERATE = 16000
+        const val RECORDER_CHANNELS = AudioFormat.CHANNEL_IN_MONO
+        const val RECORDER_AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT
+        var miniBufferSize = 0
+        var BufferElements2Rec = 1024 // want to play 2048 (2K) since 2 bytes we use only 1024
+        var BytesPerElement = 2 // 2 bytes in 16bit format
     }
 
 }

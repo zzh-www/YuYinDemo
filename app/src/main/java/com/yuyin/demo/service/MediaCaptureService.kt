@@ -1,7 +1,6 @@
 package com.yuyin.demo.service
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.app.Service
 import android.content.BroadcastReceiver
@@ -16,37 +15,33 @@ import android.media.AudioRecord
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Binder
-import android.os.Environment
 import android.os.IBinder
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import com.yuyin.demo.view.MainActivityView
 import com.yuyin.demo.R
-import com.yuyin.demo.YuYinUtil.ACTION_ALL
-import com.yuyin.demo.YuYinUtil.ACTION_START_RECORDING_From_Notification
-import com.yuyin.demo.YuYinUtil.ACTION_STOP_RECORDING_From_Notification
-import com.yuyin.demo.YuYinUtil.CaptureAudio_ALL
-import com.yuyin.demo.YuYinUtil.CaptureAudio_START
-import com.yuyin.demo.YuYinUtil.EXTRA_ACTION_NAME
-import com.yuyin.demo.YuYinUtil.EXTRA_CaptureAudio_NAME
-import java.io.File
-import java.io.FileNotFoundException
-import java.io.FileOutputStream
-import java.io.IOException
-import java.text.SimpleDateFormat
-import java.util.*
-import com.yuyin.demo.YuYinUtil.YuYinLog as Log
+import com.yuyin.demo.utils.YuYinUtil.ACTION_ALL
+import com.yuyin.demo.utils.YuYinUtil.ACTION_START_RECORDING_From_Notification
+import com.yuyin.demo.utils.YuYinUtil.ACTION_STOP_RECORDING_From_Notification
+import com.yuyin.demo.utils.YuYinUtil.CaptureAudio_ALL
+import com.yuyin.demo.utils.YuYinUtil.CaptureAudio_START
+import com.yuyin.demo.utils.YuYinUtil.EXTRA_ACTION_NAME
+import com.yuyin.demo.utils.YuYinUtil.EXTRA_CaptureAudio_NAME
+import com.yuyin.demo.utils.YuYinUtil.RecordHelper.RECORDER_AUDIO_ENCODING
+import com.yuyin.demo.utils.YuYinUtil.RecordHelper.RECORDER_CHANNELS
+import com.yuyin.demo.utils.YuYinUtil.RecordHelper.RECORDER_SAMPLERATE
+import com.yuyin.demo.utils.YuYinUtil.RecordHelper.miniBufferSize
+import com.yuyin.demo.view.MainActivityView
+import com.yuyin.demo.utils.YuYinUtil.YuYinLog as Log
 
 
 class MediaCaptureService : Service() {
-    private val mTag = "MediaCaptureService"
+    private val TAG = "MediaCaptureService"
     private val binder: IBinder = MediaServiceBinder()
 
     private var isCreate = false
     private lateinit var pre_notificationBUilder: NotificationCompat.Builder
     var m_recorder: AudioRecord? = null
-    private var m_recorderMic: AudioRecord? = null
     var m_callingIntent: Intent? = null
     private lateinit var m_mediaProjectionManager: MediaProjectionManager
     private lateinit var m_mediaProjection: MediaProjection
@@ -68,7 +63,7 @@ class MediaCaptureService : Service() {
     private fun startMediaProject(intent: Intent) {
         m_mediaProjection = m_mediaProjectionManager.getMediaProjection(-1, intent)
         preStartRecording(m_mediaProjection)
-        Log.e(mTag, "start_recording")
+        Log.e(TAG, "start_recording")
     }
 
     /**
@@ -85,14 +80,14 @@ class MediaCaptureService : Service() {
 
         // 采样率 编码 掩码
         val audioFormat = AudioFormat.Builder()
-            .setSampleRate(m_RECORDER_SAMPLERATE)
-            .setEncoding(m_RECORDER_AUDIO_ENCODING)
-            .setChannelMask(m_RECORDER_CHANNELS)
+            .setSampleRate(RECORDER_SAMPLERATE)
+            .setEncoding(RECORDER_AUDIO_ENCODING)
+            .setChannelMask(RECORDER_CHANNELS)
             .build()
         miniBufferSize = AudioRecord.getMinBufferSize(
-            m_RECORDER_SAMPLERATE,
-            m_RECORDER_CHANNELS,
-            m_RECORDER_AUDIO_ENCODING
+            RECORDER_SAMPLERATE,
+            RECORDER_CHANNELS,
+            RECORDER_AUDIO_ENCODING
         )
         if (ActivityCompat.checkSelfPermission(
                 this,
@@ -166,7 +161,7 @@ class MediaCaptureService : Service() {
 //        return super.onStartCommand(intent, flags, startId);
         // 启动前台服务
         if (intent==null) {
-            Log.e(mTag,"null start service")
+            Log.e(TAG,"null start service")
         } else {
             if (m_callingIntent == null)
                 m_callingIntent = intent
@@ -212,115 +207,13 @@ class MediaCaptureService : Service() {
             Log.i("APPIFO", info.applicationInfo.toString())
         }
     }
-
-    private fun short2byte(sData: ShortArray): ByteArray {
-        val shortArrsize = sData.size
-        val bytes = ByteArray(shortArrsize * 2)
-        for (i in 0 until shortArrsize) {
-            bytes[i * 2] = (sData[i].toInt() and 0x00FF).toByte()
-            bytes[i * 2 + 1] = (sData[i].toInt() shr 8).toByte()
-            sData[i] = 0
-        }
-        return bytes
-    }
-
-    @SuppressLint("SimpleDateFormat")
-    private fun writeAudioDataToFile() {
-        if (m_recorder == null) return
-        // Write the output audio in byte
-        Log.i(mTag, "Recording started. Computing output file name")
-        val sampleDir =
-            File(getExternalFilesDir(Environment.DIRECTORY_MUSIC), "/TestRecordingDasa1")
-        if (!sampleDir.exists()) {
-            sampleDir.mkdirs()
-        }
-        val fileName = "Record-" + SimpleDateFormat("dd-MM-yyyy-hh-mm-ss").format(Date()) + ".pcm"
-        val filePath = sampleDir.absolutePath + "/" + fileName
-        //String filePath = "/sdcard/voice8K16bitmono.pcm";
-        val sData = ShortArray(BufferElements2Rec)
-        var os: FileOutputStream? = null
-        try {
-            os = FileOutputStream(filePath)
-        } catch (e: FileNotFoundException) {
-            e.printStackTrace()
-        }
-        while (m_isRecording) {
-            // gets the voice output from microphone to byte format
-            m_recorder?.read(sData, 0, BufferElements2Rec)
-            Log.i(mTag, "Short wirting to file$sData")
-            try {
-                // // writes the data to file from buffer
-                // // stores the voice buffer
-                val bData = short2byte(sData)
-                os!!.write(bData, 0, BufferElements2Rec * BytesPerElement)
-            } catch (e: IOException) {
-                e.printStackTrace()
-                Log.i(mTag, "record error:" + e.message)
-            }
-        }
-        try {
-            os!!.close()
-        } catch (e: IOException) {
-            e.printStackTrace()
-        }
-        Log.i(mTag, String.format("Recording finished. File saved to '%s'", filePath))
-    }
-
-    @SuppressLint("SimpleDateFormat")
-    private fun writeAudioDataToFileMic() {
-        if (m_recorderMic == null) return
-        // Write the output audio in byte
-        Log.i(mTag, "Recording started. Computing output file name")
-        val sampleDir =
-            File(getExternalFilesDir(Environment.DIRECTORY_MUSIC), "/TestRecordingDasa1Mic")
-        if (!sampleDir.exists()) {
-            sampleDir.mkdirs()
-        }
-        val fileName = "Record-" + SimpleDateFormat("dd-MM-yyyy-hh-mm-ss").format(Date()) + ".pcm"
-        val filePath = sampleDir.absolutePath + "/" + fileName
-        //String filePath = "/sdcard/voice8K16bitmono.pcm";
-        val sData = ShortArray(BufferElements2Rec)
-        var os: FileOutputStream? = null
-        try {
-            os = FileOutputStream(filePath)
-        } catch (e: FileNotFoundException) {
-            e.printStackTrace()
-        }
-        while (m_isRecording) {
-            // gets the voice output from microphone to byte format
-            m_recorderMic!!.read(sData, 0, BufferElements2Rec)
-            Log.i(mTag, "Short wirting to file$sData")
-            try {
-                // // writes the data to file from buffer
-                // // stores the voice buffer
-                val bData = short2byte(sData)
-                os!!.write(bData, 0, BufferElements2Rec * BytesPerElement)
-            } catch (e: IOException) {
-                e.printStackTrace()
-                Log.i(mTag, "record error:" + e.message)
-            }
-        }
-        try {
-            os!!.close()
-        } catch (e: IOException) {
-            e.printStackTrace()
-        }
-        Log.i(mTag, String.format("Recording finished. File saved to '%s'", filePath))
-    }
+    
 
 
     companion object {
-        const val m_RECORDER_SAMPLERATE = 16000
-        const val m_RECORDER_CHANNELS = AudioFormat.CHANNEL_IN_MONO
-        const val m_RECORDER_AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT
-        const val MAX_QUEUE_SIZE = 2500
-        var miniBufferSize = 0
-        private var m_isRecording = false
         const val m_NOTIFICATION_CHANNEL_ID = "Yuyin_ChannelId"
         const val m_NOTIFICATION_CHANNEL_NAME = "Yuyin_Channel"
         const val m_NOTIFICATION_CHANNEL_DESC = "Yuyin is working"
         const val m_NOTIFICATION_ID = 1000
-        var BufferElements2Rec = 1024 // want to play 2048 (2K) since 2 bytes we use only 1024
-        var BytesPerElement = 2 // 2 bytes in 16bit format
     }
 }

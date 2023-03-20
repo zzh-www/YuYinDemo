@@ -3,6 +3,7 @@ package com.yuyin.demo.view.speech
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import androidx.core.widget.doAfterTextChanged
 import androidx.core.widget.doBeforeTextChanged
 import androidx.lifecycle.viewModelScope
@@ -14,11 +15,14 @@ import com.yuyin.demo.viewmodel.RunningAsrViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import com.yuyin.demo.YuYinUtil.YuYinLog as Log
+import com.yuyin.demo.utils.YuYinUtil.YuYinLog as Log
 
-class SpeechTextAdapter(private val dataList: List<SpeechResult>, private val viewModel: RunningAsrViewModel) :
+class SpeechTextAdapter(
+    private val dataList: List<SpeechResult>,
+    private val viewModel: RunningAsrViewModel
+) :
     RecyclerView.Adapter<SpeechTextAdapter.ViewHolder>() {
-
+    val TAG = "SpeechTextAdapter"
     var mRecyclerView: RecyclerView? = null
     var isFocus = MutableStateFlow(false)
 
@@ -40,6 +44,7 @@ class SpeechTextAdapter(private val dataList: List<SpeechResult>, private val vi
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val speechText = dataList[position]
         holder.speechView.setText(speechText.text)
+        holder.timeTextView.text = speechText.timeInfo
         holder.speechView.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
                 Log.i(tag, "on focus")
@@ -53,6 +58,11 @@ class SpeechTextAdapter(private val dataList: List<SpeechResult>, private val vi
                 }
             }
         }
+
+        holder.speechView.doAfterTextChanged {
+            speechText._text = it.toString()
+            Log.i(TAG, "text change")
+        }
     }
 
     override fun getItemCount(): Int {
@@ -61,9 +71,11 @@ class SpeechTextAdapter(private val dataList: List<SpeechResult>, private val vi
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val speechView = view.findViewById<View>(R.id.speechText) as TextInputEditText
+        val timeTextView = view.findViewById<View>(R.id.timeInfo_asr) as TextView
+
         init {
             speechView.setOnClickListener {
-                Log.i(tag,"on click")
+                Log.i(tag, "on click")
             }
             speechView.onFocusChangeListener = View.OnFocusChangeListener { _, _ ->
                 Log.i(tag, "on focus")

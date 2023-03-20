@@ -19,7 +19,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.viewModelScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.squareup.moshi.JsonAdapter
-import com.squareup.moshi.Moshi
 import com.yuyin.demo.R
 import com.yuyin.demo.databinding.FragmentSettingsBinding
 import com.yuyin.demo.models.LocalSettings
@@ -29,10 +28,10 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.nio.file.Paths
 import kotlin.io.path.absolutePathString
-import com.yuyin.demo.YuYinUtil.YuYinLog as Log
+import com.yuyin.demo.utils.YuYinUtil.YuYinLog as Log
 
 class SettingsFragment : Fragment() {
-    val mTag = "YUYIN_ASR"
+    val TAG = "SettingsFragment"
     private var _binding: FragmentSettingsBinding? = null
     val binding get() = _binding!!
     val yuyinViewModel: YuyinViewModel by activityViewModels()
@@ -139,6 +138,11 @@ class SettingsFragment : Fragment() {
         initPickFileButton()
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+
     private fun initSwitch() {
         when (yuyinViewModel.settings.saveMode) {
             0 -> binding.saveTextSwitch.let {
@@ -149,12 +153,12 @@ class SettingsFragment : Fragment() {
                 it.isChecked = true
                 it.isClickable = false
             }
-            3 -> binding.saveVoiceSwitch.let {
+            2 -> binding.saveVoiceSwitch.let {
                 it.isChecked = true
                 it.isClickable = false
             }
             else -> {
-                Log.e(mTag, "error settings ${yuyinViewModel.settings} ")
+                Log.e(TAG, "error settings ${yuyinViewModel.settings} ")
                 yuyinViewModel.settings.saveMode = 0
                 binding.saveTextSwitch.let {
                     it.isChecked = true
@@ -162,9 +166,9 @@ class SettingsFragment : Fragment() {
                 }
             }
         }
-        binding.saveTextSwitch.setOnCheckedChangeListener(switchListener())
-        binding.saveTimeSwitch.setOnCheckedChangeListener(switchListener())
-        binding.saveVoiceSwitch.setOnCheckedChangeListener(switchListener())
+        binding.saveTextSwitch.setOnCheckedChangeListener(switchListener(0))
+        binding.saveTimeSwitch.setOnCheckedChangeListener(switchListener(1))
+        binding.saveVoiceSwitch.setOnCheckedChangeListener(switchListener(2))
     }
 
     private fun initSpinner() {
@@ -270,9 +274,8 @@ class SettingsFragment : Fragment() {
                                 }
                                 .setPositiveButton(R.string.confirm) { _, _ ->
                                     // 更新配置
-                                    val moshi: Moshi = Moshi.Builder().build()
                                     val jsonAdapter: JsonAdapter<LocalSettings> =
-                                        moshi.adapter(LocalSettings::class.java)
+                                        yuyinViewModel.moshi.adapter(LocalSettings::class.java)
                                     if (yuyinViewModel.newSettings.modelMode == "自定义") {
                                         if (newDictUri == null) {
                                             Toast.makeText(
@@ -375,13 +378,13 @@ class SettingsFragment : Fragment() {
         binding.saveTimeSwitch.isChecked = flag
     }
 
-    private fun switchListener() = CompoundButton.OnCheckedChangeListener { buttonView, isChecked ->
+    private fun switchListener(saveMode:Int) = CompoundButton.OnCheckedChangeListener { buttonView, isChecked ->
         if (isChecked) {
             checkSwitch(false)
             enableSwitch(true)
             buttonView.isChecked = true
             buttonView.isClickable = false
-            yuyinViewModel.settings.saveMode = 0
+            yuyinViewModel.newSettings.saveMode = saveMode
         }
     }
 

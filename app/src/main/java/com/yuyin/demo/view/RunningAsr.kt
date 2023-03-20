@@ -6,6 +6,7 @@ import android.media.AudioRecord
 import android.os.Bundle
 import android.view.*
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
@@ -19,22 +20,29 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.lzf.easyfloat.EasyFloat
 import com.mobvoi.wenet.Recognize
+import com.squareup.moshi.JsonAdapter
 import com.yuyin.demo.R
-import com.yuyin.demo.YuYinUtil.save_file
 import com.yuyin.demo.databinding.FragmentRunningAsrBinding
+import com.yuyin.demo.models.LocalResult
+import com.yuyin.demo.utils.*
+import com.yuyin.demo.utils.YuYinUtil.getFileName
 import com.yuyin.demo.viewmodel.RunningAsrViewModel
 import com.yuyin.demo.viewmodel.YuyinViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.yuyin.demo.YuYinUtil.YuYinLog as Log
+import java.io.File
+import java.io.FileOutputStream
+import java.nio.charset.StandardCharsets
+import kotlin.io.path.absolutePathString
+import com.yuyin.demo.utils.YuYinUtil.YuYinLog as Log
 
 
 open class RunningAsr : Fragment() {
 
-    open val mTAG = "YUYIN_ASR"
+    open val TAG = "YUYIN_ASR"
     private var _binding: FragmentRunningAsrBinding? = null
     val binding get() = _binding!!
     lateinit var record: AudioRecord
@@ -46,6 +54,8 @@ open class RunningAsr : Fragment() {
     open val model: RunningAsrViewModel by viewModels()
 
     val yuYinModel: YuyinViewModel by activityViewModels()
+
+    var inSaved = false
 
     lateinit var floatView: StrokeView
 
@@ -69,16 +79,17 @@ open class RunningAsr : Fragment() {
         editModeForRecyclerView()
         initFloatingBt()
         observeFinish()
+        writeToTemPCMData()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
-        Log.i(mTAG, "onConfigurationChanged")
+        Log.i(TAG, "onConfigurationChanged")
         super.onConfigurationChanged(newConfig)
         model.change_senor = false // 标记屏幕旋转
     }
 
     override fun onDestroyView() {
-        Log.i(mTAG, "onDestroyView")
+        Log.i(TAG, "onDestroyView")
         super.onDestroyView()
         _binding = null
         destroyRecord()
@@ -88,7 +99,7 @@ open class RunningAsr : Fragment() {
     }
 
     override fun onDestroy() {
-        Log.i(this.mTAG, "onDestroy")
+        Log.i(this.TAG, "onDestroy")
         super.onDestroy()
     }
 
@@ -108,15 +119,15 @@ open class RunningAsr : Fragment() {
     }
 
     open fun initRecorder() {
-        Log.e(mTAG, "need override")
+        Log.e(TAG, "need override")
     }
 
     open fun startRecord() {
-        Log.e(mTAG, "need override")
+        Log.e(TAG, "need override")
     }
 
     open fun destroyRecord() {
-        Log.e(mTAG, "need override")
+        Log.e(TAG, "need override")
     }
 
     private fun initMenu() {
@@ -135,19 +146,59 @@ open class RunningAsr : Fragment() {
                 return when (menuItem.itemId) {
                     R.id.save_option -> {
                         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-                            val result = StringBuilder()
-                            for (i in model.speechList) {
-                                result.append(i.text)
-                                result.append("\n")
+                            if (!model.asrState && !model.recordState && Recognize.getFinished() && binding.runRecordHotView.text.isNullOrBlank() && !inSaved) {
+                                inSaved = true
+                                withContext(Dispatchers.IO) {
+                                    val textResult = mutableListOf<String>()
+                                    val starts = mutableListOf<Int>()
+                                    val ends = mutableListOf<Int>()
+                                    for (i in model.speechList) {
+                                        textResult.add(i.text)
+                                        starts.add(i.start)
+                                        ends.add(i.end)
+                                    }
+                                    val files = getFileName(
+                                        yuYinModel.yuYinDataDir.absolutePathString(),
+                                        binding.titleText.text.toString()
+                                    )
+                                    val jsonAdapter: JsonAdapter<LocalResult> =
+                                        yuYinModel.moshi.adapter(LocalResult::class.java)
+                                    val localResult = LocalResult(
+                                        textResult,
+                                        starts,
+                                        ends,
+                                        files.second.name,
+                                        yuYinModel.settings.saveMode
+                                    )
+                                    val json = jsonAdapter.toJson(localResult)
+                                    with(files.first) {
+                                        writeText(json, StandardCharsets.UTF_8)
+                                    }
+                                    if (yuYinModel.settings.saveMode == 2) {
+                                        PCMToWAV(
+                                            yuYinModel.pcmTempFile,
+                                            files.second,
+                                            getRealChannelCount(YuYinUtil.RecordHelper.RECORDER_CHANNELS),
+                                            YuYinUtil.RecordHelper.RECORDER_SAMPLERATE,
+                                            getRealEncoding(YuYinUtil.RecordHelper.RECORDER_AUDIO_ENCODING)
+                                        )
+                                    }
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(
+                                            requireContext(),
+                                            "save ${files.first.name} ok",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                        inSaved = false
+                                    }
+                                }
+                            } else {
+                                Toast.makeText(
+                                    requireContext(),
+                                    "please wait model for finish",
+                                    Toast.LENGTH_LONG
+                                ).show()
                             }
-                            if (!binding.runRecordHotView.text.isNullOrBlank()) {
-                                result.append(binding.runRecordHotView.text.toString())
-                            }
-                            save_file(
-                                requireContext(),
-                                result.toString(),
-                                binding.titleText.text.toString()
-                            )
                         }
                         true
                     }
@@ -175,9 +226,6 @@ open class RunningAsr : Fragment() {
                     binding.runRecordBt.icon = AppCompatResources.getDrawable(
                         requireContext(), R.drawable.play_icon36
                     )
-                    if (!binding.runRecordHotView.text.isNullOrBlank()) {
-                        binding.runRecordHotView.text = "****wait for last result****"
-                    }
                 }
             } else {
                 viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
@@ -257,7 +305,7 @@ open class RunningAsr : Fragment() {
                 isModelFinish.collect {
                     if (it) {
                         // 停止转写后收到finish为true事件
-                        if (!asrState && !recordState) {
+                        if (!asrState && !recordState && model.isModelInit.value) {
                             withContext(Dispatchers.Main) {
                                 binding.runRecordBt.isEnabled = true
                                 binding.runRecordHotView.text = ""
@@ -270,11 +318,9 @@ open class RunningAsr : Fragment() {
         }
     }
 
-    fun updateSpeechList(recyclerView: RecyclerView) {
+    private fun updateSpeechList(recyclerView: RecyclerView) {
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-            model.results.filter {
-                it.text.isNotEmpty() && (it.state == 2 || it.state == 4)
-            }.collect {
+            model.results.collect {
                 val position = model.speechList.size - 1
                 model.speechList.add(it) // add new para
                 model.adapter.notifyItemInserted(position + 1)
@@ -287,7 +333,7 @@ open class RunningAsr : Fragment() {
         }
     }
 
-    fun updateFlowText(flowText: StrokeView) {
+    private fun updateFlowText(flowText: StrokeView) {
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             model.hotResult.collectLatest {
                 flowText.text = it
@@ -296,7 +342,7 @@ open class RunningAsr : Fragment() {
         }
     }
 
-    fun updateHotTextView(hotText: TextView) {
+    private fun updateHotTextView(hotText: TextView) {
         // 当流代表部分操作结果或操作状态更新时，可能没有必要处理每个值，而是只处理最新的那个。
         // 当收集器处理它们太慢的时候， conflate 操作符可以用于跳过中间值。
         // 另一种方式是取消缓慢的收集器，并在每次发射新值的时候重新启动它。
@@ -312,4 +358,31 @@ open class RunningAsr : Fragment() {
         }
     }
 
+
+    private fun writeToTemPCMData() {
+        model.run {
+            yuYinModel.pcmTempFile.deleteOnExit()
+            yuYinModel.pcmTempFile.createNewFile()
+            viewModelScope.launch(Dispatchers.IO) {
+                yuYinModel.pcmTempFile.outputStream().use {
+                    audioData.buffer(MAX_QUEUE_SIZE).collect { shorts ->
+                        yuYinModel.pcmTempFile.outputAppendStream().use {
+                            for (data in shorts) {
+                                writeToOutput(it, data)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+}
+
+/***
+ * 追加文件流
+ */
+fun File.outputAppendStream(): FileOutputStream {
+    return FileOutputStream(this, true)
 }

@@ -1,8 +1,8 @@
 package com.mobvoi.wenet
 
+import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
-import androidx.test.rule.ActivityTestRule
 import com.mobvoi.wenet.Recognize.javaStringToJniArray
 import com.mobvoi.wenet.Recognize.jniArrayToJavaString
 import com.yuyin.demo.view.MainActivityView
@@ -21,7 +21,7 @@ import org.junit.runner.RunWith
 class JNIInstrumentedTest {
 
     @get:Rule
-    val activityRule = ActivityTestRule(MainActivityView::class.java,false)
+    val activityRule = ActivityScenarioRule(MainActivityView::class.java)
     @Test
     fun useAppContext() {
         // Context of the app under test.

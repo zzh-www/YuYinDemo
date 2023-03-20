@@ -7,6 +7,8 @@
     <string name="record_label">record</string>
     <string name="file_manage_label">files</string>
     <string name="main_label">main</string>
+    <string name="setting_label">setting_option</string>
+    <string name="edit_label">edit</string>
     <string name="next">Next</string>
     <string name="previous">Previous</string>
 
@@ -37,11 +39,11 @@
     <string name="save">save</string>
     <string name="stop">stop</string>
     <string name="start">start</string>
+    <string name="play">play</string>
     <string name="delete_dialog_title">删除文件</string>
     <string name="save_settings">保存设定</string>
     <string name="reset_settings">重置设定</string>
     <string name="not_found_settings">未找到正确的配置文件</string>
     <string name="cancel">取消</string>
     <string name="confirm">确认</string>
-    <string name="setting_label">setting_option</string>
 </resources>

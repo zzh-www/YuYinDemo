@@ -88,4 +88,10 @@
         <item name="fontFamily">@font/smiley</item>
         <item name="android:fontFamily">@font/smiley</item>
     </style>
+
+    <style name="TextAppearance.SmileyFontSmall" parent="TextAppearance.MaterialComponents.Tooltip">
+        <item name="fontFamily">@font/smiley</item>
+        <item name="android:fontFamily">@font/smiley</item>
+        <item name="android:textSize">10sp</item>
+    </style>
 </resources>

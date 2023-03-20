@@ -7,7 +7,7 @@ class FileItem(path: File) {
     var file_name = ""
 
     init {
-        file_name = path.name
+        file_name = path.nameWithoutExtension
         file_path = path
     }
 }

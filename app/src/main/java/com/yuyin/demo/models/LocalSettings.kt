@@ -2,6 +2,14 @@ package com.yuyin.demo.models
 
 import com.squareup.moshi.JsonClass
 
+/***
+ * saveMode 保存模式
+ *         saveText：0
+ *         saveTime：1
+ *         saveVoice：2
+ * modelMode 模型转写语言
+ * model_dict 各语言模型保存路径
+ */
 @JsonClass(generateAdapter = true)
 data class LocalSettings(
     var saveMode: Int,

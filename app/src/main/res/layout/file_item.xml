@@ -19,16 +19,15 @@
 
             <androidx.appcompat.widget.AppCompatImageView
                 android:id="@+id/file_card_im"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
                 android:src="@drawable/filetype_txt_icon_36x36"
                 android:layout_gravity="start|center_vertical"/>
 
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/file_card_text"
-                android:layout_width="wrap_content"
-                android:layout_weight="7"
+                android:layout_width="0dp"
+                android:layout_weight="1"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="@dimen/margin_normal"
                 android:ellipsize="end"
@@ -40,16 +39,14 @@
 
             <androidx.appcompat.widget.AppCompatImageView
                 android:id="@+id/file_card_bt"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
                 android:layout_gravity="center_vertical"
                 android:src="@drawable/ic_baseline_share_24" />
             <androidx.appcompat.widget.AppCompatImageView
                 android:id="@+id/file_delete_bt"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
                 android:layout_gravity="center_vertical"
                 android:src="@drawable/delete__icon" />
 

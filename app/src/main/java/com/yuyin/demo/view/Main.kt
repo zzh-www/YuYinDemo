@@ -8,11 +8,11 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.Navigation.findNavController
 import com.yuyin.demo.R
-import com.yuyin.demo.YuYinUtil.checkRequestPermissions
+import com.yuyin.demo.utils.YuYinUtil.checkRequestPermissions
 import com.yuyin.demo.databinding.FragmentMainBinding
 import com.yuyin.demo.viewmodel.YuyinViewModel
 import kotlin.io.path.exists
-import com.yuyin.demo.YuYinUtil.YuYinLog as Log
+import com.yuyin.demo.utils.YuYinUtil.YuYinLog as Log
 
 class Main : Fragment() {
 
