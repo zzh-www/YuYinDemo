@@ -2,11 +2,9 @@ package com.yuyin.demo.view.edit
 
 import android.graphics.drawable.Drawable
 import android.os.Bundle
-import android.util.ArraySet
 import android.view.*
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.view.MenuProvider
-import androidx.core.view.iterator
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
@@ -15,7 +13,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView.AdapterDataObserver
 import com.yuyin.demo.R
 import com.yuyin.demo.databinding.FragmentEditBinding
 import com.yuyin.demo.models.AudioPlay
@@ -29,6 +26,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.ArrayBlockingQueue
+import kotlin.io.path.absolutePathString
 import com.yuyin.demo.utils.YuYinUtil.YuYinLog as Log
 
 
@@ -82,6 +80,7 @@ class EditFragment : Fragment() {
                     Log.e(TAG, "emptyLocalResult, come back")
                     findNavController().popBackStack()
                 }
+                model.audioResource = File(yuyinViewModel.yuYinDataDir.absolutePathString(),model.localResult.audioFile)
             }
         }
         with(model) {
@@ -102,7 +101,10 @@ class EditFragment : Fragment() {
                     results,
                     model,
                     startIcon,
-                    endIcon
+                    endIcon,
+                    lifecycleScope,
+                    playLabel,
+                    stopLabel
                 )
                 withContext(Dispatchers.Main) {
                     binding.recyclerShowTextAndAudio.adapter = adapter
@@ -115,6 +117,11 @@ class EditFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         Log.i(TAG, "onDestroyView")
+        model.viewModelScope.launch {
+            if (currentAudioItem.isNotEmpty()) {
+                model.audioConfig.emit(AudioPlay.AudioConfig(0,0,AudioPlay.AudioConfigState.STOP, currentAudioItem.take()))
+            }
+        }
         _binding = null
     }
 
@@ -134,9 +141,18 @@ class EditFragment : Fragment() {
                 return when (menuItem.itemId) {
                     R.id.save_option -> {
                         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                            var file =  File(filePath)
+                            if (binding.titleText.text.isNullOrBlank()) {
+                                binding.titleText.text.toString().run {
+                                    if (this != file.nameWithoutExtension) {
+                                        file.deleteOnExit()
+                                        file = File(yuyinViewModel.yuYinDataDir.absolutePathString(),this)
+                                    }
+                                }
+                            }
                             val jsonAdapter = yuyinViewModel.moshi.adapter(LocalResult::class.java)
                             val json = jsonAdapter.toJson(model.localResult)
-                            with(File(filePath)) {
+                            with(file) {
                                 writeText(json, StandardCharsets.UTF_8)
                             }
                         }
@@ -151,44 +167,21 @@ class EditFragment : Fragment() {
 
 
     private fun observeAudioItem() {
-        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+        viewLifecycleOwner.lifecycleScope.launch {
             model.audioConfig.collect { audioConfig ->
                 when (audioConfig.State) {
                     AudioPlay.AudioConfigState.PLAY -> {
                         if (currentAudioItem.isEmpty()) {
                             // item1 want change to stop, others is in init
                             currentAudioItem.add(audioConfig.id)
-                            adapter.results[audioConfig.id].state = AudioPlay.AudioConfigState.STOP
-                            val holder =
-                                binding.recyclerShowTextAndAudio.findViewHolderForAdapterPosition(
-                                    audioConfig.id
-                                ) as ResultAdapter.ViewHolder
-                            holder.audioBt.icon = endIcon
-                            holder.audioBt.text = stopLabel
-                            Log.i(TAG, "play->stop; play")
+                            Log.i(TAG, "${audioConfig.id} play->stop; play")
                         } else {
                             if (audioConfig.id != currentAudioItem.peek()) {
                                 // item1 is stop but item2 want change to stop
                                 // init item1 and then change item2
-                                adapter.results[currentAudioItem.peek()!!].state =
-                                    AudioPlay.AudioConfigState.PLAY
-                                var holder =
-                                    binding.recyclerShowTextAndAudio.findViewHolderForAdapterPosition(
-                                        currentAudioItem.peek()!!
-                                    ) as ResultAdapter.ViewHolder
-                                currentAudioItem.clear()
-                                holder.audioBt.icon = startIcon
-                                holder.audioBt.text = playLabel
-                                adapter.results[audioConfig.id].state =
-                                    AudioPlay.AudioConfigState.STOP
-                                holder =
-                                    binding.recyclerShowTextAndAudio.findViewHolderForAdapterPosition(
-                                        audioConfig.id
-                                    ) as ResultAdapter.ViewHolder
-                                holder.audioBt.icon = endIcon
-                                holder.audioBt.text = stopLabel
+                                val preId = currentAudioItem.take()
                                 currentAudioItem.add(audioConfig.id)
-                                Log.i(TAG, "play->stop; stop->play")
+                                Log.i(TAG, "$preId play->stop; ${audioConfig.id} stop->play")
                             } else {
                                 Log.e(
                                     TAG,
@@ -207,16 +200,7 @@ class EditFragment : Fragment() {
                         } else {
                             if (audioConfig.id == currentAudioItem.peek()) {
                                 // 只有一个item处于stop
-                                adapter.results[audioConfig.id].state =
-                                    AudioPlay.AudioConfigState.PLAY
-                                val holder =
-                                    binding.recyclerShowTextAndAudio.findViewHolderForAdapterPosition(
-                                        audioConfig.id
-                                    ) as ResultAdapter.ViewHolder
-                                holder.audioBt.icon = startIcon
-                                holder.audioBt.text = playLabel
-                                currentAudioItem.clear()
-                                Log.i(TAG, "stop->play, play")
+                                Log.i(TAG, "${currentAudioItem.take()} stop->play, play")
                             } else {
                                 // 不可能不相等
                                 Log.e(

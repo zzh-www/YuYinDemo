@@ -48,11 +48,15 @@ fun WAVHeader.writeHeader(encoded: OutputStream) {
 class FileTest {
 
     @Test
-    fun testFileLength() {
+    fun testPCMToWAV() {
         val pcmFile = File("./src/test/assets/tmp.pcm")
         // play with ffplay
         val newFile = File("./src/test/assets/tmp.wav")
         PCMToWAV(pcmFile, newFile, 1, YuYinUtil.RecordHelper.RECORDER_SAMPLERATE, 16)
+        newFile.inputStream().use {
+            val header = WAVHeader.generate(it)
+            println(header)
+        }
     }
 
     @Test

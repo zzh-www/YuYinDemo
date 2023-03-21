@@ -5,24 +5,27 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import androidx.appcompat.content.res.AppCompatResources
-import androidx.appcompat.widget.AppCompatImageView
 import androidx.core.widget.doAfterTextChanged
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.yuyin.demo.R
 import com.yuyin.demo.models.AudioPlay
 import com.yuyin.demo.models.ResultItem
 import com.yuyin.demo.viewmodel.EditViewModel
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
 import com.yuyin.demo.utils.YuYinUtil.YuYinLog as Log
 
 class ResultAdapter(
     val results: MutableList<ResultItem>,
     private val viewModel: EditViewModel,
-    val startIcon:Drawable,
-    val endIcon:Drawable
+    val startIcon: Drawable,
+    val endIcon: Drawable,
+    val lifecycleScope: LifecycleCoroutineScope,
+    val playLabel: String,
+    val stopLabel: String
 ) :
     RecyclerView.Adapter<ResultAdapter.ViewHolder>() {
     val TAG = "ResultAdapter"
@@ -45,9 +48,9 @@ class ResultAdapter(
         val start = results[position].start
         val end = results[position].end
         holder.textView.text = text
-        holder.timeInfo.text = "${start/1000f} ~ ${end/1000f}"
+        holder.timeInfo.text = "${start/1000f}s ~ ${end/1000f}s"
         holder.audioBt.setOnClickListener {
-            viewModel.viewModelScope.launch {
+            lifecycleScope.launch {
                 viewModel.audioConfig.emit(
                     AudioPlay.AudioConfig(
                         start,
@@ -56,6 +59,43 @@ class ResultAdapter(
                         position
                     )
                 )
+                when(results[position].state) {
+                    AudioPlay.AudioConfigState.PLAY -> {
+                        holder.audioBt.icon = endIcon
+                        holder.audioBt.text = stopLabel
+                        results[position].state = AudioPlay.AudioConfigState.STOP
+                        Log.i(TAG, "$position play->stop")
+                        lifecycleScope.launch {
+                            supervisorScope {
+                                viewModel.audioItemNotification.collect {
+                                    Log.i(TAG,"item $position accept $it")
+                                    if (it.id == position && !it.isPlaying) {
+                                        // 自己收到通知 isPlaying false 暂停播放
+                                        holder.audioBt.icon = startIcon
+                                        holder.audioBt.text = playLabel
+                                        results[position].state = AudioPlay.AudioConfigState.PLAY
+                                        Log.i(TAG, "$position stop->play")
+                                        this.cancel()
+                                    } else if(it.id != position && it.isPlaying){
+                                        // 收到通知 其他item要播放
+                                            holder.audioBt.icon = startIcon
+                                            holder.audioBt.text = playLabel
+                                            results[position].state = AudioPlay.AudioConfigState.PLAY
+                                            Log.i(TAG, "$position stop->play")
+                                            this.cancel()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    AudioPlay.AudioConfigState.STOP -> {
+                        // 只需停止即可
+                        holder.audioBt.icon = startIcon
+                        holder.audioBt.text = playLabel
+                        results[position].state = AudioPlay.AudioConfigState.PLAY
+                        Log.i(TAG, "$position stop->play")
+                    }
+                }
             }
         }
         holder.textView.doAfterTextChanged {
@@ -82,4 +122,9 @@ class ResultAdapter(
 
         }
     }
+
+    /***
+     *
+     */
+    data class Notification(val id: Int, val isPlaying: Boolean)
 }
