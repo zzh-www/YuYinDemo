@@ -43,6 +43,7 @@ import com.yuyin.demo.utils.YuYinUtil.EXTRA_CaptureAudio_NAME
 import com.yuyin.demo.utils.YuYinUtil.EXTRA_RESULT_CODE
 import com.yuyin.demo.utils.YuYinUtil.m_CREATE_SCREEN_CAPTURE
 import com.yuyin.demo.databinding.ActivityMainViewBinding
+import com.yuyin.demo.models.AudioPlay
 import com.yuyin.demo.models.LocalSettings
 import com.yuyin.demo.service.MediaCaptureService
 import com.yuyin.demo.service.MediaCaptureService.Companion.m_NOTIFICATION_CHANNEL_ID
@@ -149,7 +150,9 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
             runOnUiThread {
                 if (destination.label == this.getString(R.string.capture_label) || destination.label == this.getString(
                         R.string.record_label
-                    ) || destination.label == this.getString(R.string.setting_label) || destination.label == getString(R.string.edit_label)
+                    ) || destination.label == this.getString(R.string.setting_label) || destination.label == getString(
+                        R.string.edit_label
+                    )
                 ) {
                     binding.mainBottomNavigation.let {
                         it.visibility = View.GONE
@@ -193,14 +196,15 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
         if (!yuYinDir.exists()) {
             yuYinDir.mkdir()
         }
-        val yuYinDataDir = Paths.get(yuYinDir.absolutePath,"data").toFile()
+        val yuYinDataDir = Paths.get(yuYinDir.absolutePath, "data").toFile()
         if (!yuYinDataDir.exists()) {
             yuYinDataDir.mkdir()
         }
         model.yuYinDataDir = yuYinDataDir.toPath()
         model.settingProfilePath = Paths.get(yuYinDir.absolutePath, "settings.json")
         model.settingProfilePath.let {
-            val jsonAdapter: JsonAdapter<LocalSettings> = model.moshi.adapter(LocalSettings::class.java)
+            val jsonAdapter: JsonAdapter<LocalSettings> =
+                model.moshi.adapter(LocalSettings::class.java)
             if (it.toFile().exists()) {
                 val json = it.toFile().readText()
                 model.settings = jsonAdapter.fromJson(json)!!
@@ -229,6 +233,9 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
                 it.toFile().writeText(json)
             }
         }
+        if (!model.yuYinTmpDir.mkdir()) {
+            model.yuYinTmpDir.mkdir()
+        }
     }
 
     private fun defaultModel(mod: String): MutableList<String> {
@@ -243,7 +250,11 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
 
     private fun defaultSettings() = LocalSettings(
         0,
-        mutableMapOf("zh" to defaultModel("zh"), "en" to defaultModel("en"),"自定义" to mutableListOf("","")),
+        mutableMapOf(
+            "zh" to defaultModel("zh"),
+            "en" to defaultModel("en"),
+            "自定义" to mutableListOf("", "")
+        ),
         "zh"
     )
 
@@ -277,6 +288,10 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
             }
         }
         model.recorder = null
+        model.yuYinTmpDir.listFiles()?.forEach {
+            it.delete()
+        }
+        AudioPlay.audioTrack.release()
         Log.i(TAG, "onDestroy")
     }
 
@@ -367,7 +382,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
         return false
     }
 
-    fun assetFilePath(context: Context, assetName: String): String? {
+    private fun assetFilePath(context: Context, assetName: String): String? {
         val file = File(model.yuYinDirPath.absolutePathString(), assetName)
         if (file.exists() && file.length() > 0) {
             return file.absolutePath

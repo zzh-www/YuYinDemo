@@ -26,9 +26,10 @@ open class RunningAsrViewModel : ViewModel() {
     var isModelReset = MutableStateFlow(false)
     var isModelFinish = MutableStateFlow(false)
     val audioData = MutableSharedFlow<ShortArray>()
-    val rawPCMData = mutableListOf<Byte>()
     var change_senor = false
     var offsetOfTime = 0
+    var needToSaveAudio = false
+    var needToShowTime: Boolean = false
 
     // 滚动视图
     val speechList: ArrayList<SpeechResult> = arrayListOf()
@@ -108,7 +109,9 @@ open class RunningAsrViewModel : ViewModel() {
                     val read = record.read(buffer, 0, buffer.size)
                     if (AudioRecord.ERROR_INVALID_OPERATION != read) {
                         emit(buffer)
-                        audioData.emit(buffer)
+                        if (needToSaveAudio) {
+                            audioData.emit(buffer)
+                        }
                     }
                 }
             }.catch {

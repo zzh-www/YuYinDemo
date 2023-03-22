@@ -59,7 +59,7 @@ class FilesManager : Fragment() {
                 fileItemArrayList.add(FileItem(item))
             }
         }
-        adapter = FileAdapter(fileItemArrayList,filesManagerViewModel)
+        adapter = FileAdapter(fileItemArrayList,filesManagerViewModel,yuyinViewModel)
         recyclerView!!.adapter = adapter
         openFileListener()
     }

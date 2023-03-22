@@ -3,6 +3,7 @@ package com.yuyin.demo.view.edit
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.*
+import android.widget.Toast
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
@@ -18,13 +19,14 @@ import com.yuyin.demo.databinding.FragmentEditBinding
 import com.yuyin.demo.models.AudioPlay
 import com.yuyin.demo.models.LocalResult
 import com.yuyin.demo.models.ResultItem
+import com.yuyin.demo.utils.YuYinUtil
+import com.yuyin.demo.utils.YuYinUtil.jsonType
 import com.yuyin.demo.viewmodel.EditViewModel
 import com.yuyin.demo.viewmodel.YuyinViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.nio.charset.StandardCharsets
 import java.util.concurrent.ArrayBlockingQueue
 import kotlin.io.path.absolutePathString
 import com.yuyin.demo.utils.YuYinUtil.YuYinLog as Log
@@ -68,19 +70,21 @@ class EditFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         Log.i(TAG, "onViewCreated")
         val file = File(filePath)
+        binding.titleText.setText(file.nameWithoutExtension)
         if (!file.exists()) {
             Log.e(TAG, "not exit open file, come back")
             findNavController().popBackStack()
         } else {
             with(file) {
-                val json = readText(StandardCharsets.UTF_8)
-                val jsonAdapter = yuyinViewModel.moshi.adapter(LocalResult::class.java)
-                model.localResult = jsonAdapter.fromJson(json) ?: LocalResult.emptyLocalResult
+                model.localResult = LocalResult.fromJson(yuyinViewModel.moshi, this)
                 if (model.localResult == LocalResult.emptyLocalResult) {
                     Log.e(TAG, "emptyLocalResult, come back")
                     findNavController().popBackStack()
                 }
-                model.audioResource = File(yuyinViewModel.yuYinDataDir.absolutePathString(),model.localResult.audioFile)
+                model.audioResource = File(
+                    yuyinViewModel.yuYinDataDir.absolutePathString(),
+                    model.localResult.audioFile
+                )
             }
         }
         with(model) {
@@ -94,7 +98,11 @@ class EditFragment : Fragment() {
             model.viewModelScope.launch(Dispatchers.Default) {
                 for (i in localResult.speechText.indices) {
                     localResult.run {
-                        results.add(ResultItem(speechText[i], start[i], end[i]))
+                        if (resultType > 0) {
+                            results.add(ResultItem(speechText[i], start[i], end[i]))
+                        } else {
+                            results.add(ResultItem(speechText[i], 0, 0))
+                        }
                     }
                 }
                 adapter = ResultAdapter(
@@ -111,16 +119,31 @@ class EditFragment : Fragment() {
                 }
             }
         }
-        observeAudioItem()
+        if (model.localResult.resultType == 2) {
+            observeAudioItem()
+        }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         Log.i(TAG, "onDestroyView")
-        model.viewModelScope.launch {
-            if (currentAudioItem.isNotEmpty()) {
-                model.audioConfig.emit(AudioPlay.AudioConfig(0,0,AudioPlay.AudioConfigState.STOP, currentAudioItem.take()))
+        if (AudioPlay.isPlay) {
+            AudioPlay.audioTrack.pause()
+            AudioPlay.audioTrack.flush()
+            model.viewModelScope.launch {
+                if (currentAudioItem.isNotEmpty()) {
+                    model.audioConfig.emit(
+                        AudioPlay.AudioConfig(
+                            0,
+                            0,
+                            AudioPlay.AudioConfigState.STOP,
+                            currentAudioItem.take()
+                        )
+                    )
+                }
+                AudioPlay.audioTrack.stop()
             }
+            AudioPlay.isPlay = false
         }
         _binding = null
     }
@@ -140,21 +163,37 @@ class EditFragment : Fragment() {
             override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
                 return when (menuItem.itemId) {
                     R.id.save_option -> {
+                        var file = File(filePath)
+                        val title = binding.titleText.text.toString()
                         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-                            var file =  File(filePath)
-                            if (binding.titleText.text.isNullOrBlank()) {
-                                binding.titleText.text.toString().run {
-                                    if (this != file.nameWithoutExtension) {
-                                        file.deleteOnExit()
-                                        file = File(yuyinViewModel.yuYinDataDir.absolutePathString(),this)
-                                    }
+                            if (title.isNotBlank()) {
+                                if (title != file.nameWithoutExtension) {
+                                    // rename
+                                    val rawFiles = YuYinUtil.ResultFiles.getTextAndJson(file)
+                                    val newFiles = YuYinUtil.ResultFiles.getTextAndJson(
+                                        File(
+                                            file.parent,
+                                            title + jsonType
+                                        )
+                                    )
+                                    model.localResult.toJson(yuyinViewModel.moshi, newFiles.json)
+                                    model.localResult.toText(newFiles.textFile)
+                                    rawFiles.json.delete()
+                                    rawFiles.textFile.delete()
+                                    Toast.makeText(
+                                        requireContext(),
+                                        "rename ${file.nameWithoutExtension} to $title",
+                                        Toast.LENGTH_LONG
+                                    ).show()
                                 }
+                            } else {
+                                Toast.makeText(
+                                    requireContext(),
+                                    "title is empty",
+                                    Toast.LENGTH_LONG
+                                ).show()
                             }
-                            val jsonAdapter = yuyinViewModel.moshi.adapter(LocalResult::class.java)
-                            val json = jsonAdapter.toJson(model.localResult)
-                            with(file) {
-                                writeText(json, StandardCharsets.UTF_8)
-                            }
+
                         }
                         true
                     }

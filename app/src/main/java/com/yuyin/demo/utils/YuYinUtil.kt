@@ -9,12 +9,13 @@ import android.os.Environment
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
+import com.squareup.moshi.Moshi
+import java.io.*
 import java.nio.charset.StandardCharsets
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 object YuYinUtil {
 
@@ -38,9 +39,14 @@ object YuYinUtil {
     const val ACTION_START_RECORDING_From_Notification =
         "CaptureAudio_START_RECORDING_From_Notification"
 
+    const val jsonType = ".json"
+    const val audioType = ".wav"
+    const val textType = ".txt"
+
     // view
     private const val LOG_TAG = "YUYIN_RECORD"
 
+    val moshi: Moshi = Moshi.Builder().build()
 
     // 所需请求的权限
     val appPermissions = arrayOf(
@@ -84,34 +90,43 @@ object YuYinUtil {
     }
 
     @JvmStatic
-    fun getFileName(dir: String, title: String? = null):Pair<File,File> {
+    fun getFileName(dir: String, title: String? = null): ResultFiles {
         val timeStamp = System.currentTimeMillis()
         val sdf = SimpleDateFormat("yyyyMMddHHmmss", Locale.CHINA)
         val dateStr = sdf.format(Date(timeStamp.toString().toLong()))
-        val type = ".json"
-        val audioType = ".wav"
         val dir_path = dir
-        var file: File?
-        var audioFile:File?
+        var name = ""
+        var file: File
+        var audioFile: File
+        var textFile: File
         if (title.isNullOrBlank()) {
+            name = dateStr
             file =
-                File(dir_path ,dateStr + type)
+                File(dir_path, name + jsonType)
             audioFile =
-                File(dir_path,dateStr + audioType)
+                File(dir_path, name + audioType)
+            textFile =
+                File(dir_path, name + textType)
         } else {
+            name = title
             file =
-                File(dir_path, title + type)
+                File(dir_path, title + jsonType)
             audioFile =
                 File(dir_path, title + audioType)
+            textFile =
+                File(dir_path, name + textType)
             if (file.exists()) {
+                name = title + "_" + dateStr
                 file =
-                    File(dir_path, title + "_" + dateStr + type)
+                    File(dir_path, name + jsonType)
                 audioFile =
-                    File(dir_path, title + "_" + dateStr + audioType)
+                    File(dir_path, name + audioType)
+                textFile =
+                    File(dir_path, name + textType)
             }
         }
 
-        return file to audioFile
+        return ResultFiles(file, audioFile, textFile)
     }
 
     @JvmStatic
@@ -171,6 +186,25 @@ object YuYinUtil {
         }
     }
 
+    fun compressFiles(files: List<File>, zipFile: File) {
+        val buffer = ByteArray(1024)
+        ZipOutputStream(BufferedOutputStream(FileOutputStream(zipFile))).use { zipOut ->
+            for (file in files) {
+                if (file.exists()) {
+                    FileInputStream(file).use { fileIn ->
+                        val entry = ZipEntry(file.name)
+                        zipOut.putNextEntry(entry)
+                        var len: Int
+                        while (fileIn.read(buffer).also { len = it } > 0) {
+                            zipOut.write(buffer, 0, len)
+                        }
+                        zipOut.closeEntry()
+                    }
+                }
+            }
+        }
+    }
+
     object RecordHelper {
         const val RECORDER_SAMPLERATE = 16000
         const val RECORDER_CHANNELS = AudioFormat.CHANNEL_IN_MONO
@@ -180,5 +214,22 @@ object YuYinUtil {
         var BytesPerElement = 2 // 2 bytes in 16bit format
     }
 
+    data class ResultFiles(val json: File, val audioFile: File, val textFile: File) {
+        companion object {
+            /***
+             * 获取 txt 和 json路径
+             * audio路径为空
+             */
+            fun getTextAndJson(json: File): ResultFiles {
+                val parent = json.parent
+                val name = json.nameWithoutExtension
+                return ResultFiles(
+                    File(parent, name + jsonType),
+                    File(""),
+                    File(parent, name + textType)
+                )
+            }
+        }
+    }
 }
 

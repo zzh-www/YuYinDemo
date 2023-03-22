@@ -31,7 +31,13 @@ class YuyinViewModel : ViewModel() {
     // 数据文件目录
     var yuYinDataDir = Path("")
 
-    val pcmTempFile: File get() = File(yuYinDirPath.absolutePathString(),"tmp.pcm")
+    // 临时文件目录
+    val yuYinTmpDir: File
+        get() = File(
+            yuYinDirPath.absolutePathString(), "tmp"
+        )
+
+    val pcmTempFile: File get() = File(yuYinTmpDir.absolutePath, "tmp.pcm")
 
     var recorder: AudioRecord? = null
 

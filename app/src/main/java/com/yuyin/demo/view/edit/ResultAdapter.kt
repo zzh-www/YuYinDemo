@@ -9,6 +9,7 @@ import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.divider.MaterialDivider
 import com.yuyin.demo.R
 import com.yuyin.demo.models.AudioPlay
 import com.yuyin.demo.models.ResultItem
@@ -47,56 +48,69 @@ class ResultAdapter(
         val text = results[position].speechText
         val start = results[position].start
         val end = results[position].end
+
         holder.textView.text = text
-        holder.timeInfo.text = "${start/1000f}s ~ ${end/1000f}s"
-        holder.audioBt.setOnClickListener {
-            lifecycleScope.launch {
-                viewModel.audioConfig.emit(
-                    AudioPlay.AudioConfig(
-                        start,
-                        end,
-                        results[position].state,
-                        position
+
+        if (viewModel.localResult.resultType > 0) {
+            holder.timeInfo.text = "${start/1000f}s ~ ${end/1000f}s"
+        } else {
+            holder.timeInfo.visibility = View.GONE
+            holder.divider.visibility =View.GONE
+        }
+
+        if (viewModel.localResult.resultType == 2) {
+            holder.audioBt.setOnClickListener {
+                lifecycleScope.launch {
+                    viewModel.audioConfig.emit(
+                        AudioPlay.AudioConfig(
+                            start,
+                            end,
+                            results[position].state,
+                            position
+                        )
                     )
-                )
-                when(results[position].state) {
-                    AudioPlay.AudioConfigState.PLAY -> {
-                        holder.audioBt.icon = endIcon
-                        holder.audioBt.text = stopLabel
-                        results[position].state = AudioPlay.AudioConfigState.STOP
-                        Log.i(TAG, "$position play->stop")
-                        lifecycleScope.launch {
-                            supervisorScope {
-                                viewModel.audioItemNotification.collect {
-                                    Log.i(TAG,"item $position accept $it")
-                                    if (it.id == position && !it.isPlaying) {
-                                        // 自己收到通知 isPlaying false 暂停播放
-                                        holder.audioBt.icon = startIcon
-                                        holder.audioBt.text = playLabel
-                                        results[position].state = AudioPlay.AudioConfigState.PLAY
-                                        Log.i(TAG, "$position stop->play")
-                                        this.cancel()
-                                    } else if(it.id != position && it.isPlaying){
-                                        // 收到通知 其他item要播放
+                    when(results[position].state) {
+                        AudioPlay.AudioConfigState.PLAY -> {
+                            holder.audioBt.icon = endIcon
+                            holder.audioBt.text = stopLabel
+                            results[position].state = AudioPlay.AudioConfigState.STOP
+                            Log.i(TAG, "$position play->stop")
+                            lifecycleScope.launch {
+                                supervisorScope {
+                                    viewModel.audioItemNotification.collect {
+                                        Log.i(TAG,"item $position accept $it")
+                                        if (it.id == position && !it.isPlaying) {
+                                            // 自己收到通知 isPlaying false 暂停播放
                                             holder.audioBt.icon = startIcon
                                             holder.audioBt.text = playLabel
                                             results[position].state = AudioPlay.AudioConfigState.PLAY
                                             Log.i(TAG, "$position stop->play")
                                             this.cancel()
+                                        } else if(it.id != position && it.isPlaying){
+                                            // 收到通知 其他item要播放
+                                            holder.audioBt.icon = startIcon
+                                            holder.audioBt.text = playLabel
+                                            results[position].state = AudioPlay.AudioConfigState.PLAY
+                                            Log.i(TAG, "$position stop->play")
+                                            this.cancel()
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-                    AudioPlay.AudioConfigState.STOP -> {
-                        // 只需停止即可
-                        holder.audioBt.icon = startIcon
-                        holder.audioBt.text = playLabel
-                        results[position].state = AudioPlay.AudioConfigState.PLAY
-                        Log.i(TAG, "$position stop->play")
+                        AudioPlay.AudioConfigState.STOP -> {
+                            // 只需停止即可
+                            holder.audioBt.icon = startIcon
+                            holder.audioBt.text = playLabel
+                            results[position].state = AudioPlay.AudioConfigState.PLAY
+                            Log.i(TAG, "$position stop->play")
+                        }
                     }
                 }
             }
+        } else {
+            holder.audioBt.isEnabled = false
+            holder.audioBt.visibility = View.GONE
         }
         holder.textView.doAfterTextChanged {
             Log.i(TAG, "string: $it")
@@ -114,12 +128,13 @@ class ResultAdapter(
         val textView: TextView
         val timeInfo: TextView
         val audioBt: MaterialButton
+        val divider: MaterialDivider
 
         init {
             textView = view.findViewById(R.id.speechText)
             timeInfo = view.findViewById(R.id.timeInfo)
             audioBt = view.findViewById(R.id.audio_play)
-
+            divider = view.findViewById(R.id.divider)
         }
     }
 

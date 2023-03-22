@@ -20,7 +20,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.lzf.easyfloat.EasyFloat
 import com.mobvoi.wenet.Recognize
-import com.squareup.moshi.JsonAdapter
 import com.yuyin.demo.R
 import com.yuyin.demo.databinding.FragmentRunningAsrBinding
 import com.yuyin.demo.models.LocalResult
@@ -35,7 +34,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
-import java.nio.charset.StandardCharsets
 import kotlin.io.path.absolutePathString
 import com.yuyin.demo.utils.YuYinUtil.YuYinLog as Log
 
@@ -74,6 +72,8 @@ open class RunningAsr : Fragment() {
         // init model
         floatView = EasyFloat.getFloatView(MainActivityView.floatTag)!!.findViewById(R.id.flow_text)
         binding.runRecordBt.isEnabled = false
+        model.needToSaveAudio = yuYinModel.settings.saveMode == 2
+        model.needToShowTime = yuYinModel.settings.saveMode > 0
         initAsrModel()
         initPlayButton()
         editModeForRecyclerView()
@@ -154,30 +154,28 @@ open class RunningAsr : Fragment() {
                                     val ends = mutableListOf<Int>()
                                     for (i in model.speechList) {
                                         textResult.add(i.text)
-                                        starts.add(i.start)
-                                        ends.add(i.end)
+                                        if (model.needToShowTime) {
+                                            starts.add(i.start)
+                                            ends.add(i.end)
+                                        }
                                     }
                                     val files = getFileName(
                                         yuYinModel.yuYinDataDir.absolutePathString(),
                                         binding.titleText.text.toString()
                                     )
-                                    val jsonAdapter: JsonAdapter<LocalResult> =
-                                        yuYinModel.moshi.adapter(LocalResult::class.java)
                                     val localResult = LocalResult(
                                         textResult,
                                         starts,
                                         ends,
-                                        files.second.name,
+                                        files.audioFile.name,
                                         yuYinModel.settings.saveMode
                                     )
-                                    val json = jsonAdapter.toJson(localResult)
-                                    with(files.first) {
-                                        writeText(json, StandardCharsets.UTF_8)
-                                    }
+                                    localResult.toJson(yuYinModel.moshi,files.json)
+                                    localResult.toText(files.textFile)
                                     if (yuYinModel.settings.saveMode == 2) {
                                         PCMToWAV(
                                             yuYinModel.pcmTempFile,
-                                            files.second,
+                                            files.audioFile,
                                             getRealChannelCount(YuYinUtil.RecordHelper.RECORDER_CHANNELS),
                                             YuYinUtil.RecordHelper.RECORDER_SAMPLERATE,
                                             getRealEncoding(YuYinUtil.RecordHelper.RECORDER_AUDIO_ENCODING)
@@ -186,7 +184,7 @@ open class RunningAsr : Fragment() {
                                     withContext(Dispatchers.Main) {
                                         Toast.makeText(
                                             requireContext(),
-                                            "save ${files.first.name} ok",
+                                            "save ${files.json.nameWithoutExtension} ok",
                                             Toast.LENGTH_LONG
                                         ).show()
                                         inSaved = false
@@ -361,7 +359,7 @@ open class RunningAsr : Fragment() {
 
     private fun writeToTemPCMData() {
         model.run {
-            yuYinModel.pcmTempFile.deleteOnExit()
+            yuYinModel.pcmTempFile.delete()
             yuYinModel.pcmTempFile.createNewFile()
             viewModelScope.launch(Dispatchers.IO) {
                 yuYinModel.pcmTempFile.outputStream().use {

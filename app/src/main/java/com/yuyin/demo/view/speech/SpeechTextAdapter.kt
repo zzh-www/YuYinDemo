@@ -44,7 +44,11 @@ class SpeechTextAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val speechText = dataList[position]
         holder.speechView.setText(speechText.text)
-        holder.timeTextView.text = speechText.timeInfo
+        if (viewModel.needToShowTime) {
+            holder.timeTextView.text = speechText.timeInfo
+        } else {
+            holder.timeTextView.visibility = View.GONE
+        }
         holder.speechView.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
                 Log.i(tag, "on focus")

@@ -11,13 +11,21 @@ import androidx.lifecycle.viewModelScope
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.yuyin.demo.R
+import com.yuyin.demo.models.LocalResult
+import com.yuyin.demo.utils.YuYinUtil.compressFiles
+import com.yuyin.demo.utils.YuYinUtil.moshi
 import com.yuyin.demo.viewmodel.FilesManagerViewModel
+import com.yuyin.demo.viewmodel.YuyinViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import com.yuyin.demo.utils.YuYinUtil.YuYinLog as Log
 
 class FileAdapter(
     private val data_list: ArrayList<FileItem>,
-    private val viewModel: FilesManagerViewModel
+    private val viewModel: FilesManagerViewModel,
+    private val yuyinViewModel: YuyinViewModel
 ) :
     RecyclerView.Adapter<FileAdapter.ViewHolder>() {
     val tag = "FileAdapter"
@@ -32,24 +40,33 @@ class FileAdapter(
         val view = LayoutInflater.from(parent.context).inflate(R.layout.file_item, parent, false)
         val viewHolder = ViewHolder(view)
         viewHolder.file_text.setOnClickListener {
-            val txtPath = data_list[viewHolder.bindingAdapterPosition].file_path
+            val jsonPath = data_list[viewHolder.bindingAdapterPosition].jsonFile
             with(viewModel) {
                 viewModelScope.launch {
-                    openFile.emit(txtPath)
+                    openFile.emit(jsonPath)
                 }
             }
         }
         viewHolder.file_bt.setOnClickListener {
-            val text_path = data_list[viewHolder.bindingAdapterPosition].file_path
-            val intent = Intent(Intent.ACTION_SEND)
-            val uri = FileProvider.getUriForFile(
-                parent.context,
-                "com.yuyin.demo.fileprovider",
-                text_path
-            )
-            intent.putExtra(Intent.EXTRA_STREAM, uri)
-            intent.type = "text/plain"
-            parent.context.startActivity(intent)
+            val jsonPath = data_list[viewHolder.bindingAdapterPosition].jsonFile
+            val textPath = data_list[viewHolder.bindingAdapterPosition].textFile
+            val zipFile = File(yuyinViewModel.yuYinTmpDir, jsonPath.nameWithoutExtension + ".zip")
+            yuyinViewModel.viewModelScope.launch(Dispatchers.IO) {
+                val audioPath =
+                    File(jsonPath.parent, LocalResult.fromJson(moshi, jsonPath).audioFile)
+                compressFiles(listOf(jsonPath, audioPath, textPath), zipFile)
+                withContext(Dispatchers.Main) {
+                    val intent = Intent(Intent.ACTION_SEND)
+                    val uri = FileProvider.getUriForFile(
+                        parent.context,
+                        "com.yuyin.demo.fileprovider",
+                        zipFile
+                    )
+                    intent.putExtra(Intent.EXTRA_STREAM, uri)
+                    intent.type = "application/zip"
+                    parent.context.startActivity(intent)
+                }
+            }
         }
         viewHolder.delete_bt.setOnClickListener {
             val position = viewHolder.bindingAdapterPosition
@@ -57,23 +74,30 @@ class FileAdapter(
                 Log.e(tag, "NO_POSITION")
                 return@setOnClickListener
             }
-            val text_path = data_list[position].file_path
-            val dialog =
-                MaterialAlertDialogBuilder(parent.context)
-                    .setIcon(R.drawable.delete__icon)
-                    .setTitle(R.string.delete_dialog_title)
-                    .setMessage(text_path.name)
-                    .setNegativeButton(R.string.cancel) { dialog, _ ->
-                        dialog.dismiss()
-                    }
-                    .setPositiveButton(R.string.confirm) { _, _ ->
-                        if (text_path.exists()) {
-                            text_path.delete()
-                        }
-                        data_list.removeAt(viewHolder.bindingAdapterPosition)
-                        this.notifyItemRemoved(position)
-                    }.create()
-            dialog.show()
+            viewModel.viewModelScope.launch(Dispatchers.IO) {
+                val jsonPath = data_list[viewHolder.bindingAdapterPosition].jsonFile
+                val textPath = data_list[viewHolder.bindingAdapterPosition].textFile
+                val audioPath =
+                    File(jsonPath.parent, LocalResult.fromJson(moshi, jsonPath).audioFile)
+                withContext(Dispatchers.Main) {
+                    val dialog =
+                        MaterialAlertDialogBuilder(parent.context)
+                            .setIcon(R.drawable.delete__icon)
+                            .setTitle(R.string.delete_dialog_title)
+                            .setMessage(jsonPath.nameWithoutExtension)
+                            .setNegativeButton(R.string.cancel) { dialog, _ ->
+                                dialog.dismiss()
+                            }
+                            .setPositiveButton(R.string.confirm) { _, _ ->
+                                jsonPath.delete()
+                                textPath.delete()
+                                audioPath.delete()
+                                data_list.removeAt(viewHolder.bindingAdapterPosition)
+                                this@FileAdapter.notifyItemRemoved(position)
+                            }.create()
+                    dialog.show()
+                }
+            }
         }
         return viewHolder
     }

@@ -64,7 +64,7 @@ class FileTest {
         val wavFile = File("./src/test/assets/tmpHeader.wav")
         val header = WAVHeader(
             "RIFF",
-            36+22333,
+            36 + 22333,
             "WAVE",
             "fmt ",
             16,
@@ -82,8 +82,16 @@ class FileTest {
         }
         wavFile.inputStream().use {
             val wavHeader = WAVHeader.generate(it)
-            assertEquals(wavHeader,header)
+            assertEquals(wavHeader, header)
         }
+    }
+
+    @Test
+    fun testCompress() {
+        YuYinUtil.compressFiles(
+            listOf(File("./src/test/assets/tmp.pcm"), File("./src/test/assets/tmpHeader.wav")),
+            File("./src/test/assets/tmp.zip")
+        )
     }
 
 }

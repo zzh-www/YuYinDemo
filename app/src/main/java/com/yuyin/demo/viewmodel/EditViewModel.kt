@@ -107,6 +107,8 @@ class EditViewModel : ViewModel() {
                         if (AudioPlay.isPlay) {
                             scope.coroutineContext[Job]?.cancel()
                             Log.i(TAG, "cancel $it")
+                            AudioPlay.audioTrack.pause()
+                            AudioPlay.audioTrack.flush()
                             AudioPlay.isPlay = false
                             audioItemNotification.emit(ResultAdapter.Notification(it.id,false))
                         }
