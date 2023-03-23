@@ -319,14 +319,16 @@ open class RunningAsr : Fragment() {
     private fun updateSpeechList(recyclerView: RecyclerView) {
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             model.results.collect {
-                val position = model.speechList.size - 1
-                model.speechList.add(it) // add new para
-                model.adapter.notifyItemInserted(position + 1)
-                if (model.canScroll.value) {
-                    // 可滚动才可自动滚动
-                    recyclerView.scrollToPosition(position + 1)
+                if (it.text.isNotBlank()) {
+                    val position = model.speechList.size - 1
+                    model.speechList.add(it) // add new para
+                    model.adapter.notifyItemInserted(position + 1)
+                    if (model.canScroll.value) {
+                        // 可滚动才可自动滚动
+                        recyclerView.scrollToPosition(position + 1)
+                    }
+                    Log.i(tag, "updateSpeechList $it")
                 }
-                Log.i(tag, "updateSpeechList $it")
             }
         }
     }
