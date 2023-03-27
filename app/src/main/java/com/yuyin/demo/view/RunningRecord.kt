@@ -96,8 +96,8 @@ class RunningRecord : RunningAsr(){
     }
 
     override fun destroyRecord() {
-        model.asrState = false
         model.recordState = false
+        record.stop()
         record.release() // 由当前fragment创建
     }
 

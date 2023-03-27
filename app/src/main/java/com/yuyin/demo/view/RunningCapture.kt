@@ -60,7 +60,6 @@ class RunningCapture : RunningAsr() {
 
     override fun destroyRecord() {
         model.recordState = false
-        model.asrState = false
         record.stop()
     }
 

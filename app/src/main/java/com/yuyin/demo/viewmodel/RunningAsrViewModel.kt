@@ -80,7 +80,6 @@ open class RunningAsrViewModel : ViewModel() {
         override fun onModelFinish(isFinish: Boolean) {
             viewModelScope.launch(Dispatchers.Default) {
                 isModelFinish.emit(isFinish)
-                isModelFinish.value
                 Log.i(tag, "onModelFinish $isFinish")
             }
         }

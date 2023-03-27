@@ -93,9 +93,13 @@ open class RunningAsr : Fragment() {
         super.onDestroyView()
         _binding = null
         destroyRecord()
-        if (model.asrState && !model.recordState && !Recognize.getFinished()) {
+        Recognize.setOnNativeAsrModelCall(Recognize.defaultListener)
+        Log.i(TAG,"asrState: ${model.asrState} recordState: ${model.recordState} finish:${Recognize.getFinished()}")
+        // stop asr
+        if (model.asrState) {
             Recognize.setInputFinished()
         }
+        Log.i(TAG,"asrState: ${model.asrState} recordState: ${model.recordState} finish:${Recognize.getFinished()}")
     }
 
     override fun onDestroy() {

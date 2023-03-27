@@ -2,15 +2,28 @@ package com.yuyin.demo.viewmodel
 
 import android.media.AudioRecord
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.squareup.moshi.Moshi
 import com.yuyin.demo.models.LocalSettings
+import com.yuyin.demo.models.OnNativeAsrModelCall
+import com.yuyin.demo.models.SpeechResult
+import com.yuyin.demo.utils.YuYinUtil
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import java.io.File
+import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.absolutePathString
 
 class YuyinViewModel : ViewModel() {
 
+    var recordState = false
+    var asrState = false
+    var isModelInit = MutableStateFlow(false) // 热流不管是否有人订阅都会更新
+    var isModelReset = MutableStateFlow(false)
+    var isModelFinish = MutableStateFlow(false)
 
     val dicPath: String
         get() {
