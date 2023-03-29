@@ -56,6 +56,7 @@ class FileTest {
         newFile.inputStream().use {
             val header = WAVHeader.generate(it)
             println(header)
+            println(pcmFile.length()/header.byteRate)
         }
     }
 

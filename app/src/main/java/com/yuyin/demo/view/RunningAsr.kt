@@ -312,7 +312,7 @@ open class RunningAsr : Fragment() {
                                 binding.runRecordBt.isEnabled = true
                                 binding.runRecordHotView.text = ""
                             }
-                            updateOffsetTime()
+                            updateOffsetTime(yuYinModel.pcmTempFile.length())
                         }
                     }
                 }

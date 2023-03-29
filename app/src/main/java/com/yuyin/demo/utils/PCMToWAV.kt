@@ -50,7 +50,7 @@ fun PCMToWAV(
         // 2 byte
         writeToOutput(encoded, sampleRate) // sample rate
         // 4 byte
-        writeToOutput(encoded, sampleRate * channelCount * bitsPerSample / 8) // byte rate
+        writeToOutput(encoded, getByteRate(channelCount, sampleRate, bitsPerSample)) // byte rate
         // 4 byte
         writeToOutput(encoded, (channelCount * bitsPerSample / 8).toShort()) // block align
         // 2 byte
@@ -219,3 +219,9 @@ fun getRealChannelCount(channel: Int) = when (channel) {
     AudioFormat.CHANNEL_IN_STEREO -> 2
     else -> 0
 }
+
+fun getByteRate(
+    channelCount: Int,
+    sampleRate: Int,
+    bitsPerSample: Int
+) = channelCount * sampleRate * bitsPerSample / 8

@@ -7,7 +7,11 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.mobvoi.wenet.Recognize
 import com.yuyin.demo.models.OnNativeAsrModelCall
 import com.yuyin.demo.models.SpeechResult
+import com.yuyin.demo.utils.YuYinUtil
 import com.yuyin.demo.utils.YuYinUtil.RecordHelper.miniBufferSize
+import com.yuyin.demo.utils.getByteRate
+import com.yuyin.demo.utils.getRealChannelCount
+import com.yuyin.demo.utils.getRealEncoding
 import com.yuyin.demo.view.speech.SpeechTextAdapter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -90,7 +94,7 @@ open class RunningAsrViewModel : ViewModel() {
     init {
         // 一些状态标志更新，不直接更新界面才应该使用 viewModelScope
         viewModelScope.launch(Dispatchers.Main) {
-            results.emit(SpeechResult("balabala".toByteArray(),0,0,0))
+            results.emit(SpeechResult("balabala".toByteArray(), 0, 0, 0))
             adapter.isFocus.collect {
                 if (it) {
                     // 编辑态时不可滚动
@@ -121,12 +125,13 @@ open class RunningAsrViewModel : ViewModel() {
         }
     }
 
-    fun updateOffsetTime() {
-        offsetOfTime = if (speechList.isEmpty()) {
-            0
-        } else {
-            speechList.last().end
-        }
+    fun updateOffsetTime(pcmFileLength: Long) {
+        // 已经录制多少毫秒 = 总字节数 / (当前格式每秒字节数) * 1000
+        offsetOfTime = (pcmFileLength / getByteRate(
+            getRealChannelCount(YuYinUtil.RecordHelper.RECORDER_CHANNELS),
+            YuYinUtil.RecordHelper.RECORDER_SAMPLERATE,
+            getRealEncoding(YuYinUtil.RecordHelper.RECORDER_AUDIO_ENCODING)
+        )).toInt() * 1000
         Log.i(tag, "update offsetOfTime $offsetOfTime")
     }
 
