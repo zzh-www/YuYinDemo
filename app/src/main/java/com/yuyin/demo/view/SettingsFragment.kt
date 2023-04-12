@@ -13,6 +13,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.MenuProvider
+import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
@@ -29,6 +30,8 @@ import java.io.File
 import java.nio.file.Paths
 import kotlin.io.path.absolutePathString
 import com.yuyin.demo.utils.YuYinUtil.YuYinLog as Log
+
+
 
 class SettingsFragment : Fragment() {
     val TAG = "SettingsFragment"
@@ -65,7 +68,9 @@ class SettingsFragment : Fragment() {
                             Intent.FLAG_GRANT_READ_URI_PERMISSION or
                                     Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                         )
-                        val documentName = File(documentUri.path!!).name
+                        val documentFile: DocumentFile =
+                            DocumentFile.fromSingleUri(requireContext(), documentUri) ?: return@registerForActivityResult
+                        val documentName = documentFile.name
                         val file = Paths.get(
                             yuyinViewModel.yuYinDirPath.absolutePathString(),
                             documentName
@@ -93,7 +98,9 @@ class SettingsFragment : Fragment() {
                             Intent.FLAG_GRANT_READ_URI_PERMISSION or
                                     Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                         )
-                        val documentName = File(documentUri.path!!).name
+                        val documentFile: DocumentFile =
+                            DocumentFile.fromSingleUri(requireContext(), documentUri) ?: return@registerForActivityResult
+                        val documentName = documentFile.name
                         val file = Paths.get(
                             yuyinViewModel.yuYinDirPath.absolutePathString(),
                             documentName

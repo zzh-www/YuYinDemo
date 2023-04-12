@@ -11,7 +11,6 @@ object Recognize {
         System.loadLibrary("wenet")
     }
 
-    // TODO 重写方法 都要带有返回值做错误处理
     external fun init(modelPath: String?, dictPath: String?)
     external fun reset()
     external fun acceptWaveform(waveform: ShortArray?)

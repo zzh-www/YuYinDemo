@@ -121,9 +121,7 @@ dependencies {
     implementation("androidx.legacy:legacy-support-v4:1.0.0")
     // 协程
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
-    implementation("com.squareup.moshi:moshi-kotlin:1.14.0") {
-        isTransitive = false
-    }
+    implementation("com.squareup.moshi:moshi-kotlin:1.14.0")
     kapt("com.squareup.moshi:moshi-kotlin-codegen:1.14.0")
     kaptTest("com.squareup.moshi:moshi-kotlin-codegen:1.14.0")
     implementation("com.github.princekin-f:EasyFloat:2.0.4") {
