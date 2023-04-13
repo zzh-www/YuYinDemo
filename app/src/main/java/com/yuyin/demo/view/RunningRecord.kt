@@ -96,8 +96,12 @@ class RunningRecord : RunningAsr(){
     }
 
     override fun destroyRecord() {
-        model.recordState = false
-        record.stop()
+        if (model.recordState) {
+            model.recordState = false
+            record.stop()
+        } else {
+            Log.i(TAG,"is stop")
+        }
         record.release() // 由当前fragment创建
     }
 

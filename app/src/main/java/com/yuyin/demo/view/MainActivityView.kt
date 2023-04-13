@@ -164,6 +164,10 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
             createFloatView()
             checkPermission()
         } else {
+            showAppSettings(
+                appPermissions[mRequestCode+3]!!,
+                title = getString(R.string.rationale_ask)
+            )
             Log.e(TAG, "appPermission get failed for float")
         }
     }

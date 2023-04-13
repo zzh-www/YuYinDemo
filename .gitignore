@@ -9,4 +9,5 @@
 .cxx
 local.properties
 /myStats
-app/src/main/assets/*
+/release
+app/src/main/assets/*.zip

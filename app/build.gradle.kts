@@ -5,24 +5,36 @@ plugins {
 }
 
 android {
-    namespace = "com.yuyin.demo"
-
-    packagingOptions {
-        jniLibs {
-            pickFirsts.add("lib/arm64-v8a/libc++_shared.so")
+    signingConfigs {
+        create("release") {
+            storeFile = file("/Users/zzh/work/YuYinDemo/app/yuyin.keystore")
+            storePassword = "yuyindemo"
+            keyAlias = "yuyin"
+            keyPassword = "yuyindemo"
         }
     }
+    namespace = "com.yuyin.demo"
 
     defaultConfig {
         applicationId = "com.yuyin.demo"
         versionCode = 1
         versionName = "1.0"
-        minSdk = 33
+        minSdk = 29
         targetSdk = 33
         compileSdk = 33
         buildToolsVersion = "30.0.3"
+
         viewBinding {
             enable = true
+        }
+
+        signingConfigs {
+           this.maybeCreate("release").run {
+               storeFile = file("yuyin.keystore")
+               storePassword = "yuyindemo"
+               keyAlias = "yuyin"
+               keyPassword = "yuyindemo"
+           }
         }
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -35,17 +47,22 @@ android {
                     "-DC10_USE_MINIMAL_GLOG",
                     "-DANDROID",
                     "-Wno-c++11-narrowing",
-                    "-fexceptions"
+                    "-fexceptions",
+                    "-DANDROID_STL=c++_shared"
                 )
             }
         }
 
         ndkVersion = "21.1.6352462"
         ndk {
-            abiFilters.add("armeabi-v7a")
+//            abiFilters.add("armeabi-v7a")
             abiFilters.add("arm64-v8a")
-            abiFilters.add("x86")
-            abiFilters.add("x86_64")
+//            abiFilters.add("x86")
+//            abiFilters.add("x86_64")
+        }
+
+        packagingOptions {
+            jniLibs.pickFirsts.add("lib/arm64-v8a/libc++_shared.so")
         }
     }
 
@@ -62,6 +79,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     externalNativeBuild {
@@ -130,11 +148,27 @@ dependencies {
     implementation("pub.devrel:easypermissions:3.0.0") {
         isTransitive = false
     }
+    // 注册 extractForNativeBuild configurations
+    val extractForNativeBuild by configurations.creating
+
+    implementation("org.pytorch:pytorch_android:1.10.0") {
+        isTransitive = false
+    }
+    implementation("com.github.pengzhendong:wenet-openfst-android:1.0.2") {
+        isTransitive = false
+    }
+    // 使用 extractForNativeBuild 这只是为了可以顺利编译wennet
+    extractForNativeBuild("org.pytorch:pytorch_android:1.10.0") {
+        isTransitive = false
+    }
+    extractForNativeBuild("com.github.pengzhendong:wenet-openfst-android:1.0.2") {
+        isTransitive = false
+    }
 }
 
 // 解压native包具体实现 extractForNativeBuild
 project.afterEvaluate {
-    val files = rootProject.configurations["extractForNativeBuild"].files
+    val files = configurations["extractForNativeBuild"].files
     files.forEach { println(it.name) }
     files.filter { it.name.contains("pytorch_android") or it.name.contains("wenet-openfst-android") }
         .forEach {
@@ -148,11 +182,3 @@ project.afterEvaluate {
             println("dir: $buildDir")
         }
 }
-
-
-//gradleEnterprise {
-//    buildScan {
-//        termsOfServiceUrl = "https://gradle.com/terms-of-service"
-//        termsOfServiceAgree = "yes"
-//    }
-//}

@@ -59,8 +59,12 @@ class RunningCapture : RunningAsr() {
     }
 
     override fun destroyRecord() {
-        model.recordState = false
-        record.stop()
+        if (model.recordState) {
+            model.recordState = false
+            record.stop()
+        } else {
+            Log.i(TAG,"it is stopped")
+        }
     }
 
 }

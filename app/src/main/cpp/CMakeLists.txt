@@ -3,7 +3,7 @@ set(TARGET wenet)
 project(${TARGET} CXX)
 set(CMAKE_CXX_STANDARD 14)
 include(ExternalProject)
-
+message("当前目录: ${CMAKE_CURRENT_SOURCE_DIR}")
 option(TORCH "whether to build with Torch" ON)
 option(ONNX "whether to build with ONNX" OFF)
 set(CMAKE_VERBOSE_MAKEFILE on)
@@ -19,11 +19,11 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/kaldi
 )
 
-add_subdirectory(utils)
-add_subdirectory(frontend)
-add_subdirectory(post_processor)
-add_subdirectory(kaldi)  # kaldi: wfst based decoder
-add_subdirectory(decoder)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/utils)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/frontend)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/post_processor)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/kaldi)  # kaldi: wfst based decoder
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/decoder)
 
 link_libraries(frontend decoder android)
 add_library(${TARGET} SHARED wenet.cc)
