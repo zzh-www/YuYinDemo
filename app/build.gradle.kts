@@ -17,7 +17,7 @@ android {
         applicationId = "com.yuyin.demo"
         versionCode = 1
         versionName = "1.0"
-        minSdk = 29
+        minSdk = 33
         targetSdk = 33
         compileSdk = 33
         buildToolsVersion = "30.0.3"
@@ -127,7 +127,7 @@ dependencies {
     implementation("com.github.princekin-f:EasyFloat:2.0.4") {
         isTransitive = false
     }
-    implementation("com.vmadalin:easypermissions-ktx:1.0.0") {
+    implementation("pub.devrel:easypermissions:3.0.0") {
         isTransitive = false
     }
 }

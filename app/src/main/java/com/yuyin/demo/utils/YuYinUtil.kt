@@ -1,17 +1,12 @@
 package com.yuyin.demo.utils
 
-import android.Manifest
-import android.app.Activity
-import android.content.Context
-import android.content.pm.PackageManager
 import android.media.AudioFormat
-import android.os.Environment
 import android.util.Log
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import com.squareup.moshi.Moshi
-import java.io.*
-import java.nio.charset.StandardCharsets
+import java.io.BufferedOutputStream
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.zip.ZipEntry
@@ -48,46 +43,7 @@ object YuYinUtil {
 
     val moshi: Moshi = Moshi.Builder().build()
 
-    // 所需请求的权限
-    val appPermissions = arrayOf(
-        Manifest.permission.RECORD_AUDIO,
-        Manifest.permission.FOREGROUND_SERVICE
-    )
     const val m_ALL_PERMISSIONS_PERMISSION_CODE = 1000
-
-    @JvmStatic
-    fun save_file(context: Context, text: String, title: String? = null) {
-        val timeStamp = System.currentTimeMillis()
-        val sdf = SimpleDateFormat("yyyyMMddHHmmss", Locale.CHINA)
-        val dateStr = sdf.format(Date(timeStamp.toString().toLong()))
-        val type = ".txt"
-        val dir_path = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: return
-        var file: File?
-        if (title.isNullOrBlank()) {
-            file =
-                File(dir_path.absoluteFile.toString() + File.separator + "YuYin" + File.separator + dateStr + type)
-        } else {
-            file =
-                File(dir_path.absoluteFile.toString() + File.separator + "YuYin" + File.separator + title + type)
-            if (file.exists()) {
-                file =
-                    File(dir_path.absoluteFile.toString() + File.separator + "YuYin" + File.separator + title + "_" + dateStr + type)
-            }
-        }
-        try {
-            if (file.createNewFile()) {
-                FileOutputStream(file.absolutePath).use { op ->
-                    op.write(
-                        text.toByteArray(
-                            StandardCharsets.UTF_8
-                        )
-                    )
-                }
-            }
-        } catch (e: IOException) {
-            e.printStackTrace()
-        }
-    }
 
     @JvmStatic
     fun getFileName(dir: String, title: String? = null): ResultFiles {
@@ -127,29 +83,6 @@ object YuYinUtil {
         }
 
         return ResultFiles(file, audioFile, textFile)
-    }
-
-    @JvmStatic
-    fun checkRequestPermissions(activity: Activity?, context: Context?): Boolean {
-        val listPermissionsNeeded: MutableList<String> = ArrayList()
-        for (permission in appPermissions) {
-            if (ContextCompat.checkSelfPermission(
-                    context!!,
-                    permission
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                listPermissionsNeeded.add(permission)
-            }
-        }
-        if (!listPermissionsNeeded.isEmpty()) {
-            ActivityCompat.requestPermissions(
-                activity!!,
-                listPermissionsNeeded.toTypedArray(),
-                m_ALL_PERMISSIONS_PERMISSION_CODE
-            )
-            return false
-        }
-        return true
     }
 
 

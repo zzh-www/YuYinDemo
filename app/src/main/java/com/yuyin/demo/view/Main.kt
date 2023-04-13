@@ -8,7 +8,6 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.Navigation.findNavController
 import com.yuyin.demo.R
-import com.yuyin.demo.utils.YuYinUtil.checkRequestPermissions
 import com.yuyin.demo.databinding.FragmentMainBinding
 import com.yuyin.demo.viewmodel.YuyinViewModel
 import kotlin.io.path.exists
@@ -83,10 +82,6 @@ class Main : Fragment() {
     }
 
     private fun check(): Boolean {
-        if (!checkRequestPermissions(requireActivity(), requireContext())) {
-            Log.e(TAG,"no permission for asr")
-            return false
-        }
         if (yuyinViewModel.recorder == null) {
             Log.e(TAG,"recorder is null")
             return false

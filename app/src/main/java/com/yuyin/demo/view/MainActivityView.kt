@@ -1,9 +1,9 @@
 package com.yuyin.demo.view
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.*
-import android.content.pm.PackageManager
 import android.media.AudioRecord
 import android.media.projection.MediaProjectionManager
 import android.net.Uri
@@ -16,7 +16,6 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
-import android.widget.Toast
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -31,23 +30,24 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.lzf.easyfloat.EasyFloat
 import com.lzf.easyfloat.enums.ShowPattern
 import com.lzf.easyfloat.enums.SidePattern
+import com.lzf.easyfloat.interfaces.OnPermissionResult
+import com.lzf.easyfloat.permission.PermissionUtils
 import com.lzf.easyfloat.utils.DisplayUtils
 import com.squareup.moshi.JsonAdapter
-import com.vmadalin.easypermissions.EasyPermissions
 import com.yuyin.demo.R
-import com.yuyin.demo.utils.YuYinUtil
+import com.yuyin.demo.databinding.ActivityMainViewBinding
+import com.yuyin.demo.models.AudioPlay
+import com.yuyin.demo.models.LocalSettings
+import com.yuyin.demo.service.MediaCaptureService
+import com.yuyin.demo.service.MediaCaptureService.Companion.m_NOTIFICATION_CHANNEL_ID
 import com.yuyin.demo.utils.YuYinUtil.ACTION_ALL
 import com.yuyin.demo.utils.YuYinUtil.CaptureAudio_ALL
 import com.yuyin.demo.utils.YuYinUtil.CaptureAudio_START
 import com.yuyin.demo.utils.YuYinUtil.EXTRA_CaptureAudio_NAME
 import com.yuyin.demo.utils.YuYinUtil.EXTRA_RESULT_CODE
 import com.yuyin.demo.utils.YuYinUtil.m_CREATE_SCREEN_CAPTURE
-import com.yuyin.demo.databinding.ActivityMainViewBinding
-import com.yuyin.demo.models.AudioPlay
-import com.yuyin.demo.models.LocalSettings
-import com.yuyin.demo.service.MediaCaptureService
-import com.yuyin.demo.service.MediaCaptureService.Companion.m_NOTIFICATION_CHANNEL_ID
 import com.yuyin.demo.viewmodel.YuyinViewModel
+import pub.devrel.easypermissions.EasyPermissions
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -56,7 +56,8 @@ import kotlin.io.path.absolutePathString
 import kotlin.system.exitProcess
 import com.yuyin.demo.utils.YuYinUtil.YuYinLog as Log
 
-class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallbacks {
+class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallbacks,
+    OnPermissionResult {
 
     companion object {
         const val TAG = "YUYIN_ACTIVITY"
@@ -68,13 +69,25 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
         const val textMineType = "text/plain"
     }
 
+    data class MyPermission(
+        val code: Int,
+        val name: String,
+        val manifestName: String,
+        val description: String
+    )
+
     // 视图绑定
     private lateinit var binding: ActivityMainViewBinding
 
-    private val m_ALL_PERMISSIONS_PERMISSION_CODE = 1000
+    private val mRequestCode = 1000080
+
+    // 所需请求的权限
+    private lateinit var appPermissions: MutableMap<Int, MyPermission>
+
 
     // 层级配置
-    private lateinit var appBarConfiguration: AppBarConfiguration
+    private lateinit
+    var appBarConfiguration: AppBarConfiguration
 
     val model: YuyinViewModel by viewModels()
 
@@ -112,15 +125,150 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
     // 通知
     lateinit var notificationManager: NotificationManager
 
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this)
+    }
+
+    override fun onPermissionsDenied(requestCode: Int, perms: List<String>) {
+        Log.i(TAG, "appPermission request $requestCode in onPermissionsDenied")
+        if (appPermissions[requestCode] != null) {
+            showAppSettings(
+                appPermissions[requestCode]!!,
+                title = getString(R.string.rationale_ask)
+            )
+        } else {
+            Log.e(TAG, "appPermission get failed when denied $requestCode")
+        }
+    }
+
+    override fun onPermissionsGranted(requestCode: Int, perms: List<String>) {
+        Log.i(TAG, "appPermission request $requestCode in onPermissionsGranted")
+        if (appPermissions[requestCode] != null) {
+            appPermissions.remove(requestCode)
+            checkPermission()
+        } else {
+            Log.e(TAG, "appPermission get failed when granted $requestCode")
+        }
+    }
+
+    override fun permissionResult(isOpen: Boolean) {
+        // 浮窗权限申请结果回调
+        Log.i(TAG, "appPermission request $isOpen in float")
+        if (isOpen) {
+            appPermissions.remove(mRequestCode + 3)
+            createFloatView()
+            checkPermission()
+        } else {
+            Log.e(TAG, "appPermission get failed for float")
+        }
+    }
+
+    override fun shouldShowRequestPermissionRationale(permission: String): Boolean {
+        // 拦截rationale 使用自定义dialog
+        return false
+    }
+
+    private fun initPermission() {
+        this.appPermissions = mutableMapOf(
+            mRequestCode to MyPermission(
+                mRequestCode,
+                getString(R.string.permission_notification),
+                Manifest.permission.POST_NOTIFICATIONS,
+                getString(R.string.d_permission_notification)
+            ),
+            mRequestCode + 1 to MyPermission(
+                mRequestCode + 1,
+                getString(R.string.permission_audio_record),
+                Manifest.permission.RECORD_AUDIO,
+                getString(R.string.d_permission_audio_record)
+            ),
+            mRequestCode + 2 to MyPermission(
+                mRequestCode + 2,
+                getString(R.string.permission_foreground_service),
+                Manifest.permission.FOREGROUND_SERVICE,
+                getString(R.string.d_permission_foreground_service)
+            ),
+            mRequestCode + 3 to MyPermission(
+                mRequestCode + 3,
+                getString(R.string.permission_SYSTEM_ALERT_WINDOW),
+                Manifest.permission.SYSTEM_ALERT_WINDOW,
+                getString(R.string.d_permission_SYSTEM_ALERT_WINDOW)
+            )
+        )
+        checkPermission()
+    }
+
+    private fun showAppSettings(
+        myPermission: MyPermission,
+        title: String = ""
+    ) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(myPermission.name)
+            .setMessage(if (title.isEmpty()) myPermission.description else myPermission.description)
+            .setNegativeButton(R.string.cancel) { dialog, _ ->
+                dialog.dismiss()
+                exitApp()
+            }
+            .setPositiveButton(R.string.confirm) { _, _ ->
+                if (myPermission.code == mRequestCode + 3) {
+                    PermissionUtils.requestPermission(this, this)
+                } else {
+                    EasyPermissions.requestPermissions(
+                        this,
+                        getString(R.string.rationale_ask),
+                        myPermission.code,
+                        myPermission.manifestName
+                    )
+                }
+            }.create().show()
+    }
+
+    private fun checkPermission() {
+        Log.i(TAG, "checkPermission")
+        if (appPermissions.isNotEmpty()) {
+            val permission = appPermissions.entries.first()
+            Log.i(TAG, "checkPermission $permission")
+            permission.let {
+                if (it.value.code == mRequestCode + 3) {
+                    // 浮窗权限特化处理
+                    if (!PermissionUtils.checkPermission(this)) {
+                        showAppSettings(it.value)
+                        // 成功后会再check
+                    } else {
+                        appPermissions.remove(it.key)
+                        createFloatView()
+                        checkPermission()
+                    }
+                } else {
+                    if (EasyPermissions.hasPermissions(this, it.value.manifestName)) {
+                        appPermissions.remove(it.key)
+                        checkPermission()
+                    } else {
+                        showAppSettings(it.value)
+                        // 成功后会再check
+                    }
+                }
+            }
+        } else {
+            // 申请完所有权限
+            Log.i(TAG, "all permission done start notification")
+            initNotification()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // 膨胀视图
         binding = ActivityMainViewBinding.inflate(layoutInflater)
-
         val view: View = binding.root
         setContentView(view)
 
-        showFloatView()
+        initPermission()
 
         // 应用自定义toolbar
         setSupportActionBar(binding.actionBar)
@@ -166,7 +314,6 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
                 }
             }
         }
-        initNotification()
         initProfile()
     }
 
@@ -185,8 +332,6 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
     override fun onResume() {
         super.onResume()
         Log.i(TAG, "onResume")
-        // 权限
-        YuYinUtil.checkRequestPermissions(this, this)
     }
 
     fun initProfile() {
@@ -297,39 +442,6 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
 
     override fun onSupportNavigateUp(): Boolean {
         return navController.navigateUp(appBarConfiguration)
-    }
-
-    override fun onPermissionsDenied(requestCode: Int, perms: List<String>) {
-        TODO("Not yet implemented")
-    }
-
-    override fun onPermissionsGranted(requestCode: Int, perms: List<String>) {
-        TODO("Not yet implemented")
-    }
-
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
-    ) {
-//        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == m_ALL_PERMISSIONS_PERMISSION_CODE) {
-            val permissionResults = HashMap<String, Int>()
-            var deniedCount = 0
-            for (permissionIndx in permissions.indices) {
-                if (grantResults[permissionIndx] != PackageManager.PERMISSION_GRANTED) {
-                    permissionResults[permissions[permissionIndx]] = grantResults[permissionIndx]
-                    deniedCount++
-                }
-            }
-            if (deniedCount != 0) {
-                Toast.makeText(this, "must allow", Toast.LENGTH_SHORT).show()
-                this.finish()
-            }
-
-        }
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
@@ -468,49 +580,56 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
         exitProcess(1)
     }
 
-    private fun showFloatView() {
-        if (!checkFloatView()) {
-            EasyFloat.with(this@MainActivityView)
-                .setLayout(R.layout.floatview)
-                .setShowPattern(ShowPattern.BACKGROUND) // 应用后台时显示 手动调用显示隐藏方法后 自动逻辑失效
-                .setSidePattern(SidePattern.RESULT_HORIZONTAL) // 吸附 根据移动后的位置贴附到边缘
-                .setTag(floatTag) // 设置TAG管理
-                .setDragEnable(true) // 可拖拽
-                .hasEditText(false) // 无编辑框，无需适配键盘
-                .setLocation(0, 0)
-                .setGravity(Gravity.START or Gravity.CENTER_VERTICAL, 0, 0)
-                .setLayoutChangedGravity(Gravity.START)
-                //  .setBorder()
-                .setMatchParent(false, false)
-                .setAnimator(com.lzf.easyfloat.anim.DefaultAnimator())
-                .setDisplayHeight { context -> DisplayUtils.rejectedNavHeight(context) }
-                .setFilter(MainActivityView::class.java)
-                .registerCallback {
-                    show {
-                        Log.i(TAG, "show float view");
-                    }
-                    hide {
-                        Log.i(TAG, "hide float view")
-                    }
-                    dismiss {
-                        Log.i(TAG, "dismiss float view")
-                    }
-                    drag { _, _ -> }
-                    dragEnd {
-                        //TODO 获取当前重新绘制
-                        //it.draw()
-                    }
+    private fun createFloatView() {
+        EasyFloat.with(this@MainActivityView)
+            .setLayout(R.layout.floatview)
+            .setShowPattern(ShowPattern.BACKGROUND) // 应用后台时显示 手动调用显示隐藏方法后 自动逻辑失效
+            .setSidePattern(SidePattern.RESULT_HORIZONTAL) // 吸附 根据移动后的位置贴附到边缘
+            .setTag(floatTag) // 设置TAG管理
+            .setDragEnable(true) // 可拖拽
+            .hasEditText(false) // 无编辑框，无需适配键盘
+            .setLocation(0, 0)
+            .setGravity(Gravity.START or Gravity.CENTER_VERTICAL, 0, 0)
+            .setLayoutChangedGravity(Gravity.START)
+            //  .setBorder()
+            .setMatchParent(false, false)
+            .setAnimator(com.lzf.easyfloat.anim.DefaultAnimator())
+            .setDisplayHeight { context -> DisplayUtils.rejectedNavHeight(context) }
+            .setFilter(MainActivityView::class.java)
+            .registerCallback {
+                show {
+                    Log.i(TAG, "show float view");
                 }
-                .show()
-        } else {
-            EasyFloat.show(floatTag)
+                hide {
+                    Log.i(TAG, "hide float view")
+                }
+                dismiss {
+                    Log.i(TAG, "dismiss float view")
+                }
+                drag { _, _ -> }
+                dragEnd {
+                    //TODO 获取当前重新绘制
+                    //it.draw()
+                }
+            }
+            .show()
+    }
+
+    private fun showFloatView() {
+        // 有权限下才show
+        if (appPermissions.isEmpty()) {
+            if (!checkFloatView()) {
+                Log.e(TAG, "float view not exited")
+            } else {
+                EasyFloat.show(floatTag)
+            }
         }
     }
 
     fun checkFloatView(): Boolean = EasyFloat.getFloatView(floatTag) != null
 
     private fun destroyFloatView() {
-        EasyFloat.hide(floatTag)
+//        EasyFloat.hide(floatTag)
     }
 
     // 广播服务

@@ -2,6 +2,22 @@
     <string name="app_name">YuYin</string>
     <string name="title_activity_capture">CaptureActivity</string>
 
+
+
+    <!-- Strings used for permission -->
+    <string name="ration_text_head">：请点击确认授予权限，点击取消将退出应用</string>
+    <string name="permission_notification">通知权限</string>
+    <string name="d_permission_notification">本应用需要通知权限展示应用状态</string>
+
+    <string name="permission_foreground_service">前台服务权限</string>
+    <string name="d_permission_foreground_service">本应用需要前台服务权限运行维持应用后台活动</string>
+
+    <string name="permission_audio_record">麦克风权限</string>
+    <string name="d_permission_audio_record">本应用需要麦克风权限录制音频从而转写</string>
+
+    <string name="permission_SYSTEM_ALERT_WINDOW">浮窗权限</string>
+    <string name="d_permission_SYSTEM_ALERT_WINDOW">本应用需要悬浮窗权限展示悬浮字幕</string>
+
     <!-- Strings used for fragments for navigation -->
     <string name="capture_label">capture</string>
     <string name="record_label">record</string>
