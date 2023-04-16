@@ -115,14 +115,18 @@ open class RunningAsr : Fragment() {
         recyclerView = binding.recyclerRunRecord
         recyclerView.layoutManager = model.linearLayoutManager
         recyclerView.adapter = model.adapter
-        recyclerView.setOnFocusChangeListener { v, hasFocus ->
-            if (hasFocus) {
-                // 滑动时获取焦点 取消自动滚动
-                model.viewModelScope.launch {
-                    model.canScroll.emit(false)
+        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                super.onScrollStateChanged(recyclerView, newState)
+                // 判断是否能往下滑动 不能滑说明在底部或者无item
+                if (recyclerView.canScrollVertically(1)) {
+                    // 可以滑动 则禁止自动滑动
+                    model.viewModelScope.launch {
+                        model.canScroll.emit(false)
+                    }
                 }
             }
-        }
+        })
         // false false
         // true true
         initRecorder()
