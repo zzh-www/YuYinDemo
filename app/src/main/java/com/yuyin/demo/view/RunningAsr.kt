@@ -93,6 +93,8 @@ open class RunningAsr : Fragment() {
         super.onDestroyView()
         _binding = null
         destroyRecord()
+        if (floatView.text.isNotEmpty())
+            floatView.text = ""
         Recognize.setOnNativeAsrModelCall(Recognize.defaultListener)
         Log.i(TAG,"asrState: ${model.asrState} recordState: ${model.recordState} finish:${Recognize.getFinished()}")
         // stop asr
@@ -113,6 +115,14 @@ open class RunningAsr : Fragment() {
         recyclerView = binding.recyclerRunRecord
         recyclerView.layoutManager = model.linearLayoutManager
         recyclerView.adapter = model.adapter
+        recyclerView.setOnFocusChangeListener { v, hasFocus ->
+            if (hasFocus) {
+                // 滑动时获取焦点 取消自动滚动
+                model.viewModelScope.launch {
+                    model.canScroll.emit(false)
+                }
+            }
+        }
         // false false
         // true true
         initRecorder()

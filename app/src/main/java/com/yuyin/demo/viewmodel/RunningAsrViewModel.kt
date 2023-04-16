@@ -94,7 +94,6 @@ open class RunningAsrViewModel : ViewModel() {
     init {
         // 一些状态标志更新，不直接更新界面才应该使用 viewModelScope
         viewModelScope.launch(Dispatchers.Main) {
-            results.emit(SpeechResult("balabala".toByteArray(), 0, 0, 0))
             adapter.isFocus.collect {
                 if (it) {
                     // 编辑态时不可滚动

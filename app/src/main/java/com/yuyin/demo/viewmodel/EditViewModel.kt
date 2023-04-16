@@ -42,7 +42,8 @@ class EditViewModel : ViewModel() {
                                     // 每一百毫秒音频的字节数
                                     val bytesPerMS = header.byteRate / 10
                                     // start 向下取整
-                                    val start = kotlin.math.floor(it.start / 100f).toInt() * bytesPerMS
+                                    val start =
+                                        kotlin.math.floor(it.start / 100f).toInt() * bytesPerMS
                                     val end = kotlin.math.ceil(it.end / 100f).toInt() * bytesPerMS
                                     Log.i(TAG, "bytesPerMS $bytesPerMS start $start end $end")
                                     // 跳转到开始
@@ -51,7 +52,12 @@ class EditViewModel : ViewModel() {
                                     for (i in 0 until start / bytesPerMS) {
                                         if (input.read(buffer) < 0) {
                                             AudioPlay.isPlay = false
-                                            audioItemNotification.emit(ResultAdapter.Notification(it.id,false))
+                                            audioItemNotification.emit(
+                                                ResultAdapter.Notification(
+                                                    it.id,
+                                                    false
+                                                )
+                                            )
                                             this.coroutineContext[Job]?.cancel("未跳转到音频开始，文件已经结束")
                                         }
                                     }
@@ -63,40 +69,57 @@ class EditViewModel : ViewModel() {
                                         if (read < 0) {
                                             // 到文件尾部
                                             break
-                                        }
-                                        else if ((start + duration) > end) {
+                                        } else if ((start + duration) > end) {
                                             // 到该段音频末尾
                                             break
                                         }
                                         duration += read
                                         AudioPlay.audioTrack.play()
-                                        when(AudioPlay.audioTrack.write(buffer,0,read)) {
+                                        when (AudioPlay.audioTrack.write(buffer, 0, read)) {
                                             AudioTrack.ERROR_INVALID_OPERATION -> {
-                                                audioItemNotification.emit(ResultAdapter.Notification(it.id,false))
-                                                Log.e(TAG,"play failed, ERROR_INVALID_OPERATION")
+                                                audioItemNotification.emit(
+                                                    ResultAdapter.Notification(
+                                                        it.id,
+                                                        false
+                                                    )
+                                                )
+                                                Log.e(TAG, "play failed, ERROR_INVALID_OPERATION")
                                                 this.coroutineContext[Job]?.cancel("播放错误")
                                             }
                                             AudioTrack.ERROR_BAD_VALUE -> {
-                                                audioItemNotification.emit(ResultAdapter.Notification(it.id,false))
-                                                Log.e(TAG,"play failed ERROR_BAD_VALUE")
+                                                audioItemNotification.emit(
+                                                    ResultAdapter.Notification(
+                                                        it.id,
+                                                        false
+                                                    )
+                                                )
+                                                Log.e(TAG, "play failed ERROR_BAD_VALUE")
                                                 this.coroutineContext[Job]?.cancel("播放错误")
                                             }
                                             AudioTrack.ERROR_DEAD_OBJECT -> {
-                                                audioItemNotification.emit(ResultAdapter.Notification(it.id,false))
-                                                Log.e(TAG,"play failed ERROR_DEAD_OBJECT")
+                                                audioItemNotification.emit(
+                                                    ResultAdapter.Notification(
+                                                        it.id,
+                                                        false
+                                                    )
+                                                )
+                                                Log.e(TAG, "play failed ERROR_DEAD_OBJECT")
                                                 this.coroutineContext[Job]?.cancel("播放错误")
                                             }
                                             else -> {
-                                                Log.i(TAG, "play ${duration / header.byteRate} config: $it")
+                                                Log.i(
+                                                    TAG,
+                                                    "play ${duration / header.byteRate} config: $it"
+                                                )
                                             }
                                         }
                                     }
                                 }
-                                audioItemNotification.emit(ResultAdapter.Notification(it.id,false))
+                                audioItemNotification.emit(ResultAdapter.Notification(it.id, false))
                                 Log.i(TAG, "stop $it")
                             }
                         } else {
-                            audioItemNotification.emit(ResultAdapter.Notification(it.id,false))
+                            audioItemNotification.emit(ResultAdapter.Notification(it.id, false))
                             Log.e(
                                 TAG,
                                 "file not exit ${audioResource.absolutePath} or is not in init type: ${AudioPlay.isPlay}"
@@ -110,7 +133,7 @@ class EditViewModel : ViewModel() {
                             AudioPlay.audioTrack.pause()
                             AudioPlay.audioTrack.flush()
                             AudioPlay.isPlay = false
-                            audioItemNotification.emit(ResultAdapter.Notification(it.id,false))
+                            audioItemNotification.emit(ResultAdapter.Notification(it.id, false))
                         }
                     }
                 }

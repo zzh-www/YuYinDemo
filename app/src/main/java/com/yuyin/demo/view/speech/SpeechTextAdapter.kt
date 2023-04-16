@@ -50,6 +50,7 @@ class SpeechTextAdapter(
             holder.timeTextView.visibility = View.GONE
         }
         holder.speechView.setOnFocusChangeListener { _, hasFocus ->
+            holder.onFocus = hasFocus
             if (hasFocus) {
                 Log.i(tag, "on focus")
                 viewModel.viewModelScope.launch(Dispatchers.Main) {
@@ -64,8 +65,14 @@ class SpeechTextAdapter(
         }
 
         holder.speechView.doAfterTextChanged {
-            speechText._text = it.toString()
-            Log.i(TAG, "text change")
+            if (holder.onFocus) {
+                Log.i(TAG, "text change")
+                Log.i(TAG,"change from ${speechText._text} to $it on $position  and holderText = ${holder.speechView.text}")
+                speechText._text = it.toString()
+            } else {
+                Log.i(TAG,"change from ${speechText._text} to $it on $position  and holderText = ${holder.speechView.text} positonText = ${dataList[position].text}")
+                Log.i(TAG, "auto change")
+            }
         }
     }
 
@@ -76,13 +83,14 @@ class SpeechTextAdapter(
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val speechView = view.findViewById<View>(R.id.speechText) as TextInputEditText
         val timeTextView = view.findViewById<View>(R.id.timeInfo_asr) as TextView
+        var onFocus = false
 
         init {
             speechView.setOnClickListener {
                 Log.i(tag, "on click")
             }
             speechView.onFocusChangeListener = View.OnFocusChangeListener { _, _ ->
-                Log.i(tag, "on focus")
+                Log.i(tag, "on focus $")
             }
             speechView.doBeforeTextChanged { _, _, _, _ ->
                 Log.i(tag, "doBeforeTextChanged")

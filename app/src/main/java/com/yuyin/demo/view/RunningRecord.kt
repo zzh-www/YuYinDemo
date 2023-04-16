@@ -3,7 +3,6 @@ package com.yuyin.demo.view
 import android.Manifest
 import android.content.pm.PackageManager
 import android.content.res.Configuration
-import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.Bundle
@@ -12,7 +11,6 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.app.ActivityCompat
 import androidx.fragment.app.viewModels
-import com.yuyin.demo.utils.YuYinUtil
 import com.yuyin.demo.utils.YuYinUtil.RecordHelper.RECORDER_AUDIO_ENCODING
 import com.yuyin.demo.utils.YuYinUtil.RecordHelper.RECORDER_CHANNELS
 import com.yuyin.demo.utils.YuYinUtil.RecordHelper.RECORDER_SAMPLERATE

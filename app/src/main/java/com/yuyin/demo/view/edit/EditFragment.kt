@@ -115,6 +115,7 @@ class EditFragment : Fragment() {
                     stopLabel
                 )
                 withContext(Dispatchers.Main) {
+                    binding.recyclerShowTextAndAudio.setItemViewCacheSize(0)
                     binding.recyclerShowTextAndAudio.adapter = adapter
                 }
             }

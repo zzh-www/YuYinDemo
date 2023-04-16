@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.LifecycleCoroutineScope
+import androidx.lifecycle.viewModelScope
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.divider.MaterialDivider
@@ -41,7 +42,53 @@ class ResultAdapter(
         val view =
             LayoutInflater.from(parent.context).inflate(R.layout.text_with_audio, parent, false)
         val viewHolder = ViewHolder(view)
+        Log.i(TAG, "onDetachedFromRecyclerView")
         return viewHolder
+    }
+
+
+    override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
+        super.onDetachedFromRecyclerView(recyclerView)
+        Log.i(TAG, "onDetachedFromRecyclerView")
+    }
+
+    override fun onViewAttachedToWindow(holder: ViewHolder) {
+        super.onViewAttachedToWindow(holder)
+        Log.i(TAG, "onViewAttachedToWindow")
+        Log.i(
+            TAG,
+            "onViewAttachedToWindow ${holder.absoluteAdapterPosition} ${holder.textView.text}"
+        )
+    }
+
+    override fun onViewDetachedFromWindow(holder: ViewHolder) {
+        super.onViewDetachedFromWindow(holder)
+        Log.i(TAG, "onViewDetachedFromWindow")
+        Log.i(
+            TAG,
+            "onViewDetachedFromWindow ${holder.absoluteAdapterPosition} ${holder.textView.text} playText: ${holder.audioBt.text}"
+        )
+        // 恢复初始状态离开屏幕
+        if (results[holder.absoluteAdapterPosition].state == AudioPlay.AudioConfigState.STOP) {
+            viewModel.viewModelScope.launch {
+                results[holder.absoluteAdapterPosition].state = AudioPlay.AudioConfigState.PLAY
+                viewModel.audioConfig.emit(
+                    AudioPlay.AudioConfig(
+                        0,
+                        0,
+                        AudioPlay.AudioConfigState.STOP,
+                        holder.absoluteAdapterPosition
+                    )
+                )
+            }
+            holder.audioBt.icon = startIcon
+            holder.audioBt.text = playLabel
+        }
+    }
+
+    override fun onViewRecycled(holder: ViewHolder) {
+        super.onViewRecycled(holder)
+        Log.i(TAG, "onViewRecycled ${holder.textView.text}")
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
@@ -52,10 +99,15 @@ class ResultAdapter(
         holder.textView.text = text
 
         if (viewModel.localResult.resultType > 0) {
-            holder.timeInfo.text = "${start/1000f}s ~ ${end/1000f}s"
+            holder.timeInfo.text = "${start / 1000f}s ~ ${end / 1000f}s"
         } else {
             holder.timeInfo.visibility = View.GONE
-            holder.divider.visibility =View.GONE
+            holder.divider.visibility = View.GONE
+        }
+
+        holder.textView.setOnFocusChangeListener { _, hasFocus ->
+            holder.onFocus = hasFocus
+            Log.i(TAG, "focus $hasFocus")
         }
 
         if (viewModel.localResult.resultType == 2) {
@@ -69,7 +121,7 @@ class ResultAdapter(
                             position
                         )
                     )
-                    when(results[position].state) {
+                    when (results[position].state) {
                         AudioPlay.AudioConfigState.PLAY -> {
                             holder.audioBt.icon = endIcon
                             holder.audioBt.text = stopLabel
@@ -78,19 +130,21 @@ class ResultAdapter(
                             lifecycleScope.launch {
                                 supervisorScope {
                                     viewModel.audioItemNotification.collect {
-                                        Log.i(TAG,"item $position accept $it")
+                                        Log.i(TAG, "item $position accept $it")
                                         if (it.id == position && !it.isPlaying) {
                                             // 自己收到通知 isPlaying false 暂停播放
                                             holder.audioBt.icon = startIcon
                                             holder.audioBt.text = playLabel
-                                            results[position].state = AudioPlay.AudioConfigState.PLAY
+                                            results[position].state =
+                                                AudioPlay.AudioConfigState.PLAY
                                             Log.i(TAG, "$position stop->play")
                                             this.cancel()
-                                        } else if(it.id != position && it.isPlaying){
+                                        } else if (it.id != position && it.isPlaying) {
                                             // 收到通知 其他item要播放
                                             holder.audioBt.icon = startIcon
                                             holder.audioBt.text = playLabel
-                                            results[position].state = AudioPlay.AudioConfigState.PLAY
+                                            results[position].state =
+                                                AudioPlay.AudioConfigState.PLAY
                                             Log.i(TAG, "$position stop->play")
                                             this.cancel()
                                         }
@@ -113,10 +167,17 @@ class ResultAdapter(
             holder.audioBt.visibility = View.GONE
         }
         holder.textView.doAfterTextChanged {
-            Log.i(TAG, "string: $it")
-            Log.i(TAG, "position: $position")
-            results[position].speechText = it.toString()
-            viewModel.localResult.speechText[position] = it.toString()
+            if (holder.onFocus) {
+                Log.i(TAG, "string: $it")
+                Log.i(TAG, "position: $position")
+                Log.i(TAG, "text change")
+                results[position].speechText = it.toString()
+                viewModel.localResult.speechText[position] = it.toString()
+            } else {
+                Log.i(TAG, "viewText ${holder.textView.text}")
+                Log.i(TAG, "position text = ${results[position].speechText} on $position ")
+                Log.i(TAG, "auto change")
+            }
         }
     }
 
@@ -125,6 +186,7 @@ class ResultAdapter(
     }
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        var onFocus: Boolean = false
         val textView: TextView
         val timeInfo: TextView
         val audioBt: MaterialButton
