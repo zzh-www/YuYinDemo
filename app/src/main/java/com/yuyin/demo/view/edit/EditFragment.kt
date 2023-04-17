@@ -166,38 +166,45 @@ class EditFragment : Fragment() {
                     R.id.save_option -> {
                         val file = File(filePath)
                         val title = binding.titleText.text.toString()
-                        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-                            if (title.isNotBlank()) {
-                                if (title != file.nameWithoutExtension) {
-                                    // rename
-                                    val rawFiles = YuYinUtil.ResultFiles.getTextAndJson(file)
-                                    val newFiles = YuYinUtil.ResultFiles.getTextAndJson(
-                                        File(
-                                            file.parent,
-                                            title + jsonType
-                                        )
+                        if (title.isNotEmpty()) {
+                            model.viewModelScope.launch(Dispatchers.IO) {
+                                val rawFiles = YuYinUtil.ResultFiles.getTextAndJson(file)
+                                val newFiles = YuYinUtil.ResultFiles.getTextAndJson(
+                                    File(
+                                        file.parent,
+                                        title + jsonType
                                     )
-                                    model.localResult.toJson(yuyinViewModel.moshi, newFiles.json)
-                                    model.localResult.toText(newFiles.textFile)
-                                    rawFiles.json.delete()
-                                    rawFiles.textFile.delete()
-                                    Toast.makeText(
-                                        requireContext(),
-                                        "rename ${file.nameWithoutExtension} to $title",
-                                        Toast.LENGTH_LONG
-                                    ).show()
-                                }
+                                )
+                                rawFiles.json.delete()
+                                rawFiles.textFile.delete()
+                                model.localResult.toJson(yuyinViewModel.moshi, newFiles.json)
+                                model.localResult.toText(newFiles.textFile)
+                            }
+                            if (title != file.nameWithoutExtension) {
+                                // rename
+                                Toast.makeText(
+                                    requireContext(),
+                                    "rename ${file.nameWithoutExtension} to $title",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             } else {
                                 Toast.makeText(
                                     requireContext(),
-                                    "title is empty",
-                                    Toast.LENGTH_LONG
+                                    "save ${file.nameWithoutExtension}",
+                                    Toast.LENGTH_SHORT
                                 ).show()
                             }
-
+                        } else {
+                            Toast.makeText(
+                                requireContext(),
+                                "title is empty",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
+
                         true
                     }
+
                     else -> false
                 }
             }
@@ -230,6 +237,7 @@ class EditFragment : Fragment() {
                             }
                         }
                     }
+
                     AudioPlay.AudioConfigState.STOP -> {
                         if (currentAudioItem.isEmpty()) {
                             // 不可能为空
