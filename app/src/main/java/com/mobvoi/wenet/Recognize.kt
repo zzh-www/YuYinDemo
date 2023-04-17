@@ -1,6 +1,6 @@
 package com.mobvoi.wenet
 
-import android.util.Log
+import com.yuyin.demo.utils.YuYinUtil.YuYinLog as Log
 import com.yuyin.demo.models.OnNativeAsrModelCall
 import com.yuyin.demo.models.SpeechResult
 import java.nio.charset.StandardCharsets

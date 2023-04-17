@@ -5,21 +5,13 @@ plugins {
 }
 
 android {
-    signingConfigs {
-        create("release") {
-            storeFile = file("/Users/zzh/work/YuYinDemo/app/yuyin.keystore")
-            storePassword = "yuyindemo"
-            keyAlias = "yuyin"
-            keyPassword = "yuyindemo"
-        }
-    }
     namespace = "com.yuyin.demo"
 
     defaultConfig {
         applicationId = "com.yuyin.demo"
         versionCode = 1
         versionName = "1.0"
-        minSdk = 29
+        minSdk = 33
         targetSdk = 33
         compileSdk = 33
         buildToolsVersion = "30.0.3"
@@ -29,12 +21,12 @@ android {
         }
 
         signingConfigs {
-           this.maybeCreate("release").run {
-               storeFile = file("yuyin.keystore")
-               storePassword = "yuyindemo"
-               keyAlias = "yuyin"
-               keyPassword = "yuyindemo"
-           }
+            this.maybeCreate("release").run {
+                storeFile = file("yuyin.keystore")
+                storePassword = "yuyindemo"
+                keyAlias = "yuyin"
+                keyPassword = "yuyindemo"
+            }
         }
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -91,6 +83,11 @@ android {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
+
+    kotlin {
+        jvmToolchain(8)
+    }
+
     viewBinding { enable = true }
 }
 

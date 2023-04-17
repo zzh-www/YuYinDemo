@@ -122,6 +122,17 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
             }
         }
 
+    private val requestNotification =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            if (it.resultCode == RESULT_OK) {
+                appPermissions.remove(mRequestCode)
+                checkPermission()
+            } else {
+                Log.i(TAG,"can not request notification")
+                checkPermission()
+            }
+        }
+
     // 通知
     lateinit var notificationManager: NotificationManager
 
@@ -165,7 +176,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
             checkPermission()
         } else {
             showAppSettings(
-                appPermissions[mRequestCode+3]!!,
+                appPermissions[mRequestCode + 3]!!,
                 title = getString(R.string.rationale_ask)
             )
             Log.w(TAG, "appPermission get failed for float")
@@ -218,9 +229,23 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
                 dialog.dismiss()
                 exitApp()
             }
-            .setPositiveButton(R.string.confirm) { _, _ ->
+            .setPositiveButton(R.string.confirm) { dialog, _ ->
+                dialog.dismiss()
                 if (myPermission.code == mRequestCode + 3) {
                     PermissionUtils.requestPermission(this, this)
+                } else if (myPermission.code == mRequestCode) {
+                    // 通知权限也要进行特殊适配
+                    notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    if (!notificationManager.areNotificationsEnabled()) {
+                        val intent = Intent().apply {
+                            this.action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+                            this.data = Uri.fromParts("package", packageName, null)
+                        }
+                        requestNotification.launch(intent)
+                    } else {
+                        appPermissions.remove(myPermission.code)
+                        checkPermission()
+                    }
                 } else {
                     EasyPermissions.requestPermissions(
                         this,
@@ -549,21 +574,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
         channel.description = MediaCaptureService.m_NOTIFICATION_CHANNEL_DESC
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.createNotificationChannel(channel)
-        notificationManager.notificationChannels
-
-        if (!notificationManager.areNotificationsEnabled()) {
-            val intent = Intent().apply {
-                this.action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
-                this.data = Uri.fromParts("package", packageName, null)
-            }
-            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-                if (it.resultCode == RESULT_OK) {
-                    initAudioCapture()
-                }
-            }.launch(intent)
-        } else {
-            initAudioCapture()
-        }
+        initAudioCapture()
     }
 
     private fun initAudioCapture() {
