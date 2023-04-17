@@ -1,7 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.kapt")
+    id("com.google.devtools.ksp") version "1.8.20-1.0.10"
 }
 
 android {
@@ -137,8 +137,8 @@ dependencies {
     // 协程
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
     implementation("com.squareup.moshi:moshi-kotlin:1.14.0")
-    kapt("com.squareup.moshi:moshi-kotlin-codegen:1.14.0")
-    kaptTest("com.squareup.moshi:moshi-kotlin-codegen:1.14.0")
+    ksp("com.squareup.moshi:moshi-kotlin-codegen:1.14.0")
+    ksp("com.squareup.moshi:moshi-kotlin-codegen:1.14.0")
     implementation("com.github.princekin-f:EasyFloat:2.0.4") {
         isTransitive = false
     }
