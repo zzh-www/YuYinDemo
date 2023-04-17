@@ -62,7 +62,7 @@ android {
         }
 
         packagingOptions {
-            jniLibs.pickFirsts.add("lib/arm64-v8a/libc++_shared.so")
+            jniLibs.pickFirsts.add("lib/arm64-v8a/libc++_shared.so") // 增加其他架构支持需要添加pickFirst 选项
         }
     }
 
@@ -162,6 +162,10 @@ dependencies {
         isTransitive = false
     }
     extractForNativeBuild("com.github.pengzhendong:wenet-openfst-android:1.0.2") {
+        isTransitive = false
+    }
+    // xlog 框架
+    implementation("com.elvishew:xlog:1.11.0") {
         isTransitive = false
     }
 }

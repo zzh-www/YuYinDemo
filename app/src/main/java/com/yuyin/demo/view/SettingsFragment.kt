@@ -72,7 +72,7 @@ class SettingsFragment : Fragment() {
                             DocumentFile.fromSingleUri(requireContext(), documentUri) ?: return@registerForActivityResult
                         val documentName = documentFile.name
                         val file = Paths.get(
-                            yuyinViewModel.yuYinDirPath.absolutePathString(),
+                            YuyinViewModel.yuYinDirPath.absolutePathString(),
                             documentName
                         ).toFile()
                         if (file.exists()) {
@@ -102,7 +102,7 @@ class SettingsFragment : Fragment() {
                             DocumentFile.fromSingleUri(requireContext(), documentUri) ?: return@registerForActivityResult
                         val documentName = documentFile.name
                         val file = Paths.get(
-                            yuyinViewModel.yuYinDirPath.absolutePathString(),
+                            YuyinViewModel.yuYinDirPath.absolutePathString(),
                             documentName
                         ).toFile()
                         if (file.exists()) {
@@ -311,7 +311,7 @@ class SettingsFragment : Fragment() {
                                                     }
                                                 }
                                                 val fileDict = Paths.get(
-                                                    yuyinViewModel.yuYinDirPath.absolutePathString(),
+                                                    YuyinViewModel.yuYinDirPath.absolutePathString(),
                                                     binding.dictPathText.text.toString()
                                                 ).toFile()
                                                 if (!fileDict.exists()) {
@@ -324,7 +324,7 @@ class SettingsFragment : Fragment() {
                                                     }
                                                 }
                                                 val fileModel = Paths.get(
-                                                    yuyinViewModel.yuYinDirPath.absolutePathString(),
+                                                    YuyinViewModel.yuYinDirPath.absolutePathString(),
                                                     binding.modePathText.text.toString()
                                                 ).toFile()
                                                 if (!fileModel.exists()) {
@@ -343,7 +343,7 @@ class SettingsFragment : Fragment() {
                                                     )
                                                 val json =
                                                     jsonAdapter.toJson(yuyinViewModel.newSettings)
-                                                yuyinViewModel.settingProfilePath.toFile()
+                                                YuyinViewModel.settingProfilePath.toFile()
                                                     .writeText(json)
                                                 yuyinViewModel.settings.modelMode =
                                                     yuyinViewModel.newSettings.modelMode
@@ -355,7 +355,7 @@ class SettingsFragment : Fragment() {
                                         // just copy
                                         val json =
                                             jsonAdapter.toJson(yuyinViewModel.newSettings)
-                                        yuyinViewModel.settingProfilePath.toFile()
+                                        YuyinViewModel.settingProfilePath.toFile()
                                             .writeText(json)
                                         yuyinViewModel.settings =
                                             yuyinViewModel.newSettings.copy()

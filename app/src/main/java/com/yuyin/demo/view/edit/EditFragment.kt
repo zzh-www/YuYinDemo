@@ -40,11 +40,11 @@ class EditFragment : Fragment() {
     val yuyinViewModel: YuyinViewModel by activityViewModels()
     val model: EditViewModel by viewModels()
     lateinit var adapter: ResultAdapter
-    var currentAudioItem = ArrayBlockingQueue<Int>(1)
-    lateinit var startIcon: Drawable
-    lateinit var endIcon: Drawable
-    lateinit var playLabel: String
-    lateinit var stopLabel: String
+    private var currentAudioItem = ArrayBlockingQueue<Int>(1)
+    private lateinit var startIcon: Drawable
+    private lateinit var endIcon: Drawable
+    private lateinit var playLabel: String
+    private lateinit var stopLabel: String
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -82,7 +82,7 @@ class EditFragment : Fragment() {
                     findNavController().popBackStack()
                 }
                 model.audioResource = File(
-                    yuyinViewModel.yuYinDataDir.absolutePathString(),
+                    YuyinViewModel.yuYinDataDir.absolutePathString(),
                     model.localResult.audioFile
                 )
             }
@@ -164,7 +164,7 @@ class EditFragment : Fragment() {
             override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
                 return when (menuItem.itemId) {
                     R.id.save_option -> {
-                        var file = File(filePath)
+                        val file = File(filePath)
                         val title = binding.titleText.text.toString()
                         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
                             if (title.isNotBlank()) {

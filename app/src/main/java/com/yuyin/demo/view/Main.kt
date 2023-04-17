@@ -99,11 +99,11 @@ class Main : Fragment() {
 
     fun checkSettingFile(): Boolean {
         var result = true
-        if (!yuyinViewModel.settingProfilePath.exists()) {
+        if (!YuyinViewModel.settingProfilePath.exists()) {
             Log.e(TAG,"settingProfilePath is not exit")
             result = false
         }
-        if (!yuyinViewModel.yuYinDirPath.exists()) {
+        if (!YuyinViewModel.yuYinDirPath.exists()) {
             Log.e(TAG,"yuYinDirPath is not exit")
             result = false
         }

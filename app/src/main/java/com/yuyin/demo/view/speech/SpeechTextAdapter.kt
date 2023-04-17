@@ -67,10 +67,10 @@ class SpeechTextAdapter(
         holder.speechView.doAfterTextChanged {
             if (holder.onFocus) {
                 Log.i(TAG, "text change")
-                Log.i(TAG,"change from ${speechText._text} to $it on $position  and holderText = ${holder.speechView.text}")
+                Log.v(TAG,"change from ${speechText._text} to $it on $position  and holderText = ${holder.speechView.text}")
                 speechText._text = it.toString()
             } else {
-                Log.i(TAG,"change from ${speechText._text} to $it on $position  and holderText = ${holder.speechView.text} positonText = ${dataList[position].text}")
+                Log.v(TAG,"change from ${speechText._text} to $it on $position  and holderText = ${holder.speechView.text} positonText = ${dataList[position].text}")
                 Log.i(TAG, "auto change")
             }
         }

@@ -57,7 +57,7 @@ class ResultAdapter(
         Log.i(TAG, "onViewAttachedToWindow")
         Log.i(
             TAG,
-            "onViewAttachedToWindow ${holder.absoluteAdapterPosition} ${holder.textView.text}"
+            "onViewAttachedToWindow ${holder.absoluteAdapterPosition}"
         )
     }
 
@@ -66,7 +66,7 @@ class ResultAdapter(
         Log.i(TAG, "onViewDetachedFromWindow")
         Log.i(
             TAG,
-            "onViewDetachedFromWindow ${holder.absoluteAdapterPosition} ${holder.textView.text} playText: ${holder.audioBt.text}"
+            "onViewDetachedFromWindow ${holder.absoluteAdapterPosition}"
         )
         // 恢复初始状态离开屏幕
         if (results[holder.absoluteAdapterPosition].state == AudioPlay.AudioConfigState.STOP) {
@@ -88,7 +88,7 @@ class ResultAdapter(
 
     override fun onViewRecycled(holder: ViewHolder) {
         super.onViewRecycled(holder)
-        Log.i(TAG, "onViewRecycled ${holder.textView.text}")
+        Log.i(TAG, "onViewRecycled ${holder.absoluteAdapterPosition}")
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
@@ -174,8 +174,8 @@ class ResultAdapter(
                 results[position].speechText = it.toString()
                 viewModel.localResult.speechText[position] = it.toString()
             } else {
-                Log.i(TAG, "viewText ${holder.textView.text}")
-                Log.i(TAG, "position text = ${results[position].speechText} on $position ")
+                Log.v(TAG, "viewText ${holder.textView.text}")
+                Log.v(TAG, "position text = ${results[position].speechText} on $position ")
                 Log.i(TAG, "auto change")
             }
         }

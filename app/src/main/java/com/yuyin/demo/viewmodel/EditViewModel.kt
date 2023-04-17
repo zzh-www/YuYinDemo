@@ -45,7 +45,7 @@ class EditViewModel : ViewModel() {
                                     val start =
                                         kotlin.math.floor(it.start / 100f).toInt() * bytesPerMS
                                     val end = kotlin.math.ceil(it.end / 100f).toInt() * bytesPerMS
-                                    Log.i(TAG, "bytesPerMS $bytesPerMS start $start end $end")
+                                    Log.d(TAG, "bytesPerMS $bytesPerMS start $start end $end")
                                     // 跳转到开始
                                     var buffer = ByteArray(bytesPerMS)
                                     var read = 0

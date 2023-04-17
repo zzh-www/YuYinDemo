@@ -50,7 +50,7 @@ class FileAdapter(
         viewHolder.file_bt.setOnClickListener {
             val jsonPath = data_list[viewHolder.bindingAdapterPosition].jsonFile
             val textPath = data_list[viewHolder.bindingAdapterPosition].textFile
-            val zipFile = File(yuyinViewModel.yuYinTmpDir, jsonPath.nameWithoutExtension + ".zip")
+            val zipFile = File(YuyinViewModel.yuYinTmpDir, jsonPath.nameWithoutExtension + ".zip")
             yuyinViewModel.viewModelScope.launch(Dispatchers.IO) {
                 val audioPath =
                     File(jsonPath.parent, LocalResult.fromJson(moshi, jsonPath).audioFile)

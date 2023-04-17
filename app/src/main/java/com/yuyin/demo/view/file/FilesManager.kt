@@ -51,7 +51,7 @@ class FilesManager : Fragment() {
         val linearLayoutManager = LinearLayoutManager(context)
         recyclerView = binding!!.recyclerFile
         recyclerView!!.layoutManager = linearLayoutManager
-        val dir_path = yuyinViewModel.yuYinDataDir.toFile()
+        val dir_path = YuyinViewModel.yuYinDataDir.toFile()
         val files = dir_path.listFiles { _: File?, name: String -> name.endsWith(".json") }
         // 返回null
         if (files != null) {

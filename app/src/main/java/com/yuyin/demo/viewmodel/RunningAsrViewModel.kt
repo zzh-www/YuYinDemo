@@ -56,14 +56,14 @@ open class RunningAsrViewModel : ViewModel() {
                 data.start += offsetOfTime
                 data.end += offsetOfTime
                 results.emit(data)
-                Log.i(tag, "onSpeechResultReceive $data")
+                Log.i(tag, "onSpeechResultReceive")
             }
         }
 
         override fun onSpeechResultPartReceive(data: ByteArray) {
             viewModelScope.launch(Dispatchers.Default) {
                 hotResult.emit(String(data, StandardCharsets.UTF_8))
-                Log.i(tag, "onSpeechResultPartReceive ${String(data)}")
+                Log.i(tag, "onSpeechResultPartReceive")
             }
         }
 

@@ -135,24 +135,24 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
     }
 
     override fun onPermissionsDenied(requestCode: Int, perms: List<String>) {
-        Log.i(TAG, "appPermission request $requestCode in onPermissionsDenied")
+        Log.d(TAG, "appPermission request $requestCode in onPermissionsDenied")
         if (appPermissions[requestCode] != null) {
             showAppSettings(
                 appPermissions[requestCode]!!,
                 title = getString(R.string.rationale_ask)
             )
         } else {
-            Log.e(TAG, "appPermission get failed when denied $requestCode")
+            Log.w(TAG, "appPermission get failed when denied $requestCode")
         }
     }
 
     override fun onPermissionsGranted(requestCode: Int, perms: List<String>) {
-        Log.i(TAG, "appPermission request $requestCode in onPermissionsGranted")
+        Log.d(TAG, "appPermission request $requestCode in onPermissionsGranted")
         if (appPermissions[requestCode] != null) {
             appPermissions.remove(requestCode)
             checkPermission()
         } else {
-            Log.e(TAG, "appPermission get failed when granted $requestCode")
+            Log.w(TAG, "appPermission get failed when granted $requestCode")
         }
     }
 
@@ -168,7 +168,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
                 appPermissions[mRequestCode+3]!!,
                 title = getString(R.string.rationale_ask)
             )
-            Log.e(TAG, "appPermission get failed for float")
+            Log.w(TAG, "appPermission get failed for float")
         }
     }
 
@@ -267,6 +267,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        initProfile()
         // 膨胀视图
         binding = ActivityMainViewBinding.inflate(layoutInflater)
         val view: View = binding.root
@@ -318,7 +319,6 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
                 }
             }
         }
-        initProfile()
     }
 
     override fun onStart() {
@@ -340,25 +340,31 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
 
     fun initProfile() {
         val docDirPath = getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
-        model.yuYinDirPath = Paths.get(docDirPath?.absolutePath, "YuYin")
+        YuyinViewModel.yuYinDirPath = Paths.get(docDirPath?.absolutePath, "YuYin")
         val yuYinDir = Paths.get(docDirPath?.absolutePath, "YuYin").toFile()
         if (!yuYinDir.exists()) {
             yuYinDir.mkdir()
+        }
+        if (!YuyinViewModel.yuYinTmpDir.isDirectory) {
+            YuyinViewModel.yuYinTmpDir.mkdir()
+        }
+        if (!YuyinViewModel.yuyinLogDir.isDirectory) {
+            YuyinViewModel.yuyinLogDir.mkdir()
         }
         val yuYinDataDir = Paths.get(yuYinDir.absolutePath, "data").toFile()
         if (!yuYinDataDir.exists()) {
             yuYinDataDir.mkdir()
         }
-        model.yuYinDataDir = yuYinDataDir.toPath()
-        model.settingProfilePath = Paths.get(yuYinDir.absolutePath, "settings.json")
-        model.settingProfilePath.let {
+        YuyinViewModel.yuYinDataDir = yuYinDataDir.toPath()
+        YuyinViewModel.settingProfilePath = Paths.get(yuYinDir.absolutePath, "settings.json")
+        YuyinViewModel.settingProfilePath.let {
             val jsonAdapter: JsonAdapter<LocalSettings> =
                 model.moshi.adapter(LocalSettings::class.java)
             if (it.toFile().exists()) {
                 val json = it.toFile().readText()
                 model.settings = jsonAdapter.fromJson(json)!!
                 if (File(model.modelPath).exists() && File(model.dicPath).exists()) {
-                    Log.e(TAG, "load settings successful")
+                    Log.i(TAG, "load settings successful")
                 } else {
                     val localSettings = defaultSettings()
                     model.settings = localSettings
@@ -375,15 +381,13 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
                     dialog.show()
                 }
             } else {
+                Log.w(TAG, "load settings create new")
                 val localSettings = defaultSettings()
                 model.settings = localSettings
                 val json = jsonAdapter.toJson(localSettings)
                 it.toFile().createNewFile()
                 it.toFile().writeText(json)
             }
-        }
-        if (!model.yuYinTmpDir.mkdir()) {
-            model.yuYinTmpDir.mkdir()
         }
     }
 
@@ -437,7 +441,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
             }
         }
         model.recorder = null
-        model.yuYinTmpDir.listFiles()?.forEach {
+        YuyinViewModel.yuYinTmpDir.listFiles()?.forEach {
             it.delete()
         }
         AudioPlay.audioTrack.release()
@@ -499,7 +503,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
     }
 
     private fun assetFilePath(context: Context, assetName: String): String? {
-        val file = File(model.yuYinDirPath.absolutePathString(), assetName)
+        val file = File(YuyinViewModel.yuYinDirPath.absolutePathString(), assetName)
         if (file.exists() && file.length() > 0) {
             return file.absolutePath
         }

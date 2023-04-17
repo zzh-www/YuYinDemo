@@ -105,7 +105,7 @@ open class RunningAsr : Fragment() {
     }
 
     override fun onDestroy() {
-        Log.i(this.TAG, "onDestroy")
+        Log.i(TAG, "onDestroy")
         super.onDestroy()
     }
 
@@ -178,7 +178,7 @@ open class RunningAsr : Fragment() {
                                         }
                                     }
                                     val files = getFileName(
-                                        yuYinModel.yuYinDataDir.absolutePathString(),
+                                        YuyinViewModel.yuYinDataDir.absolutePathString(),
                                         binding.titleText.text.toString()
                                     )
                                     val localResult = LocalResult(
@@ -345,7 +345,7 @@ open class RunningAsr : Fragment() {
                         // 可滚动才可自动滚动
                         recyclerView.scrollToPosition(position + 1)
                     }
-                    Log.i(tag, "updateSpeechList $it")
+                    Log.i(tag, "updateSpeechList")
                 }
             }
         }
@@ -355,7 +355,7 @@ open class RunningAsr : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             model.hotResult.collectLatest {
                 flowText.text = it
-                Log.i(tag, "update flowText $it")
+                Log.d(tag, "update flowText")
             }
         }
     }
@@ -371,7 +371,7 @@ open class RunningAsr : Fragment() {
                 if (offset > hotText.height) {
                     hotText.scrollTo(0, offset - hotText.height)
                 }
-                Log.i(tag, "update hotText $it")
+                Log.d(tag, "update hotText")
             }
         }
     }

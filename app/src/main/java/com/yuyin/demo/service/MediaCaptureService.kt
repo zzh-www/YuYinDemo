@@ -204,7 +204,7 @@ class MediaCaptureService : Service() {
         val pm = packageManager
         val packageInfos = pm.getInstalledPackages(0)
         for (info in packageInfos) {
-            Log.i("APPIFO", info.applicationInfo.toString())
+            Log.d("APPIFO", info.applicationInfo.toString())
         }
     }
     
