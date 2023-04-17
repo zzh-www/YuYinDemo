@@ -1,5 +1,7 @@
 package com.yuyin.demo.view.speech
 
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -41,38 +43,65 @@ class SpeechTextAdapter(
         return ViewHolder(view)
     }
 
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val speechText = dataList[position]
-        holder.speechView.setText(speechText.text)
-        if (viewModel.needToShowTime) {
-            holder.timeTextView.text = speechText.timeInfo
-        } else {
-            holder.timeTextView.visibility = View.GONE
-        }
+    override fun onViewAttachedToWindow(holder: ViewHolder) {
+        super.onViewAttachedToWindow(holder)
+
+        val position = holder.absoluteAdapterPosition
         holder.speechView.setOnFocusChangeListener { _, hasFocus ->
+            val textWatcher = object : TextWatcher {
+                override fun beforeTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    count: Int,
+                    after: Int
+                ) {
+                }
+
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                }
+
+                override fun afterTextChanged(s: Editable?) {
+                    if (holder.onFocus) {
+                        Log.i(TAG, "text change on $position")
+                    } else {
+                        Log.d(TAG, "auto change $position")
+                    }
+                }
+            }
             holder.onFocus = hasFocus
             if (hasFocus) {
-                Log.i(tag, "on focus")
+                Log.i(TAG, "position: $position addTextChangedListener")
+                Log.i(TAG, "on focus")
+                holder.speechView.addTextChangedListener(textWatcher)
                 viewModel.viewModelScope.launch(Dispatchers.Main) {
                     isFocus.emit(true)
                 }
             } else {
-                Log.i(tag, "not on focus")
+                Log.i(TAG, "position: $position removeTextChangedListener")
+                Log.i(TAG, "not on focus")
+                holder.speechView.removeTextChangedListener(textWatcher)
                 viewModel.viewModelScope.launch(Dispatchers.Main) {
                     isFocus.emit(false)
                 }
             }
         }
+    }
 
-        holder.speechView.doAfterTextChanged {
-            if (holder.onFocus) {
-                Log.i(TAG, "text change")
-                Log.v(TAG,"change from ${speechText._text} to $it on $position  and holderText = ${holder.speechView.text}")
-                speechText._text = it.toString()
-            } else {
-                Log.v(TAG,"change from ${speechText._text} to $it on $position  and holderText = ${holder.speechView.text} positonText = ${dataList[position].text}")
-                Log.i(TAG, "auto change")
-            }
+    override fun onViewDetachedFromWindow(holder: ViewHolder) {
+        super.onViewDetachedFromWindow(holder)
+        holder.speechView.setOnFocusChangeListener { _, hasFocus ->
+            Log.i(TAG, "focus $hasFocus")
+        }
+        holder.onFocus = false
+    }
+
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        val speechText = dataList[holder.absoluteAdapterPosition]
+        holder.speechView.setText(speechText.text)
+        if (viewModel.needToShowTime) {
+            holder.timeTextView.text = speechText.timeInfo
+        } else {
+            holder.timeTextView.visibility = View.GONE
         }
     }
 
@@ -84,24 +113,5 @@ class SpeechTextAdapter(
         val speechView = view.findViewById<View>(R.id.speechText) as TextInputEditText
         val timeTextView = view.findViewById<View>(R.id.timeInfo_asr) as TextView
         var onFocus = false
-
-        init {
-            speechView.setOnClickListener {
-                Log.i(tag, "on click")
-            }
-            speechView.onFocusChangeListener = View.OnFocusChangeListener { _, _ ->
-                Log.i(tag, "on focus $")
-            }
-            speechView.doBeforeTextChanged { _, _, _, _ ->
-                Log.i(tag, "doBeforeTextChanged")
-            }
-            speechView.doAfterTextChanged {
-                Log.i(tag, "doAfterTextChanged")
-            }
-        }
-    }
-
-    companion object {
-        val tag = "SpeechTextAdapter"
     }
 }

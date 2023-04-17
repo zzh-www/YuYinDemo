@@ -62,4 +62,11 @@
     <string name="not_found_settings">未找到正确的配置文件</string>
     <string name="cancel">取消</string>
     <string name="confirm">确认</string>
+
+
+    <!-- Strings for share -->
+    <string name="share_title">分享</string>
+    <string name="share_message">请选择分享方式：\n 以zip包形式分享（压缩需要时间）\n 多文件形式分享（部分应用不兼容）</string>
+    <string name="share_zip">zip</string>
+    <string name="share_multi">multi</string>
 </resources>

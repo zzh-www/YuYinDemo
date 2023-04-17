@@ -63,7 +63,7 @@ class MediaCaptureService : Service() {
     private fun startMediaProject(intent: Intent) {
         m_mediaProjection = m_mediaProjectionManager.getMediaProjection(-1, intent)
         preStartRecording(m_mediaProjection)
-        Log.e(TAG, "start_recording")
+        Log.i(TAG, "start_recording")
     }
 
     /**

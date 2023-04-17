@@ -1,11 +1,12 @@
 package com.yuyin.demo.view.edit
 
 import android.graphics.drawable.Drawable
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.lifecycle.viewModelScope
 import androidx.recyclerview.widget.RecyclerView
@@ -54,62 +55,46 @@ class ResultAdapter(
 
     override fun onViewAttachedToWindow(holder: ViewHolder) {
         super.onViewAttachedToWindow(holder)
-        Log.i(TAG, "onViewAttachedToWindow")
-        Log.i(
-            TAG,
-            "onViewAttachedToWindow ${holder.absoluteAdapterPosition}"
-        )
-    }
-
-    override fun onViewDetachedFromWindow(holder: ViewHolder) {
-        super.onViewDetachedFromWindow(holder)
-        Log.i(TAG, "onViewDetachedFromWindow")
-        Log.i(
-            TAG,
-            "onViewDetachedFromWindow ${holder.absoluteAdapterPosition}"
-        )
-        // 恢复初始状态离开屏幕
-        if (results[holder.absoluteAdapterPosition].state == AudioPlay.AudioConfigState.STOP) {
-            viewModel.viewModelScope.launch {
-                results[holder.absoluteAdapterPosition].state = AudioPlay.AudioConfigState.PLAY
-                viewModel.audioConfig.emit(
-                    AudioPlay.AudioConfig(
-                        0,
-                        0,
-                        AudioPlay.AudioConfigState.STOP,
-                        holder.absoluteAdapterPosition
-                    )
-                )
-            }
-            holder.audioBt.icon = startIcon
-            holder.audioBt.text = playLabel
-        }
-    }
-
-    override fun onViewRecycled(holder: ViewHolder) {
-        super.onViewRecycled(holder)
-        Log.i(TAG, "onViewRecycled ${holder.absoluteAdapterPosition}")
-    }
-
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val text = results[position].speechText
+        val position = holder.absoluteAdapterPosition
         val start = results[position].start
         val end = results[position].end
-
-        holder.textView.text = text
-
-        if (viewModel.localResult.resultType > 0) {
-            holder.timeInfo.text = "${start / 1000f}s ~ ${end / 1000f}s"
-        } else {
-            holder.timeInfo.visibility = View.GONE
-            holder.divider.visibility = View.GONE
-        }
-
+        Log.i(
+            TAG,
+            "onViewAttachedToWindow ${position}"
+        )
         holder.textView.setOnFocusChangeListener { _, hasFocus ->
+            val textWatcher = object : TextWatcher {
+                override fun beforeTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    count: Int,
+                    after: Int
+                ) {
+                }
+
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                }
+
+                override fun afterTextChanged(s: Editable?) {
+                    if (holder.onFocus) {
+                        Log.i(TAG, "position: $position text change")
+                        results[position].speechText = s.toString()
+                        viewModel.localResult.speechText[position] = s.toString()
+                    } else {
+                        Log.d(TAG, "auto change")
+                    }
+                }
+            }
             holder.onFocus = hasFocus
+            if (hasFocus) {
+                Log.i(TAG, "position: $position addTextChangedListener")
+                holder.textView.addTextChangedListener(textWatcher)
+            } else {
+                Log.i(TAG, "position: $position removeTextChangedListener")
+                holder.textView.removeTextChangedListener(textWatcher)
+            }
             Log.i(TAG, "focus $hasFocus")
         }
-
         if (viewModel.localResult.resultType == 2) {
             holder.audioBt.setOnClickListener {
                 lifecycleScope.launch {
@@ -152,6 +137,7 @@ class ResultAdapter(
                                 }
                             }
                         }
+
                         AudioPlay.AudioConfigState.STOP -> {
                             // 只需停止即可
                             holder.audioBt.icon = startIcon
@@ -166,18 +152,58 @@ class ResultAdapter(
             holder.audioBt.isEnabled = false
             holder.audioBt.visibility = View.GONE
         }
-        holder.textView.doAfterTextChanged {
-            if (holder.onFocus) {
-                Log.i(TAG, "string: $it")
-                Log.i(TAG, "position: $position")
-                Log.i(TAG, "text change")
-                results[position].speechText = it.toString()
-                viewModel.localResult.speechText[position] = it.toString()
-            } else {
-                Log.v(TAG, "viewText ${holder.textView.text}")
-                Log.v(TAG, "position text = ${results[position].speechText} on $position ")
-                Log.i(TAG, "auto change")
+    }
+
+    override fun onViewDetachedFromWindow(holder: ViewHolder) {
+        super.onViewDetachedFromWindow(holder)
+        holder.absoluteAdapterPosition
+        Log.i(
+            TAG,
+            "onViewDetachedFromWindow ${holder.absoluteAdapterPosition}"
+        )
+        // 恢复初始状态离开屏幕
+        if (results[holder.absoluteAdapterPosition].state == AudioPlay.AudioConfigState.STOP) {
+            viewModel.viewModelScope.launch {
+                results[holder.absoluteAdapterPosition].state = AudioPlay.AudioConfigState.PLAY
+                viewModel.audioConfig.emit(
+                    AudioPlay.AudioConfig(
+                        0,
+                        0,
+                        AudioPlay.AudioConfigState.STOP,
+                        holder.absoluteAdapterPosition
+                    )
+                )
             }
+            holder.audioBt.icon = startIcon
+            holder.audioBt.text = playLabel
+        }
+        holder.textView.setOnFocusChangeListener { _, hasFocus ->
+            Log.i(TAG, "focus $hasFocus")
+        }
+        holder.audioBt.setOnClickListener {
+
+        }
+        holder.onFocus = false
+    }
+
+    override fun onViewRecycled(holder: ViewHolder) {
+        super.onViewRecycled(holder)
+        Log.i(TAG, "onViewRecycled ${holder.absoluteAdapterPosition}")
+    }
+
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        val currentPosition = holder.absoluteAdapterPosition
+        val text = results[currentPosition].speechText
+        val start = results[currentPosition].start
+        val end = results[currentPosition].end
+
+        holder.textView.text = text
+
+        if (viewModel.localResult.resultType > 0) {
+            holder.timeInfo.text = "${start / 1000f}s ~ ${end / 1000f}s"
+        } else {
+            holder.timeInfo.visibility = View.GONE
+            holder.divider.visibility = View.GONE
         }
     }
 

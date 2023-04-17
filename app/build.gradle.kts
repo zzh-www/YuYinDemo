@@ -11,7 +11,7 @@ android {
         applicationId = "com.yuyin.demo"
         versionCode = 1
         versionName = "1.0"
-        minSdk = 33
+        minSdk = 29
         targetSdk = 33
         compileSdk = 33
         buildToolsVersion = "30.0.3"
@@ -80,12 +80,12 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
 
     kotlin {
-        jvmToolchain(8)
+        jvmToolchain(11)
     }
 
     viewBinding { enable = true }
