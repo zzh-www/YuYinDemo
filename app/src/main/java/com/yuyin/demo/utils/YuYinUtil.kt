@@ -141,7 +141,7 @@ object YuYinUtil {
                 FilePrinter.Builder(YuyinViewModel.yuyinLogDir.absolutePath) // 指定保存日志文件的路径
                     .fileNameGenerator(DateFileNameGenerator()) // 指定日志文件名生成器，默认为 ChangelessFileNameGenerator("log")
                     .backupStrategy(NeverBackupStrategy()) // 指定日志文件备份策略，默认为 FileSizeBackupStrategy(1024 * 1024)
-                    .cleanStrategy(FileLastModifiedCleanStrategy(24 * 60 * 60 * 30 * 1000L)) // 指定日志文件清除策略，默认为 NeverCleanStrategy()
+                    .cleanStrategy(FileLastModifiedCleanStrategy(24 * 60 * 60 * 5 * 1000L)) // 指定日志文件清除策略，默认为 NeverCleanStrategy()
                     .flattener(ClassicFlattener()) // 指定日志平铺器，默认为 DefaultFlattener
 //                .writer(MyWriter()) // 指定日志写入器，默认为 SimpleWriter
                     .build()

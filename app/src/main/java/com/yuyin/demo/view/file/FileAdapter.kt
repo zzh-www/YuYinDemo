@@ -17,6 +17,9 @@ import com.yuyin.demo.utils.YuYinUtil.moshi
 import com.yuyin.demo.viewmodel.FilesManagerViewModel
 import com.yuyin.demo.viewmodel.YuyinViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -51,22 +54,46 @@ class FileAdapter(
             val jsonPath = data_list[viewHolder.bindingAdapterPosition].jsonFile
             val textPath = data_list[viewHolder.bindingAdapterPosition].textFile
             val zipFile = File(YuyinViewModel.yuYinTmpDir, jsonPath.nameWithoutExtension + ".zip")
-            yuyinViewModel.viewModelScope.launch(Dispatchers.IO) {
-                val audioPath =
-                    File(jsonPath.parent, LocalResult.fromJson(moshi, jsonPath).audioFile)
-                compressFiles(listOf(jsonPath, audioPath, textPath), zipFile)
-                withContext(Dispatchers.Main) {
-                    val intent = Intent(Intent.ACTION_SEND)
-                    val uri = FileProvider.getUriForFile(
-                        parent.context,
-                        "com.yuyin.demo.fileprovider",
-                        zipFile
-                    )
-                    intent.putExtra(Intent.EXTRA_STREAM, uri)
-                    intent.type = "application/zip"
-                    parent.context.startActivity(intent)
-                }
-            }
+            val dialog =
+                MaterialAlertDialogBuilder(parent.context)
+                    .setIcon(R.drawable.delete__icon)
+                    .setTitle(R.string.share_title)
+                    .setMessage(jsonPath.nameWithoutExtension)
+                    .setNegativeButton(R.string.cancel) { dialog, _ ->
+                        dialog.dismiss()
+                    }
+                    .setPositiveButton(R.string.confirm) { _, _ ->
+                        val compressJob = viewModel.viewModelScope.async(Dispatchers.IO) {
+                            if (!zipFile.exists()) {
+                                val audioPath =
+                                    File(
+                                        jsonPath.parent,
+                                        LocalResult.fromJson(moshi, jsonPath).audioFile
+                                    )
+                                compressFiles(
+                                    listOf(jsonPath, audioPath, textPath),
+                                    zipFile
+                                )
+                            }
+                            true
+                        }
+                        val  createIntent = viewModel.viewModelScope.async {
+                            val intent = Intent(Intent.ACTION_SEND)
+                            val uri = FileProvider.getUriForFile(
+                                parent.context,
+                                "com.yuyin.demo.fileprovider",
+                                zipFile
+                            )
+                            intent.putExtra(Intent.EXTRA_STREAM, uri)
+                            intent.type = "application/zip"
+                            intent
+                        }
+                        viewModel.viewModelScope.launch {
+                            if (compressJob.await()) {
+                                parent.context.startActivity(createIntent.await())
+                            }
+                        }
+                    }.create().show()
         }
         viewHolder.delete_bt.setOnClickListener {
             val position = viewHolder.bindingAdapterPosition

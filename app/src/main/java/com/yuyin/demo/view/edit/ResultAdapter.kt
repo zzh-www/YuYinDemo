@@ -43,14 +43,13 @@ class ResultAdapter(
         val view =
             LayoutInflater.from(parent.context).inflate(R.layout.text_with_audio, parent, false)
         val viewHolder = ViewHolder(view)
-        Log.i(TAG, "onDetachedFromRecyclerView")
         return viewHolder
     }
 
 
     override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
         super.onDetachedFromRecyclerView(recyclerView)
-        Log.i(TAG, "onDetachedFromRecyclerView")
+        Log.d(TAG, "onDetachedFromRecyclerView")
     }
 
     override fun onViewAttachedToWindow(holder: ViewHolder) {
@@ -58,7 +57,7 @@ class ResultAdapter(
         val position = holder.absoluteAdapterPosition
         val start = results[position].start
         val end = results[position].end
-        Log.i(
+        Log.d(
             TAG,
             "onViewAttachedToWindow ${position}"
         )
@@ -157,7 +156,7 @@ class ResultAdapter(
     override fun onViewDetachedFromWindow(holder: ViewHolder) {
         super.onViewDetachedFromWindow(holder)
         holder.absoluteAdapterPosition
-        Log.i(
+        Log.d(
             TAG,
             "onViewDetachedFromWindow ${holder.absoluteAdapterPosition}"
         )
@@ -188,7 +187,7 @@ class ResultAdapter(
 
     override fun onViewRecycled(holder: ViewHolder) {
         super.onViewRecycled(holder)
-        Log.i(TAG, "onViewRecycled ${holder.absoluteAdapterPosition}")
+        Log.d(TAG, "onViewRecycled ${holder.absoluteAdapterPosition}")
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {

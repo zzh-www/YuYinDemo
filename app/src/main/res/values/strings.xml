@@ -69,4 +69,5 @@
     <string name="share_message">请选择分享方式：\n 以zip包形式分享（压缩需要时间）\n 多文件形式分享（部分应用不兼容）</string>
     <string name="share_zip">zip</string>
     <string name="share_multi">multi</string>
+    <string name="share_log">分享应用日志文件</string>
 </resources>

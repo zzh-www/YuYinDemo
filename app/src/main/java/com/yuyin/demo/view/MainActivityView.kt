@@ -471,6 +471,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
         }
         AudioPlay.audioTrack.release()
         Log.i(TAG, "onDestroy")
+//        TODO("应用退出将所有日志文件解压以减少空间")
     }
 
     override fun onSupportNavigateUp(): Boolean {
@@ -648,7 +649,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
     fun checkFloatView(): Boolean = EasyFloat.getFloatView(floatTag) != null
 
     private fun destroyFloatView() {
-//        EasyFloat.hide(floatTag)
+        EasyFloat.hide(floatTag)
     }
 
     // 广播服务
@@ -659,7 +660,7 @@ class MainActivityView : AppCompatActivity(), EasyPermissions.PermissionCallback
             val action = intent.action
             if (action.equals(CaptureAudio_ALL, ignoreCase = true)) {
                 val actionName = intent.getStringExtra(EXTRA_CaptureAudio_NAME)
-                if (actionName != null && !actionName.isEmpty()) {
+                if (!actionName.isNullOrEmpty()) {
                     if (actionName.equals(
                             CaptureAudio_START,
                             ignoreCase = true
