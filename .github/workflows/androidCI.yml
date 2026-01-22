@@ -20,7 +20,7 @@ jobs:
           distribution: 'temurin'
           cache: gradle
       - name: get wenet
-        run: wget https://github.com/wenet-e2e/wenet/archive/c11db56b8f3ebb323b8548cf80fd0d36eef5f245.zip -O wenet.zip && unzip -q wenet.zip && mv wenet-c11db56b8f3ebb323b8548cf80fd0d36eef5f245 wenet && rm wenet.zip
+        run: curl -L https://github.com/wenet-e2e/wenet/archive/c11db56b8f3ebb323b8548cf80fd0d36eef5f245.zip -o wenet.zip && unzip -q wenet.zip && mv wenet-c11db56b8f3ebb323b8548cf80fd0d36eef5f245 wenet && rm wenet.zip
 
       - name: get assets
         run: chmod +x ./.github/workflows/downloadAssets.sh && ./.github/workflows/downloadAssets.sh
