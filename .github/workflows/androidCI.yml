@@ -20,13 +20,13 @@ jobs:
           distribution: 'temurin'
           cache: gradle
       - name: get wenet
-        run: git clone https://github.com/wenet-e2e/wenet.git && cd ./wenet && git checkout c11db56b8f3ebb323b8548cf80fd0d36eef5f245 && cd ../
+        run: curl -L https://github.com/wenet-e2e/wenet/archive/c11db56b8f3ebb323b8548cf80fd0d36eef5f245.zip -o wenet.zip && unzip -q wenet.zip && mv wenet-c11db56b8f3ebb323b8548cf80fd0d36eef5f245 wenet && rm wenet.zip
 
       - name: get assets
         run: chmod +x ./.github/workflows/downloadAssets.sh && ./.github/workflows/downloadAssets.sh
 
       - name: Cache assets
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           key: YuYinAssets
           path: app/src/main/assets
@@ -40,7 +40,7 @@ jobs:
         run: ./gradlew assembleRelease
 
       - name: Archive production artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: apk
           path: app/build/outputs/apk
